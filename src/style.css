@@ -1,0 +1,48 @@
+
+/* VOICE: festa de interior, alegre, céu aberto
+   IDEA: um jogo de rua de cidade pequena com cartaz de Oktoberfest
+   PICTURE: o próprio mundo 3D, tela cheia
+   COLOUR and TYPE: azul bávaro #1d4e9e, branco, amarelo chope #f4b41a; Rubik 900/500
+   LAYOUT: HUD nos cantos, joystick e botões grandes no celular */
+:root{color-scheme:dark;--blue:#1d4e9e;--beer:#f4b41a;--ink:#fff}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;overflow:hidden;background:#0c1530;color:var(--ink);font:16px/1.45 Rubik,system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+#game,#game canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.card{background:rgba(13,29,66,.82);border:2px solid rgba(255,255,255,.18);border-radius:14px;backdrop-filter:blur(6px)}
+#hud[hidden],#end[hidden],#start[hidden]{display:none}
+#obj{position:fixed;left:max(12px,env(safe-area-inset-left));top:12px;padding:10px 14px;max-width:min(330px,calc(100vw - 190px));display:grid;gap:2px}
+#objT{font-weight:900;color:var(--beer);font-size:15px}
+#objS{font-weight:700;font-size:15px}
+#objD{font-size:13px;opacity:.85}
+#top{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;padding:6px 14px;display:flex;gap:14px;font-weight:700;font-size:15px;white-space:nowrap}
+#map{position:fixed;right:12px;top:12px;width:150px;height:150px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+#prompt{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);padding:8px 16px;font-weight:700;white-space:nowrap;display:none}
+#toast{position:fixed;left:50%;top:84px;transform:translateX(-50%) translateY(-8px);width:min(460px,calc(100vw - 24px));padding:12px 16px;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+#toast b{color:var(--beer);display:block;font-size:17px}
+#joy{position:fixed;left:24px;bottom:28px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.35);display:none;touch-action:none}
+#knob{position:absolute;left:35px;top:35px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 10px rgba(0,0,0,.4)}
+#btns{position:fixed;right:20px;bottom:30px;display:none;flex-direction:column;gap:12px;align-items:flex-end}
+#btns button,.big{font:900 16px Rubik,sans-serif;color:#10224a;background:var(--beer);border:0;border-radius:999px;min-height:56px;min-width:96px;padding:0 20px;box-shadow:0 4px 0 #b37f00;cursor:pointer;touch-action:manipulation}
+#btns button:active,.big:active{transform:translateY(3px);box-shadow:0 1px 0 #b37f00}
+#bFly{display:none;background:#fff!important;box-shadow:0 4px 0 #9aa8c4!important}
+.touch #joy{display:block}.touch #btns{display:flex}.touch #top{bottom:auto;top:174px;right:12px;left:auto;transform:none;flex-direction:column;gap:0;padding:6px 10px;font-size:13px}
+.touch #prompt{bottom:170px}
+#start,#end{position:fixed;inset:0;display:grid;place-items:center;padding:20px;background:linear-gradient(180deg,rgba(12,21,48,.25),rgba(12,21,48,.88) 70%)}
+.panel{width:min(520px,100%);padding:26px 24px;text-align:center}
+h1{font:900 clamp(38px,9vw,60px)/1 Rubik,sans-serif;margin:0 0 6px;letter-spacing:-1px;color:#fff;text-shadow:0 4px 0 var(--blue)}
+h1 span{color:var(--beer)}
+.sub{margin:0 0 18px;font-weight:500;opacity:.9}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;text-align:left;font-size:14px;margin:0 auto 18px;max-width:380px}
+.keys kbd{font:700 12px Rubik;background:#fff;color:#10224a;border-radius:6px;padding:2px 7px;white-space:nowrap;justify-self:end}
+.note{font-size:13px;opacity:.7;margin:14px 0 0}
+.diam{height:10px;margin:-26px -24px 20px;border-radius:12px 12px 0 0;background:repeating-linear-gradient(45deg,var(--blue) 0 10px,#fff 10px 20px)}
+button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#fps{position:fixed;left:8px;bottom:8px;font:12px monospace;opacity:.7;pointer-events:none}
+#loading{position:fixed;inset:0;display:grid;place-items:center;font-weight:700;background:#0c1530;z-index:5}
+@media (max-width:520px){
+  #map{width:112px;height:112px}
+  #obj{max-width:calc(100vw - 150px);padding:8px 10px}
+  .touch #top{top:134px}
+  #toast{top:auto;bottom:200px}
+}

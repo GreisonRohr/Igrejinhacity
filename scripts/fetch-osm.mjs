@@ -1,6 +1,6 @@
 // Baixa ruas, rio, quadras e prédios do OpenStreetMap (Overpass API) para data/raw/osm.json.
 // Uso: node scripts/fetch-osm.mjs   (pode rodar em qualquer computador com Node 18+)
-import fs from 'node:fs'; import { BBOX } from './geo.mjs';
+import fs from 'node:fs'; import { BBOX } from '../src/geo.js';
 const b = `${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
 const q = `[out:json][timeout:180];
 (

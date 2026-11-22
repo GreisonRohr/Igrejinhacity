@@ -2,7 +2,7 @@
 import fs from 'node:fs'; import { createRequire } from 'node:module';
 const req = createRequire(import.meta.url); let chromium;
 try { ({ chromium } = req('playwright')); } catch { ({ chromium } = req(req('child_process').execSync('npm root -g').toString().trim() + '/playwright')); }
-import { toXZ } from './geo.mjs'; import { LANDMARKS } from './landmarks.mjs';
+import { toXZ } from '../src/geo.js'; import { LANDMARKS } from '../src/landmarks.js';
 const meta = JSON.parse(fs.readFileSync('public/data/terrain.json'));
 const hb = fs.readFileSync('public/data/terrain.bin');
 const world = fs.existsSync('public/data/world.json') ? JSON.parse(fs.readFileSync('public/data/world.json')) : null;

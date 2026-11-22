@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1d4e9e">
+<title>Igrejinha City</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="game"></div>
+<div id="hud" hidden>
+  <div id="obj" class="card"><span id="objT">Explorando Igrejinha</span><span id="objS"></span><span id="objD"></span></div>
+  <div id="top" class="card"><span id="clockT">08:00</span><span id="spd">A pé</span></div>
+  <canvas id="map" width="300" height="300"></canvas>
+  <div id="prompt" class="card"></div>
+  <div id="toast" class="card"></div>
+  <div id="joy"><div id="knob"></div></div>
+  <div id="btns"><button id="bFly">Voar</button><button id="bAct">Carro</button></div>
+</div>
+<div id="start">
+  <div class="panel card">
+    <div class="diam"></div>
+    <h1>Igrejinha <span>City</span></h1>
+    <p class="sub">Um passeio de mundo aberto pelo Vale do Paranhana</p>
+    <div class="keys" id="keysDesk">
+      <kbd>W A S D / setas</kbd><span>andar</span>
+      <kbd>Shift</kbd><span>correr</span>
+      <kbd>Arrastar o mouse</kbd><span>girar a câmera</span>
+    </div>
+    <button class="big" id="play" disabled>Carregando…</button>
+    <p class="note">Relevo real. Ruas e prédios do OpenStreetMap chegam na próxima etapa.</p>
+  </div>
+</div>
+<div id="fps" hidden></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

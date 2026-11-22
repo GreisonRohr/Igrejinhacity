@@ -1,6 +1,6 @@
 // Baixa tiles Terrarium (AWS elevation-tiles-prod) e gera data/terrain.bin (grade em metros locais).
 import fs from 'node:fs'; import path from 'node:path'; import { PNG } from 'pngjs';
-import { BBOX, toXZ, toLatLon } from './geo.mjs';
+import { BBOX, toXZ, toLatLon } from '../src/geo.js';
 const Z = 14, CELL = 10; // metros por célula da grade final
 const RAW = 'data/raw/terrarium'; fs.mkdirSync(RAW, { recursive: true });
 const lon2t = (lon) => (lon + 180) / 360 * 2 ** Z;
