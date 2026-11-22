@@ -14,7 +14,10 @@ import { City } from './world/city.js';
 import { buildStreetLife } from './world/streetlife.js';
 import { buildGroundCanvas, groundTexture } from './world/ground.js';
 import { fetchPackedJSON } from './util/load.js';
-import { placeLandmarks, buildLandmarks, landmarkBlocked } from './world/landmarks3d.js';
+import { placeLandmarks, buildLandmarks } from './world/landmarks3d.js';
+import { FixedLoop } from './core/loop.js';
+import { buildSpatial } from './core/spatial.js';
+import { events } from './core/events.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -111,7 +114,12 @@ for (const p of places) {
 let spawn = byId.praca;
 if (params.get('spawn') && byId[params.get('spawn')]) spawn = byId[params.get('spawn')];
 const player = new Walker(scene, terrain, spawn.x + 6, spawn.z + 6);
-player.blocked = (x, z, r) => city.blocked(x, z, r) || landmarkBlocked(landmarks.colliders, x, z, r);
+// consulta espacial única (prédios, árvores, carros parados, marcos) — src/core/spatial.js
+const spatial = buildSpatial(city, landmarks.colliders);
+city.colGrid.clear();                                  // os dados agora vivem só no spatial
+city.blocked = (x, z, r) => spatial.blocked(x, z, r);
+city.roofAt = (x, z) => spatial.roofAt(x, z, true);
+player.blocked = (x, z, r) => spatial.blocked(x, z, r);
 player.groundAt = (x, z, cur) => { const g = terrain.heightAt(x, z), d = city.deckAt(x, z); return d !== null && d > g - 0.3 && d - cur < 1.2 ? Math.max(d, g) : g; };
 player.surf = player.groundAt(player.x, player.z, terrain.heightAt(player.x, player.z));
 // se nasceu dentro de um prédio, procura um lugar livre em espiral
@@ -127,8 +135,8 @@ tryLoadGLB(BASE + 'models/protagonista.glb', 1.8).then(glb => {
 });
 const input = new Input(renderer.domElement);
 const cam = new FollowCam(camera, terrain);
-cam.blocked = (x, z, r) => city.blocked(x, z, r);
-cam.roofAt = (x, z) => { const h = city.roofAt(x, z); return h === -Infinity ? -Infinity : h; };
+cam.blocked = (x, z, r) => spatial.blocked(x, z, r, true);
+cam.roofAt = (x, z) => spatial.roofAt(x, z, true);
 cam.yaw = Math.PI;                                   // começa olhando para o norte (morros)
 const minimap = new Minimap($('map'), terrain, groundCanvas);
 
@@ -164,16 +172,20 @@ let running = false, last = performance.now(), lodT = 0, lastMin = -1;
 let fpsN = 0, fpsT = 0;
 if (DEBUG) $('fps').hidden = false;
 
-let frameNo = 0;
+let frameNo = 0, frameAx = { f: 0, t: 0, run: false };
+// núcleo: passo fixo (lógica igual a 30, 60 ou 144 fps) — ver src/core/loop.js
+const sim = new FixedLoop(h => { player.step(h, frameAx, cam.yaw); events.emit('step', h); });
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const rawDt = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, rawDt); last = now;
   const look = input.takeLook();
   const ax = running ? input.axes() : { f: 0, t: 0, run: false };
-  player.update(dt, ax, cam.yaw);
+  frameAx = ax;
+  const alpha = sim.advance(rawDt);                 // simulação em passos fixos de 1/60 s
+  const pv = player.present(alpha, dt);             // desenho interpolado
   const moving = Math.hypot(ax.f, ax.t) > 0.1;
-  cam.update(dt, { x: player.x, y: player.y, z: player.z }, running ? look : { dx: dt * 6, dy: 0, zoom: 0 },
+  cam.update(dt, pv, running ? look : { dx: dt * 6, dy: 0, zoom: 0 },
     { followYaw: moving && ax.f > 0.5 ? player.ang : null, height: 1.6 });
-  sky.update(running ? dt : 0, { x: player.x, y: player.y, z: player.z }, camera.position);
+  sky.update(running ? dt : 0, pv, camera.position);
   landmarks.update(dt, sky);
   if (waldir) waldir.userData.animate(dt, 0);
 
@@ -258,4 +270,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { waldir, street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { spatial, sim, events, waldir, street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

@@ -22,6 +22,7 @@ export class Walker {
     this.groundAt = (x, z) => terrain.heightAt(x, z);   // substituído para incluir pontes
     this.surf = terrain.heightAt(x, z);
     this.lean = 0;
+    this.prev = { x, z, y: this.surf, y0: 0, ang: 0 };   // estado do passo anterior (interpolação)
   }
 
   get y() { return this.surf; }
@@ -31,7 +32,9 @@ export class Walker {
   /** Pulo: só no chão. */
   jump() { if (this.onGround) { this.vy = 5.2; this.onGround = false; } }
 
-  update(dt, { f, t, run }, camYaw) {
+  /** Um passo fixo de simulação (h = 1/60 s). Não mexe na malha: ver present(). */
+  step(dt, { f, t, run }, camYaw) {
+    const P = this.prev; P.x = this.x; P.z = this.z; P.y = this.surf; P.y0 = this.y0; P.ang = this.ang;
     const mag = Math.min(1, Math.hypot(f, t));
     // correr por mais de 1,2 s vira sprint
     this.runTime = run && mag > 0.5 ? this.runTime + dt : 0;
@@ -59,18 +62,37 @@ export class Walker {
       if (ok(this.x, nz)) this.z = nz;
     }
     // pulo / gravidade
-    const ground = this.surf = this.floor(this.x, this.z);
+    this.surf = this.floor(this.x, this.z);
     if (!this.onGround) {
       this.vy -= 15 * dt; this.y0 += this.vy * dt;
       if (this.y0 <= 0) { this.y0 = 0; this.vy = 0; this.onGround = true; }
     }
     this.air += ((this.onGround ? 0 : 1) - this.air) * Math.min(1, dt * 12);
+  }
+
+  /** Posição interpolada entre os dois últimos passos (para câmera e malha). */
+  lerp(alpha, out = {}) {
+    const P = this.prev;
+    out.x = P.x + (this.x - P.x) * alpha; out.z = P.z + (this.z - P.z) * alpha;
+    out.ground = P.y + (this.surf - P.y) * alpha; out.y0 = P.y0 + (this.y0 - P.y0) * alpha;
+    out.y = out.ground;
+    let d = this.ang - P.ang; d = Math.atan2(Math.sin(d), Math.cos(d)); out.ang = P.ang + d * alpha;
+    return out;
+  }
+
+  /** Desenho do quadro: malha, sombra de contato e animação (dt real do quadro). */
+  present(alpha, dt) {
+    const s = this.lerp(alpha, this._v || (this._v = {}));
     const m = this.mesh;
-    m.position.set(this.x, ground + this.y0, this.z);
-    this.blob.position.set(this.x, ground + 0.03, this.z);
-    const bs = 1 / (1 + this.y0 * 0.6); this.blob.scale.set(bs, 1, bs); this.blob.material.opacity = bs;
-    m.rotation.set(0, this.ang, 0);
+    m.position.set(s.x, s.ground + s.y0, s.z);
+    this.blob.position.set(s.x, s.ground + 0.03, s.z);
+    const bs = 1 / (1 + s.y0 * 0.6); this.blob.scale.set(bs, 1, bs); this.blob.material.opacity = bs;
+    m.rotation.set(0, s.ang, 0);
     m.rotation.z = this.lean;
     m.userData.animate(dt, this.onGround ? this.speed : 0, this.speed > 5, this.air);
+    return s;
   }
+
+  /** Compatibilidade: um passo + desenho sem interpolação. */
+  update(dt, ax, camYaw) { this.step(dt, ax, camYaw); this.present(1, dt); }
 }
