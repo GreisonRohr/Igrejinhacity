@@ -16,7 +16,19 @@ const ROAD_W = {
 };
 const MAIN = /Castelo Branco/i;
 
-const roads = [], water = [], areas = [], buildings = [], pois = [];
+const roads = [], water = [], areas = [], buildings = [], pois = [], places = [];
+// lugares com ícone no minimapa e placa (escolas, bancos, postos, farmácias, saúde, cascatas…)
+const CAT = t => /school|kindergarten|college/.test(t.amenity) ? 'escola' : t.amenity === 'bank' ? 'banco' : t.amenity === 'fuel' ? 'posto'
+  : t.amenity === 'pharmacy' || t.healthcare === 'pharmacy' ? 'farmacia' : /hospital|clinic/.test(t.amenity) ? 'saude'
+  : t.waterway === 'waterfall' ? 'cascata' : t.amenity === 'community_centre' ? 'social' : t.shop && t.name ? 'loja' : null;
+const center = e => e.lat ? [e.lat, e.lon] : [e.geometry.reduce((s, q) => s + q.lat, 0) / e.geometry.length, e.geometry.reduce((s, q) => s + q.lon, 0) / e.geometry.length];
+for (const e of raw.elements) {
+  const t = e.tags || {}, k = CAT(t);
+  if (!k || (e.type === 'way' && !e.geometry?.length) || e.type === 'relation') continue;
+  const [x, z] = toXZ(...center(e)).map(r1);
+  const nome = t.name || { posto: 'Posto de combustível', banco: 'Banco', escola: 'Escola', farmacia: 'Farmácia' }[k];
+  if (!places.some(p => p.n === nome && Math.hypot(p.x - x, p.z - z) < 60)) places.push({ x, z, k, n: nome });
+}
 
 function areaKind(t) {
   if (t.natural === 'water' || t.water || t.waterway === 'riverbank') return 'water';
@@ -95,13 +107,13 @@ for (const e of raw.elements) {
 
 // estatísticas para conferência
 const named = n => roads.filter(r => r.n && r.n.includes(n)).reduce((s, r) => s + r.p.slice(1).reduce((a, q, i) => a + Math.hypot(q[0] - r.p[i][0], q[1] - r.p[i][1]), 0), 0);
-const world = { fonte: raw.fonte, baixado: raw.baixado, roads, water, areas, buildings, pois };
+const world = { fonte: raw.fonte, baixado: raw.baixado, roads, water, areas, buildings, pois, places };
 // casas geradas: [x, z, y, largura, profundidade, rotação, altura, tipo(h casa | c comércio | i indústria)]
 const t0 = Date.now();
 // Por decisão do projeto, só prédios reais do OSM. O gerador fica disponível com --gerar-casas.
 world.gen = process.argv.includes('--gerar-casas') ? generateBuildings(world, LANDMARKS, loadTerrain()) : [];
 console.log('geradas', world.gen.length, 'construções em', Date.now() - t0, 'ms');
 fs.writeFileSync('public/data/world.json', JSON.stringify(world));
-console.log({ roads: roads.length, water: water.length, areas: areas.length, buildings: buildings.length, pois: pois.length, geradas: world.gen.length,
+console.log({ roads: roads.length, water: water.length, areas: areas.length, buildings: buildings.length, pois: pois.length, places: places.length, geradas: world.gen.length,
   kmCasteloBranco: (named('Castelo Branco') / 1000).toFixed(2), kmRios: (water.filter(w => w.k === 'river').reduce((s, w) => s + w.p.length, 0)),
   tamanhoKB: Math.round(fs.statSync('public/data/world.json').size / 1024) });

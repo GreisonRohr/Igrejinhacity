@@ -14,9 +14,20 @@ export const LANDMARKS = [
   { id: 'ponte', icon: '=', cor: '#9a9a92', nome: 'Ponte do Centro', lat: -29.5699278, lon: -50.7930803 },
   { id: 'passarela', icon: '=', cor: '#9a9a92', nome: 'Passarela do Paranhana', lat: -29.5868318, lon: -50.8118363 },
   { id: 'cruz', icon: '✝', cor: '#ffffff', nome: 'Morro da Cruz', lat: -29.5398227, lon: -50.8366944 },
+  { id: 'cascata', icon: '≋', cor: '#4fb6e0', nome: 'Cascata da Solitária', lat: -29.557934, lon: -50.842511 },
+  { id: 'viaduto', icon: '=', cor: '#9a9a92', nome: 'Viaduto (ERS-115)', lat: -29.574674, lon: -50.784972 },
+  { id: 'paludo', icon: 'L', cor: '#d6322c', nome: 'Paludo', lat: -29.570062, lon: -50.792077 },
+  { id: 'suci', icon: 'S', cor: '#1d4e9e', nome: 'SUCI', lat: -29.572130, lon: -50.794145 },
   { id: 'asadelta', icon: '▲', cor: '#ff7a1a', nome: 'Morro da Asa Delta', lat: -29.5281898, lon: -50.8420120 },
 ];
 
 import { toXZ } from './geo.js';
 for (const l of LANDMARKS) [l.x, l.z] = toXZ(l.lat, l.lon);
 export const byId = Object.fromEntries(LANDMARKS.map(l => [l.id, l]));
+
+// ícones das categorias de lugares do OSM (escolas, bancos…) no minimapa
+export const PLACE_STYLE = {
+  escola: { icon: 'E', cor: '#2e8b57' }, banco: { icon: '$', cor: '#2f6fd0' }, posto: { icon: 'G', cor: '#f08a24' },
+  farmacia: { icon: '+', cor: '#d6322c' }, saude: { icon: 'H', cor: '#d6322c' }, cascata: { icon: '≋', cor: '#4fb6e0' },
+  social: { icon: 'S', cor: '#1d4e9e' }, loja: { icon: 'L', cor: '#8a5a32' },
+};

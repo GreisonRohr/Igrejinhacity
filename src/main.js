@@ -7,7 +7,7 @@ import { Input, isTouch } from './input.js';
 import { Walker } from './player/walker.js';
 import { FollowCam } from './camera.js';
 import { Minimap } from './ui/minimap.js';
-import { LANDMARKS, byId } from './landmarks.js';
+import { LANDMARKS, byId, PLACE_STYLE } from './landmarks.js';
 import { City } from './world/city.js';
 import { buildGroundCanvas, groundTexture } from './world/ground.js';
 
@@ -70,6 +70,17 @@ for (const l of LANDMARKS) {
   scene.add(s); labels.push(s);
 }
 
+// lugares do OSM (escolas, bancos, postos…): placa pequena, visível de perto, e ícone no minimapa
+const places = world.places
+  .filter(p => !LANDMARKS.some(l => Math.hypot(l.x - p.x, l.z - p.z) < 60))
+  .map(p => ({ ...p, ...PLACE_STYLE[p.k], nome: p.n }));
+for (const p of places) {
+  const s = makeLabel(p.n, 9);
+  s.position.set(p.x, terrain.heightAt(p.x, p.z) + 12, p.z);
+  s.userData.maxDist = 350;
+  scene.add(s); labels.push(s);
+}
+
 /* ---------- jogador ---------- */
 let spawn = byId.praca;
 if (params.get('spawn') && byId[params.get('spawn')]) spawn = byId[params.get('spawn')];
@@ -113,7 +124,7 @@ function frame(now) {
     const h = Math.floor(sky.hours), m = Math.floor((sky.hours - h) * 60);
     if (m !== lastMin) { lastMin = m; $('clockT').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; }
     $('spd').textContent = `A pé · ${Math.round(player.y)} m`;
-    minimap.draw(player.x, player.z, cam.yaw, player.ang);
+    minimap.draw(player.x, player.z, cam.yaw, player.ang, places);
     // ponto mais próximo
     let near = null, nd = 1e9;
     for (const l of LANDMARKS) { const d = Math.hypot(l.x - player.x, l.z - player.z); if (d < nd) { nd = d; near = l; } }

@@ -51,7 +51,8 @@ export class Minimap {
       const dx = a - c, dy = b - c, d = Math.hypot(dx, dy);
       if (d > c - 12) { if (!l.pin) continue; a = c + dx / d * (c - 12); b = c + dy / d * (c - 12); }
       g.fillStyle = l.cor; g.strokeStyle = '#10224a'; g.lineWidth = 2.5;
-      g.beginPath(); g.arc(a, b, 10, 0, 7); g.fill(); g.stroke();
+      const rad = l.k ? 8 : 10;
+      g.beginPath(); g.arc(a, b, rad, 0, 7); g.fill(); g.stroke();
       g.fillStyle = l.cor === '#ffffff' || l.cor === '#f4b41a' ? '#10224a' : '#fff';
       g.fillText(l.icon, a, b + 1);
     }

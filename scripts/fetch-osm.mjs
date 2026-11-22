@@ -5,7 +5,7 @@
 import fs from 'node:fs'; import { BBOX } from '../src/geo.js';
 
 const UA = { 'User-Agent': 'igrejinha-city-game/1.0 (open source game data build)' };
-const KEEP = ['highway', 'waterway', 'natural', 'water', 'building', 'landuse', 'leisure', 'amenity'];
+const KEEP = ['highway', 'waterway', 'natural', 'water', 'building', 'landuse', 'leisure', 'amenity', 'shop', 'tourism', 'place', 'bridge', 'man_made', 'office', 'healthcare'];
 fs.mkdirSync('data/raw', { recursive: true });
 const save = (elements, fonte) => {
   fs.writeFileSync('data/raw/osm.json', JSON.stringify({ fonte, baixado: new Date().toISOString(), elements }));
@@ -66,7 +66,7 @@ async function viaOsmApi() {
     out.push({ type: 'relation', id: r.id, tags: r.tags, members });
   }
   // pontos com nome (comércio, igrejas…) servem para placas e decoração
-  for (const n of nodes.values()) if (n.tags && (n.tags.amenity || n.tags.shop || n.tags.tourism || n.tags.highway === 'street_lamp'))
+  for (const n of nodes.values()) if (n.tags && (n.tags.name || n.tags.amenity || n.tags.shop || n.tags.tourism || n.tags.natural || n.tags.waterway || n.tags.highway === 'street_lamp' || n.tags.healthcare))
     out.push({ type: 'node', id: n.id, lat: n.lat, lon: n.lon, tags: n.tags });
   return out;
 }
