@@ -5,20 +5,21 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { byId } from '../landmarks.js';
 import { makeLabel } from './labels.js';
+import { planOktober, buildOktober } from './oktoberfest.js';
 
 const PI = Math.PI;
-const tex = (w, h, draw, repeat = false) => {
+export const tex = (w, h, draw, repeat = false) => {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 };
-const lambert = (color, o = {}) => new THREE.MeshLambertMaterial({ color, ...o });
-const inPoly = (x, z, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c; };
-const segClosest = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l = dx * dx + dz * dz; const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l)); return [a[0] + dx * t, a[1] + dz * t]; };
+export const lambert = (color, o = {}) => new THREE.MeshLambertMaterial({ color, ...o });
+export const inPoly = (x, z, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c; };
+export const segClosest = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l = dx * dx + dz * dz; const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l)); return [a[0] + dx * t, a[1] + dz * t]; };
 
 /** Junta geometrias por material e devolve poucas malhas. */
-class Kit {
+export class Kit {
   constructor() { this.parts = new Map(); this.extra = []; }
   add(geo, mat, x = 0, y = 0, z = 0, ry = 0, rx = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
     const g = geo.index ? geo.toNonIndexed() : geo.clone();
@@ -98,6 +99,8 @@ export function placeLandmarks(world, terrain) {
   ex.push(obb({ ...P.ruacoberta, hl: P.ruacoberta.hl + 2, hw: P.ruacoberta.hw + 1 }));
   if (P.praca.poly) ex.push((x, z) => inPoly(x, z, P.praca.poly));
   if (P.waldir.poly) { const wp = P.waldir.poly; ex.push((x, z) => inPoly(x, z, wp)); }
+  P.oktober = planOktober(world);
+  if (P.oktober) ex.push(P.oktober.excl);
   P.exclusions = ex;
   return P;
 }
@@ -505,6 +508,8 @@ export function buildLandmarks(P, world, terrain, scene) {
     const ux = (best.b[0] - best.a[0]) / best.L, uz = (best.b[1] - best.a[1]) / best.L;
     return { x: best.a[0] + ux * best.L * 0.3 - uz * 1.2, z: best.a[1] + uz * best.L * 0.3 + ux * 1.2, y: y0, face: Math.atan2(-uz, ux) };
   }
+
+  buildOktober(P.oktober, world, terrain, root, colliders, updaters);
 
   return {
     colliders, root, waldir: waldirNpc,
