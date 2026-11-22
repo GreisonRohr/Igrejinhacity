@@ -11,6 +11,7 @@ import { FollowCam } from './camera.js';
 import { Minimap } from './ui/minimap.js';
 import { LANDMARKS, byId, PLACE_STYLE } from './landmarks.js';
 import { City } from './world/city.js';
+import { buildStreetLife } from './world/streetlife.js';
 import { buildGroundCanvas, groundTexture } from './world/ground.js';
 import { fetchPackedJSON } from './util/load.js';
 import { placeLandmarks, buildLandmarks, landmarkBlocked } from './world/landmarks3d.js';
@@ -66,6 +67,9 @@ terrain.material.map = groundTexture(groundCanvas, renderer);
 T('terreno', () => scene.add(terrain.build()));
 T('cidade', () => scene.add(city.build()));
 const landmarks = T('pontos marcantes', () => buildLandmarks(LM, world, terrain, scene));
+const street = T('árvores e carros', () => buildStreetLife(world, terrain, city, Q));
+scene.add(street.group);
+if (DEBUG) console.log('rua:', JSON.stringify(street.counts));
 const sky = new Sky(scene, Q);
 
 // placas dos pontos marcantes
@@ -166,6 +170,7 @@ function frame(now) {
     lodT = 0.3;
     terrain.update(camera.position.x, camera.position.z);
     city.update(camera.position.x, camera.position.z);
+    street.update(camera.position.x, camera.position.z);
     landmarks.cull(camera.position.x, camera.position.z, Q.buildDist * 0.45);
     city.setNight(sky.night);
     for (const s of labels) s.visible = s.position.distanceTo(camera.position) < s.userData.maxDist;
@@ -205,4 +210,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

@@ -65,9 +65,9 @@ Custo: esforço de implementação e custo em desempenho.
 
 | Etapa | Conteúdo | Itens | Situação |
 |---|---|---|---|
-| 1 | **Fundação de desempenho**: liberar cópias CPU, mesclar e cortar por distância os pontos marcantes, distâncias por camada | 1, 2 | em andamento |
-| 2 | **Luz e atmosfera**: ACES, céu com gradiente, sol/lua/estrelas, nuvens, névoa exponencial, cores por hora, sombra de contato | 5–9, 20 (parte) | em andamento |
-| 3 | **Arborização e mobiliário urbano** instanciados: árvores nas calçadas, carros estacionados, lixeiras, placas | 10, 11 | em andamento |
+| 1 | **Fundação de desempenho**: liberar cópias CPU, mesclar e cortar por distância os pontos marcantes, distâncias por camada | 1, 2 | feito (heap 327→214 MB, calls 1.109→~660) |
+| 2 | **Luz e atmosfera**: ACES, céu com gradiente, sol/lua/estrelas, nuvens, névoa exponencial, cores por hora, sombra de contato | 5–9, 20 (parte) | feito |
+| 3 | **Arborização e mobiliário urbano** instanciados: árvores nas calçadas, carros estacionados, lixeiras, placas | 10, 11 | feito: 7,6 mil árvores, 6,4 mil carros (falta mobiliário) |
 | 4 | **Pedestres** com rotina (calçadas, praça, parque), conversa com gíria gaúcha | 13 | próximo |
 | 5 | **Carro do jogador + trânsito** no grafo do OSM (aceleração, freio, colisão, semáforos) | 14 | próximo |
 | 6 | **Áudio ambiente** gravado (precisa liberar o banco de sons Pixabay) | 19 | depende de rede |
