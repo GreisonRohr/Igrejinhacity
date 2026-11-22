@@ -18,6 +18,7 @@ import { placeLandmarks, buildLandmarks } from './world/landmarks3d.js';
 import { FixedLoop } from './core/loop.js';
 import { buildSpatial } from './core/spatial.js';
 import { events } from './core/events.js';
+import { NavGraph } from './nav/graph.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -60,7 +61,8 @@ function toast(title, txt = '', sec = 4) {
 
 /* ---------- carregamento ---------- */
 const BASE = import.meta.env.BASE_URL;
-const [terrain, world] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json')]);
+const [terrain, world, navData] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json'), fetchPackedJSON(BASE + 'data/nav.data.json')]);
+const nav = new NavGraph(navData);                     // grafo de ruas e calçadas (src/nav/graph.js)
 // carregamento em etapas: a thread é liberada entre elas, a tela mostra o progresso e nunca congela
 const bar = $('loadbar'), barTxt = $('loadtxt');
 const yieldUI = () => new Promise(r => setTimeout(r, 0));
@@ -137,6 +139,7 @@ const input = new Input(renderer.domElement);
 const cam = new FollowCam(camera, terrain);
 cam.blocked = (x, z, r) => spatial.blocked(x, z, r, true);
 cam.roofAt = (x, z) => spatial.roofAt(x, z, true);
+if (DEBUG && params.has('nav')) scene.add(nav.debugMesh((x, z) => terrain.heightAt(x, z)));
 cam.yaw = Math.PI;                                   // começa olhando para o norte (morros)
 const minimap = new Minimap($('map'), terrain, groundCanvas);
 
@@ -270,4 +273,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { spatial, sim, events, waldir, street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { nav, spatial, sim, events, waldir, street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

@@ -138,6 +138,65 @@ await suite('colisao', async () => {
   return `parou na parede após ${r.moved.toFixed(1)} m`;
 });
 
+await suite('passo-fixo', async () => {
+  // a mesma entrada durante 4 s precisa dar o mesmo resultado a 20, 30, 60 e 144 fps
+  const p = await page();
+  const r = await p.evaluate(() => {
+    const g = __game, pl = g.player, Loop = g.sim.constructor;
+    const x0 = pl.x, z0 = pl.z, s0 = pl.surf, out = [];
+    for (const fps of [20, 30, 60, 144]) {
+      Object.assign(pl, { x: x0, z: z0, surf: s0, ang: 0, speed: 0, runTime: 0, y0: 0, vy: 0, onGround: true, lean: 0, air: 0 });
+      let t = 0;
+      const loop = new Loop(h => { const ax = { f: 1, t: t < 2 ? 0.6 : -0.4, run: t > 1 }; if (Math.abs(t - 0.5) < 1e-9) pl.jump(); pl.step(h, ax, 0.3); t = Math.round((t + h) * 600) / 600; });
+      loop.acc = loop.step / 2;                         // meio passo: evita perder o último por arredondamento
+      for (let i = 0; i < 4 * fps; i++) loop.advance(1 / fps);
+      out.push({ fps, x: pl.x, z: pl.z, steps: loop.steps, d: Math.hypot(pl.x - x0, pl.z - z0) });
+    }
+    Object.assign(pl, { x: x0, z: z0, surf: s0 });
+    return out;
+  });
+  const ref = r[0];
+  for (const q of r) {
+    assert(q.steps === 240, `${q.fps} fps deu ${q.steps} passos (esperado 240)`);
+    assert(Math.hypot(q.x - ref.x, q.z - ref.z) < 1e-6, `${q.fps} fps terminou ${Math.hypot(q.x - ref.x, q.z - ref.z).toFixed(4)} m longe de 20 fps`);
+  }
+  return `20/30/60/144 fps → mesma posição após ${ref.d.toFixed(1)} m (${ref.steps} passos)`;
+});
+
+await suite('navegacao', async () => {
+  const p = await page();
+  const r = await p.evaluate(() => {
+    const nav = __game.nav;
+    let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+    const res = { car: { ok: 0, n: 0, ms: 0, contramao: 0 }, ped: { ok: 0, n: 0, ms: 0, contramao: 0 } };
+    for (const mode of ['car', 'ped']) for (let k = 0; k < 150; k++) {
+      // pares dentro da área urbana (até 2,5 km da praça)
+      const a = nav.nearest((rnd() - 0.5) * 5000, (rnd() - 0.5) * 5000, mode), b = nav.nearest((rnd() - 0.5) * 5000, (rnd() - 0.5) * 5000, mode);
+      if (a < 0 || b < 0 || a === b) continue;
+      const R = res[mode]; R.n++;
+      const t0 = performance.now(), path = nav.route(a, b, mode); R.ms = Math.max(R.ms, performance.now() - t0);
+      if (!path) continue; R.ok++;
+      // cada trecho da rota precisa ser permitido (carro nunca na contramão nem em calçada)
+      for (let i = 1; i < path.length; i++) {
+        let fine = false; for (const ei of nav.adj[path[i - 1]]) { const e = nav.edges[ei]; const v = e.a === path[i - 1] ? e.b : e.a; if (v === path[i] && nav.canUse(e, path[i - 1], mode)) fine = true; }
+        if (!fine) R.contramao++;
+      }
+      const pl = nav.polyline(path); let L = 0; for (let i = 1; i < pl.length; i++) L += Math.hypot(pl[i][0] - pl[i - 1][0], pl[i][1] - pl[i - 1][1]);
+      const [ax, az] = nav.nodePos(a), [bx, bz] = nav.nodePos(b);
+      if (L < Math.hypot(bx - ax, bz - az) - 0.5) R.contramao++;
+    }
+    return { res, nodes: nav.nodeCount, edges: nav.edges.length };
+  });
+  for (const m of ['car', 'ped']) {
+    const R = r.res[m];
+    assert(R.contramao === 0, `${m}: ${R.contramao} trechos proibidos na rota`);
+    assert(R.ok / R.n >= (m === 'ped' ? 0.97 : 0.85), `${m}: só ${R.ok}/${R.n} rotas encontradas`);
+    assert(R.ms < 60, `${m}: rota levou ${R.ms.toFixed(0)} ms`);
+  }
+  const c = r.res.car, w = r.res.ped;
+  return `${r.nodes} nós; carro ${c.ok}/${c.n} rotas (pior ${c.ms.toFixed(0)} ms), a pé ${w.ok}/${w.n} (pior ${w.ms.toFixed(0)} ms), 0 contramão`;
+});
+
 await suite('waldir', async () => {
   const p = await page();
   const ok = await p.evaluate(async () => {

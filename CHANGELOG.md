@@ -2,6 +2,16 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-22 — Ciclo 2 (núcleo de simulação)
+- Simulação em passo fixo de 60 Hz com interpolação: andar, pular e subir ladeira dão o mesmo resultado em qualquer
+  taxa de quadros (testado a 20, 30, 60 e 144 fps).
+- Consulta espacial única para prédios, árvores, carros parados e pontos marcantes (antes eram estruturas separadas,
+  e os marcos eram uma lista percorrida inteira). Memória 140 → 129 MB.
+- Grafo de navegação das ruas: 2.530 cruzamentos, 3.344 trechos, mão única, velocidade por tipo de via; rotas A*
+  para carro e a pé. Visualizador em `?debug&nav`.
+- Gerador aleatório com semente e barramento de eventos (base para pedestres e trânsito).
+- `npm test` com 8 suítes (novas: `passo-fixo`, `navegacao`).
+
 ## 2026-11-22 — Ciclo 1 (rede de segurança e carregamento)
 - `npm test`: 6 suítes no build de produção (carga, orçamento, 26 travessias de ponte, colisão, Waldir, capturas);
   orçamentos em `tests/budget.json`.

@@ -10,7 +10,10 @@ em `public/data/` (JSON com gzip+base64). Testes de navegador com Playwright (he
 scripts/            pipeline de dados (Node): fetch-osm, fetch-terrain, fetch-geo-igrejinha, build-terrain,
                     build-world (+ geo-igrejinha.mjs, gen-buildings.mjs), preview
 public/data/        terrain.json + terrain.data.json (grade 5 m), world.data.json (ruas, prédios, áreas, lugares)
-src/main.js         (213) inicialização, qualidade por dispositivo, laço do jogo, HUD, Waldir, interação
+src/core/           loop (passo fixo 60 Hz + interpolação), spatial (consulta única de colisão + agentes),
+                    rng (mulberry32 com semente), events (barramento)
+src/nav/graph.js    grafo de ruas/calçadas (public/data/nav.data.json, gerado por scripts/build-nav.mjs), A*
+src/main.js         (≈270) inicialização, qualidade por dispositivo, laço do jogo, HUD, Waldir, interação
 src/geo.js          projeção lat/lon → metros (origem Praça Dona Luísa; x leste, z sul)
 src/landmarks.js    pontos marcantes (coordenadas), estilos de ícone
 src/input.js        teclado, joystick, arrastar câmera, botões
@@ -31,13 +34,13 @@ src/ui/minimap      minimapa girando
 ## Problemas arquiteturais identificados
 | # | Problema | Consequência | Prioridade |
 |---|---|---|---|
-| A1 | **Sem passo fixo de simulação**: lógica avança com o `dt` do quadro | física e IA mudam com o FPS; impossível testar de forma determinística; carros e NPCs vão divergir | P1 |
-| A2 | **Sem consulta espacial comum**: colisão de prédios (city.colGrid), pontos marcantes (lista linear), árvores/carros (city), pontes (decks) em estruturas separadas | NPCs e carros precisariam consultar 4 lugares; `landmarkBlocked` é O(n) | P1 |
-| A3 | **Sem grafo de navegação**: ruas existem só como polilinhas de desenho | impossível trânsito e pedestres seguindo ruas/calçadas | P1 |
+| A1 | ✅ resolvido no Ciclo 2 (`core/loop.js`) — **Sem passo fixo de simulação**: lógica avança com o `dt` do quadro | física e IA mudam com o FPS; impossível testar de forma determinística; carros e NPCs vão divergir | P1 |
+| A2 | ✅ resolvido no Ciclo 2 (`core/spatial.js`) — **Sem consulta espacial comum**: colisão de prédios (city.colGrid), pontos marcantes (lista linear), árvores/carros (city), pontes (decks) em estruturas separadas | NPCs e carros precisariam consultar 4 lugares; `landmarkBlocked` é O(n) | P1 |
+| A3 | ✅ resolvido no Ciclo 2 (`nav/graph.js`) — **Sem grafo de navegação**: ruas existem só como polilinhas de desenho | impossível trânsito e pedestres seguindo ruas/calçadas | P1 |
 | A4 | **`main.js` concentra tudo** (HUD, Waldir, interações, laço) | cada sistema novo aumenta o acoplamento | P1 |
 | A5 | **Sem sistema de interação**: o "E" é tratado caso a caso | não escala para dezenas de interações | P1 |
-| A6 | **Construção síncrona na thread principal** (≈4–8 s) | tela congela no carregamento, risco de "página não responde" no celular | P0 (risco) |
-| A7 | **Testes fora do repositório** (scripts em pasta temporária) | regressões não são verificáveis por outra sessão | P1 |
+| A6 | ✅ mitigado no Ciclo 1 (etapas + envio em lotes) — **Construção síncrona na thread principal** (≈4–8 s) | tela congela no carregamento, risco de "página não responde" no celular | P0 (risco) |
+| A7 | ✅ resolvido no Ciclo 1 (`tests/`, `npm test`) — **Testes fora do repositório** (scripts em pasta temporária) | regressões não são verificáveis por outra sessão | P1 |
 | A8 | **Sem sistema de save** | recordes e progresso não persistem | P2 |
 | A9 | **Dados brutos grandes no git** (Open Buildings 16 MB, edificações 7 MB) | repositório cresce a cada atualização | P3 |
 
@@ -51,8 +54,8 @@ src/core/
                    agentes dinâmicos (NPCs, veículos, jogador); consultas por raio/segmento
   rng.js           gerador com semente (mulberry32) — jogo e cosmético separados
 src/nav/
-  roadgraph.js     grafo viário (nós = cruzamentos, arestas = faixas com sentido, velocidade, largura)
-  walkgraph.js     grafo de calçadas e travessias (offset das ruas + praças/parque)
+  graph.js         ✅ grafo único com flags carro/pedestre (nós = cruzamentos; trechos com sentido, velocidade,
+                   faixas, largura, ponte). A pé: deslocamento para a calçada e travessias entram no Ciclo 3.
 src/sim/
   agents.js        pedestres: rotina por hora (casa/trabalho/praça/bar/festa), utility AI, desvio (steering)
   traffic.js       veículos IA: seguir faixa, distância segura, preferência em cruzamento, reagir a pedestre
@@ -81,5 +84,6 @@ src/game/          missões, recordes, save versionado
 
 ## Medição e testes
 - `?debug`: fps, draw calls, triângulos; tempos e heap por etapa de carregamento no console.
-- Testes Playwright (a trazer para `tests/`): carga sem erros, travessia das 13 pontes (26 travessias),
-  colisão, Waldir, capturas de referência, heap após GC, draw calls nas views de referência.
+- `npm test` (Playwright no build de produção), 8 suítes: carga, orçamento (heap após GC, draw calls, triângulos),
+  pontes (26 travessias), colisão, passo-fixo (determinismo a 20/30/60/144 fps), navegação (A* sem contramão),
+  Waldir, capturas de referência. `?debug&nav` mostra o grafo.
