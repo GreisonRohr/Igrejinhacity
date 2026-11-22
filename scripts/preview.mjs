@@ -26,11 +26,11 @@ g.putImageData(im,0,0);
 const T=(x,z)=>[(x-vx0)*S,(z-vz0)*S];
 const poly=(pts,close)=>{g.beginPath();pts.forEach((p,i)=>{const[a,b]=T(p[0],p[1]);i?g.lineTo(a,b):g.moveTo(a,b)});if(close)g.closePath()};
 if(world){
- for(const a of world.areas){poly(a.p,true);g.fillStyle={park:'#5fa84a',water:'#3f86bd',residential:'rgba(230,220,200,.35)',industrial:'rgba(190,170,200,.45)',commercial:'rgba(240,180,160,.45)',forest:'rgba(40,90,40,.5)',grass:'#7cb35a',farmland:'rgba(210,200,120,.35)'}[a.k]||'rgba(0,0,0,0)';g.fill()}
+ for(const a of world.areas){poly(a.p,true);g.fillStyle={park:'#5fa84a',water:'#3f86bd',residential:'rgba(230,220,200,.35)',industrial:'rgba(190,170,200,.45)',commercial:'rgba(240,180,160,.45)',forest:'rgba(40,90,40,.5)',grass:'#7cb35a',farmland:'rgba(210,200,120,.35)',pitch:'#4f9a3a',cemetery:'rgba(170,170,160,.6)',parking:'rgba(120,120,120,.5)',pool:'#4fb6e0',retail:'rgba(240,180,160,.45)',quarry:'rgba(200,190,170,.7)'}[a.k]||'rgba(0,0,0,0)';g.fill()}
  g.lineCap=g.lineJoin='round';
  for(const w of world.water){poly(w.p,false);g.strokeStyle='#3f86bd';g.lineWidth=Math.max(1.5,(w.w||4)*S);g.stroke()}
- for(const r of world.roads){poly(r.p,false);g.strokeStyle=r.main?'#f4b41a':r.k==='track'||r.k==='path'?'#c9a06b':'#eeeae0';g.lineWidth=Math.max(zoom?1:0.7,r.w*S);g.stroke()}
- g.fillStyle='#b5553a';for(const b of world.buildings){poly(b.p,true);g.fill()}
+ for(const r of world.roads){poly(r.p,false);g.strokeStyle=r.main?'#f4b41a':/Independ/.test(r.n||'')?'#ff8a3d':/Sturmer/.test(r.n||'')?'#ff5a5a':r.k==='track'||r.k==='path'?'#c9a06b':'#eeeae0';g.lineWidth=Math.max(zoom?1:0.7,(r.main||/Independ|Sturmer/.test(r.n||'')?Math.max(r.w,zoom?10:22):r.w)*S);g.stroke()}
+ for(const b of world.buildings){poly(b.p,true);g.fillStyle=/industrial|warehouse/.test(b.kind)?'#7a6a9a':'#b5553a';g.fill()}
 }
 g.font='bold '+(zoom?13:11)+'px sans-serif';
 for(const l of lm){const[a,b]=T(l.x,l.z);if(a<0||b<0||a>W||b>H)continue;g.fillStyle='#1d4e9e';g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.arc(a,b,zoom?6:5,0,7);g.fill();g.stroke();
