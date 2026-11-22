@@ -30,7 +30,7 @@ documentar → atualizar roadmap → definir próxima prioridade. Mudança estru
   estimada); 18 mil prédios do Google sem distinção de uso; carros "caixa"; placas de nome se sobrepõem.
 
 ### Performance (medido em Chromium headless, perfil celular)
-- Heap 214 MB (alvo 150), ~660 draw calls (alvo 300), ~2,2 M triângulos (alvo 1 M), carregamento 6–11 s congelando.
+- Heap 140 MB ✓ (alvo 150), ~645 draw calls (alvo 300), ~2,3 M triângulos (alvo 1 M), carregamento ~13 s com barra, maior travamento 0,8 s.
 - Não testado em celular real.
 
 ### Arquitetura
@@ -88,8 +88,8 @@ Ver TECHNICAL_ARCHITECTURE.md (A1–A9): sem passo fixo, sem consulta espacial �
 |---|---|---|---|---|
 | 0 | Auditoria, documentos de gestão | — | não | **feito** |
 | — | Etapas de realismo anteriores (desempenho, céu e luz, árvores e carros) | — | — | feito (22/11) |
-| 1 | Testes no repo + carregamento sem congelar + memória | P1-1, P0-2, P0-3 | sim (loading) | **aguardando aprovação** |
-| 2 | Núcleo de simulação + consulta espacial + grafos viário/calçada | P1-2, P1-3 | **sim** | aguarda |
+| 1 | Testes no repo + carregamento sem congelar + memória | P1-1, P0-2, P0-3 | sim (loading) | **feito** (22/11) |
+| 2 | Núcleo de simulação + consulta espacial + grafos viário/calçada | P1-2, P1-3 | **sim** | **próximo** (autorizado) |
 | 3 | Pedestres inteligentes (centro e praça primeiro) | P1-4, P1-7 | sim | aguarda |
 | 4 | Carro do jogador | P1-5 | sim | aguarda |
 | 5 | Trânsito IA | P1-6 | sim | aguarda |
@@ -101,5 +101,10 @@ Ver TECHNICAL_ARCHITECTURE.md (A1–A9): sem passo fixo, sem consulta espacial �
 | 11 | Fachadas, chão de perto, câmera | P2-3, P2-4, P2-6 | não | — |
 | contínuo | Teste em celular real | P0-1 | — | **depende do diretor** |
 
-**Próxima prioridade recomendada:** Ciclo 1 (rede de testes + carregamento + memória). É o que protege tudo o
+**Ciclo 1 concluído.** Heap 214 → 140 MB (orçamento 150 ✓), maior travamento na carga 7,2 s → 0,82 s, barra de progresso,
+`npm test` com 6 suítes. P0-2 e P0-3 resolvidos; P0-1 (celular real) depende do diretor com `?debug`.
+
+**Próxima prioridade:** Ciclo 2 (núcleo de simulação + grafos), fundação de pedestres e trânsito.
+
+~~Próxima prioridade recomendada:~~ Ciclo 1 (rede de testes + carregamento + memória). É o que protege tudo o
 que vem depois e remove os riscos P0. Em seguida o Ciclo 2, fundação obrigatória para NPCs e trânsito de verdade.

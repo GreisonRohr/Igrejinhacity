@@ -2,15 +2,15 @@
 
 Formato: `[ ]` a fazer · `[~]` em andamento · `[x]` feito. ID do roadmap entre colchetes.
 
-## Ciclo 1 — Rede de segurança e carregamento (aguardando aprovação)
-- [ ] [P1-1] Criar `tests/` com Playwright headless e `npm test`: carga sem erros, 26 travessias de ponte,
+## Ciclo 1 — Rede de segurança e carregamento (feito 22/11)
+- [x] [P1-1] Criar `tests/` com Playwright headless e `npm test`: carga sem erros, 26 travessias de ponte,
       colisão com prédio/carro/árvore, Waldir responde ao E, capturas de referência (praça, rua, Oktoberfest, noite)
-- [ ] [P1-1] Teste de orçamento: heap após GC, draw calls e triângulos nas 3 views de referência (falha se piorar >10%)
-- [ ] [P0-2] Tela de carregamento com barra por etapa; montagem fatiada (cede a thread entre chunks)
-- [ ] [P0-3] Liberar `world` (JSON) após montar; colisores em arrays tipados; medir heap
-- [ ] [P0-1] Página `?debug` com leitura de fps/heap para o diretor testar no celular e mandar print
+- [x] [P1-1] Teste de orçamento: heap após GC, draw calls e triângulos nas 3 views de referência (falha se piorar >10%)
+- [x] [P0-2] Tela de carregamento com barra por etapa; montagem fatiada (cede a thread entre chunks)
+- [x] [P0-3] Memória: geometria enviada à GPU em lotes na carga (cópia CPU liberada) → 140 MB. (Liberar o JSON do mundo fica para quando os grafos do Ciclo 2 substituírem seu uso.)
+- [x] [P0-1] Página `?debug` com leitura de fps/heap para o diretor testar no celular e mandar print
 
-## Ciclo 2 — Núcleo de simulação
+## Ciclo 2 — Núcleo de simulação (próximo, autorizado)
 - [ ] [P1-2] `core/loop.js` passo fixo + interpolação; migrar walker e câmera
 - [ ] [P1-2] `core/spatial.js` com prédios, marcos, árvores, carros parados, pontes; substituir `blocked`
 - [ ] [P1-2] `core/rng.js`, `core/events.js`

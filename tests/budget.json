@@ -1,0 +1,7 @@
+{
+  "_nota": "Limites medidos em Chromium headless (renderização por software, 844x390). Ajustar só com justificativa no CHANGELOG.",
+  "heapMB": 155,
+  "drawCallsPraca": 750,
+  "triangulosMilPraca": 2600,
+  "maiorTravamentoMs": 1500
+}

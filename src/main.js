@@ -58,16 +58,27 @@ function toast(title, txt = '', sec = 4) {
 /* ---------- carregamento ---------- */
 const BASE = import.meta.env.BASE_URL;
 const [terrain, world] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json')]);
-const T = (name, fn) => { const t0 = performance.now(); const r = fn(); if (DEBUG) console.log(name, Math.round(performance.now() - t0) + ' ms', performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB' : ''); return r; };
+// carregamento em etapas: a thread é liberada entre elas, a tela mostra o progresso e nunca congela
+const bar = $('loadbar'), barTxt = $('loadtxt');
+const yieldUI = () => new Promise(r => setTimeout(r, 0));
+const stage = async (label, from, to, fn) => {
+  const t0 = performance.now();
+  const set = f => { const v = from + (to - from) * f; bar.style.width = (v * 100).toFixed(0) + '%'; barTxt.textContent = label; };
+  set(0); await yieldUI();
+  const r = await fn(async f => { set(f); await yieldUI(); });
+  set(1);
+  if (DEBUG) console.log('@' + Math.round(t0), label, Math.round(performance.now() - t0) + ' ms', performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB' : '');
+  return r;
+};
 const LM = placeLandmarks(world, terrain);
 const city = new City(world, terrain, Q, LM.exclusions);
-T('rio', () => city.carveWater());                   // escava o leito do rio antes de montar a malha
-const groundCanvas = T('textura do chão', () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize)));
+await stage('Escavando o Paranhana…', 0.05, 0.1, () => city.carveWater());
+const groundCanvas = await stage('Pintando o chão…', 0.1, 0.18, () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize)));
 terrain.material.map = groundTexture(groundCanvas, renderer);
-T('terreno', () => scene.add(terrain.build()));
-T('cidade', () => scene.add(city.build()));
-const landmarks = T('pontos marcantes', () => buildLandmarks(LM, world, terrain, scene));
-const street = T('árvores e carros', () => buildStreetLife(world, terrain, city, Q));
+await stage('Erguendo a Serra…', 0.18, 0.22, () => scene.add(terrain.build()));
+await stage('Construindo a cidade…', 0.22, 0.7, async tick => scene.add(await city.build(tick)));
+const landmarks = await stage('Montando a Igreja, a praça e a Oktoberfest…', 0.7, 0.82, () => buildLandmarks(LM, world, terrain, scene));
+const street = await stage('Plantando árvores…', 0.82, 0.88, () => buildStreetLife(world, terrain, city, Q));
 scene.add(street.group);
 if (DEBUG) console.log('rua:', JSON.stringify(street.counts));
 const sky = new Sky(scene, Q);
@@ -153,6 +164,7 @@ let running = false, last = performance.now(), lodT = 0, lastMin = -1;
 let fpsN = 0, fpsT = 0;
 if (DEBUG) $('fps').hidden = false;
 
+let frameNo = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   const look = input.takeLook();
@@ -168,7 +180,9 @@ function frame(now) {
   lodT -= dt;
   if (lodT <= 0) {
     lodT = 0.3;
+    const tu0 = performance.now();
     terrain.update(camera.position.x, camera.position.z);
+    if (DEBUG && frameNo < 6) console.log('@' + Math.round(tu0), 'quadro', frameNo, 'terreno LOD', Math.round(performance.now() - tu0), 'ms');
     city.update(camera.position.x, camera.position.z);
     street.update(camera.position.x, camera.position.z);
     landmarks.cull(camera.position.x, camera.position.z, Q.buildDist * 0.45);
@@ -193,15 +207,49 @@ function frame(now) {
     if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('on'); }
   }
 
+  const r0 = performance.now();
   renderer.render(scene, camera);
+  if (DEBUG && frameNo < 6) console.log('@' + Math.round(r0), 'quadro', frameNo, 'render', Math.round(performance.now() - r0), 'ms');
+  frameNo++;
   if (DEBUG) {
+    // medidor para teste em aparelho real: tempo de quadro (mediana e pior em 2 s), memória, resolução
+    const ft = (now - (frame.prev || now)); frame.prev = now; (frame.ts ||= []).push(ft);
     fpsN++; fpsT += dt;
-    if (fpsT > 0.5) { const i = renderer.info.render; $('fps').textContent = `${Math.round(fpsN / fpsT)} fps · ${i.calls} draws · ${(i.triangles / 1000).toFixed(0)}k tris`; fpsN = fpsT = 0; }
+    if (fpsT > 2) {
+      const a = frame.ts.slice().sort((x, y) => x - y), med = a[a.length >> 1], worst = a[a.length - 1], i = renderer.info.render;
+      const mem = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB' : 'n/d';
+      $('fps').textContent = `${Math.round(1000 / med)} fps · quadro ${med.toFixed(1)} ms (pior ${worst.toFixed(0)} ms) · ${i.calls} draws · ${(i.triangles / 1000).toFixed(0)}k tris · mem ${mem} · ${renderer.domElement.width}×${renderer.domElement.height} @${renderer.getPixelRatio()}x`;
+      frame.ts = []; fpsN = fpsT = 0;
+    }
   }
   requestAnimationFrame(frame);
 }
 
+await stage('Preparando a placa de vídeo…', 0.88, 1, async tick => {
+  // envia a geometria à GPU em lotes (libera a cópia em memória sem um travamento único longo)
+  const all = []; scene.traverse(o => { if (o.isMesh || o.isInstancedMesh || o.isPoints) all.push([o, o.visible]); });
+  for (const [o] of all) o.visible = false;
+  const t = terrain, ortho = new THREE.OrthographicCamera(t.minX, t.maxX, -t.minZ, -t.maxZ, -5000, 5000);
+  ortho.position.set(0, 2000, 0); ortho.up.set(0, 0, -1); ortho.lookAt(0, 0, 0); ortho.updateMatrixWorld();
+  const rt = new THREE.WebGLRenderTarget(8, 8), sh = renderer.shadowMap.enabled, gl = renderer.getContext();
+  renderer.shadowMap.enabled = false; renderer.setRenderTarget(rt);
+  const B = 60;
+  for (let i = 0; i < all.length; i += B) {
+    for (let j = i; j < Math.min(all.length, i + B); j++) all[j][0].visible = true;
+    renderer.render(scene, ortho); gl.finish();
+    for (let j = i; j < Math.min(all.length, i + B); j++) all[j][0].visible = false;
+    await tick(i / all.length);
+  }
+  renderer.setRenderTarget(null); renderer.shadowMap.enabled = sh; rt.dispose();
+  // pré-compila os shaders de tudo (com sombra, névoa e luzes da cena) sem travar: compileAsync
+  for (const [o] of all) o.visible = true;
+  scene.traverse(o => { if (o.isSprite) o.visible = true; });
+  await renderer.compileAsync(scene, camera);
+  for (const [o, v] of all) o.visible = v;
+});
+$('loading').hidden = true;
 $('play').disabled = false; $('play').textContent = 'Jogar';
+window.__readyAt = performance.now();   // fim do carregamento (testes medem travamentos até aqui)
 $('play').addEventListener('click', () => {
   $('start').hidden = true; $('hud').hidden = false; running = true;
   toast('Bem-vindo a Igrejinha!', isTouch ? ' Use o joystick para andar e arraste a tela para olhar.' : ' WASD para andar, Shift corre, arraste o mouse para olhar.', 6);
@@ -210,4 +258,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { waldir, street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

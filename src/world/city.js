@@ -192,11 +192,15 @@ export class City {
   }
 
   /* ---------- 2. tudo o mais (depois que o terreno está pronto) ---------- */
-  build() {
+  /** Monta tudo, cedendo a thread entre etapas (tick(fração) é chamado e aguardado). */
+  async build(tick = async () => {}) {
     this.buildWater();
+    await tick(0.1);
     this.buildRoads();
-    this.buildBuildings();
+    await tick(0.3);
+    await this.buildBuildings(f => tick(0.3 + f * 0.6));
     this.buildLamps();
+    await tick(0.95);
     for (const c of this.chunks.values()) {
       for (const [key, mat, shadow] of [['walls', this.wallMat, true], ['roofs', this.roofMat, true], ['roads', this.roadMat, false], ['cobble', this.cobbleMat, false], ['walk', this.walkMat, false], ['marks', this.markMat, false], ['bridge', this.bridgeMat, true]]) {
         const g = c[key].build(); c[key] = null;
@@ -463,10 +467,11 @@ export class City {
     pool.renderOrder = 3; this.pools = pool; this.group.add(pool);
   }
 
-  buildBuildings() {
+  async buildBuildings(tick = null) {
     const t = this.t;
-    let i = 0;
+    let i = 0, n = 0;
     for (const b of this.world.buildings) {
+      if (tick && ++n % 2500 === 0) await tick(n / this.world.buildings.length);
       if (this.exclusions.length) {
         const cx = b.p.reduce((s2, q) => s2 + q[0], 0) / b.p.length, cz = b.p.reduce((s2, q) => s2 + q[1], 0) / b.p.length;
         if (this.exclusions.some(f => f(cx, cz))) continue;

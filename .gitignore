@@ -2,3 +2,4 @@ node_modules/
 dist/
 data/raw/terrarium/
 data/raw/geoigrejinha/curvas_*.geojson
+tests/out/

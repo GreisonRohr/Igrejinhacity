@@ -38,7 +38,7 @@ h1 span{color:var(--beer)}
 .note{font-size:13px;opacity:.7;margin:14px 0 0}
 .diam{height:10px;margin:-26px -24px 20px;border-radius:12px 12px 0 0;background:repeating-linear-gradient(45deg,var(--blue) 0 10px,#fff 10px 20px)}
 button:focus-visible{outline:3px solid #fff;outline-offset:3px}
-#fps{position:fixed;left:8px;bottom:8px;font:12px monospace;opacity:.7;pointer-events:none}
+#fps{position:fixed;left:8px;right:8px;top:50%;font:600 13px monospace;background:rgba(0,0,0,.6);padding:6px 8px;border-radius:8px;pointer-events:none;z-index:9}
 #loading{position:fixed;inset:0;display:grid;place-items:center;font-weight:700;background:#0c1530;z-index:5}
 @media (max-width:520px){
   #map{width:112px;height:112px}
@@ -46,3 +46,8 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
   .touch #top{top:134px}
   #toast{top:auto;bottom:200px}
 }
+#loading{margin:0 auto 14px;max-width:380px}
+#loading[hidden]{display:none}
+#loadtrack{height:10px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+#loadbar{height:100%;width:2%;background:linear-gradient(90deg,var(--beer),#ffd659);transition:width .15s}
+#loadtxt{font-size:13px;opacity:.85;margin-top:6px}

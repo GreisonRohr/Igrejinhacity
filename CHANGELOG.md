@@ -2,6 +2,15 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-22 — Ciclo 1 (rede de segurança e carregamento)
+- `npm test`: 6 suítes no build de produção (carga, orçamento, 26 travessias de ponte, colisão, Waldir, capturas);
+  orçamentos em `tests/budget.json`.
+- Carregamento em etapas com barra de progresso; geometria enviada à GPU em lotes; shaders pré-compilados
+  (`compileAsync`). Maior travamento 7,2 s → 0,82 s.
+- Memória 214 → 140 MB (orçamento de celular 150 MB).
+- `?debug` com medidor para aparelho real: fps, tempo de quadro mediano e pior, draw calls, triângulos, memória, resolução.
+- Menu: créditos dos dados no lugar de texto antigo.
+
 ## 2026-11-22
 ### Gestão
 - Estrutura de projeto: GAME_BIBLE, ROADMAP (P0–P3), TASKS, BUGS, CHANGELOG, TECHNICAL_ARCHITECTURE, WORLD_DESIGN.
