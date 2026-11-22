@@ -29,9 +29,26 @@ Mudança estrutural (núcleo, arquitetura, sistemas existentes) só com aprovaç
 - Antes de implementar: ler o código envolvido, entender o que já funciona, avaliar impacto, planejar.
 - Preservar sistemas que funcionam; não criar sistemas isolados que dupliquem os existentes
   (`src/world/city.js`, `landmarks3d.js`, `oktoberfest.js`, `player/`, `camera.js`, `input.js`).
-- Especialistas por tarefa: design (`gd-design-review`, `gd-feature-spec`), câmera/controle (`camera-systems`,
-  `input-systems`, `game-feel`), NPCs (`game-ai`, `ai-behavior-trees-utility-ai`, `dialogue-systems`), visual
-  (`threejs-materials-lighting`, `shader-programming`), desempenho (`performance-optimization`), UI (`game-ui-ux`).
+- Especialistas por tarefa (carregar a skill antes de começar):
+  | Tarefa | Skills |
+  |---|---|
+  | Luz, céu, sombras, tone mapping | `threejs-materials-lighting`, `gamedev-lighting` |
+  | Materiais PBR e texturas | `gamedev-texture-authoring`, `threejs-materials-lighting` |
+  | Modelo a partir de foto (marcos) | `gamedev-reference-reconstruction`, `gamedev-visual-iteration` (`tools/refmatch`) |
+  | Construções e fachadas | `gamedev-modular-kit`, `gamedev-art-direction` |
+  | Relevo, ruas, rio a partir de dados | `gamedev-world-from-data` |
+  | Árvores e vegetação | `gamedev-foliage` |
+  | Locomoção e peso do personagem | `gamedev-locomotion`, `physics-tuning` |
+  | Animação humana | `animation-systems`, `game-detail-bar` (§4) |
+  | Câmera | `camera-systems`, `game-detail-bar` (§1) |
+  | Pedestres e IA | `game-ai`, `ai-behavior-trees-utility-ai`, `systemic-emergent-design`, `dialogue-systems` |
+  | Trânsito e veículos | `game-ai` (navegação), `physics-tuning`, `systemic-emergent-design` |
+  | Mundo aberto, streaming, marcos | `open-world-design`, `game-detail-bar` (guia open-world) |
+  | Clima, dia/noite, VFX | `shaders-and-vfx`, `shader-programming`, `gamedev-lighting` |
+  | Áudio | `audio-design`, `gamedev-audio-wire`, `game-asset-pipeline` |
+  | Artefatos visuais (cintilação, acne, banding) | `gamedev-visual-artifacts` |
+  | Desempenho | `performance-optimization`, `game-detail-bar` (§13 e guia 3d-scenes) |
+  | Design de sistema novo | `gd-design-review`, `gd-feature-spec` |
 - Depois de implementar: revisar o código, testar no navegador (Playwright: carregamento sem erros, capturas, testes
   automáticos de movimento como o das pontes), `npm run build`, e só então commitar e publicar.
 - Não alterar dados, configuração ou funcionalidades fora do pedido sem autorização.
