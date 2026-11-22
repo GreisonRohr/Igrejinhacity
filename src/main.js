@@ -114,11 +114,8 @@ const FALAS_WALDIR = [
 let waldir = null, falaI = 0;
 if (landmarks.waldir) {
   const w = landmarks.waldir;
-  waldir = makePerson(0xffffff);
+  waldir = makePerson({ shirt: 0xf6f6f6, pants: 0x3b3b3b, skin: 0xdcae86, hair: 0x9c9c9c, shoes: 0x2b2b2b, mustache: true, apron: 0xd9161e, build: 1.18 });
   waldir.position.set(w.x, w.y, w.z); waldir.rotation.y = w.face + Math.PI / 2;
-  waldir.children[2].scale.set(1.15, 1.05, 1.25);                  // um pouco mais robusto
-  const apron = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.7, 0.05), new THREE.MeshLambertMaterial({ color: 0xd9161e }));
-  apron.position.set(0, 1.15, 0.27); waldir.add(apron);
   scene.add(waldir);
   const tag = makeLabel('Waldir', 3); tag.position.set(w.x, w.y + 2.9, w.z); tag.userData.maxDist = 40; scene.add(tag); labels.push(tag);
 }
@@ -145,6 +142,7 @@ function frame(now) {
     { followYaw: moving && ax.f > 0.5 ? player.ang : null, height: 1.6 });
   sky.update(running ? dt : 0, { x: player.x, y: player.y, z: player.z });
   landmarks.update(dt, sky);
+  if (waldir) waldir.userData.animate(dt, 0);
 
   lodT -= dt;
   if (lodT <= 0) {
