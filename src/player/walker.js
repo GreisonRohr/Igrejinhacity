@@ -53,7 +53,7 @@ export class Walker {
       const v = this.speed * (slope > 0 ? Math.max(0.45, 1 - slope * 0.9) : 1);
       const nx = this.x + sx * v * dt, nz = this.z + sz * v * dt;
       // não cai de desnível > 1,2 m (guarda-corpo de ponte, barrancos) nem sobe degrau > 0,6 m
-      const ok = (x, z) => { const h = this.floor(x, z) - this.surf; return this.terrain.inside(x, z, 5) && !this.blocked(x, z, 0.45) && h > -1.2 && h < 0.6 + this.y0; };
+      const ok = (x, z) => { const h = this.floor(x, z) - this.surf; return this.terrain.inside(x, z, 5) && !this.blocked(x, z, 0.45) && h > -1.2 && h < 0.9 + this.y0; };
       if (ok(nx, this.z)) this.x = nx;
       if (ok(this.x, nz)) this.z = nz;
     }

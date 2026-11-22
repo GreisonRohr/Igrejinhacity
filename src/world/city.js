@@ -136,6 +136,11 @@ export class City {
     for (const a of this.riverAreas) rasterize(a.p, t, this.mask);
     const masked = (x, z) => { const i = Math.round((x - t.x0) / t.cell), j = Math.round((z - t.z0) / t.cell); return i >= 0 && j >= 0 && i < t.nx && j < t.nz && this.mask[j * t.nx + i]; };
     this.masked = masked;
+    // cabeceiras de ponte: o terreno ali não é escavado (a rua chega no nível do tabuleiro)
+    this.bridgeEnds = [];
+    for (const r of this.world.roads) if (r.br) this.bridgeEnds.push(r.p[0], r.p[r.p.length - 1]);
+    const keep = (x, z) => { let m = 1; for (const e of this.bridgeEnds) { const d = Math.hypot(x - e[0], z - e[1]); if (d < 16) m = Math.min(m, smooth(5, 16, d)); } return m; };
+    this.keep = keep;
     for (const w of this.world.water) {
       if (w.k !== 'river' && w.k !== 'stream' && w.k !== 'canal') continue;
       const big = w.k === 'river', half = w.w / 2;
@@ -155,7 +160,8 @@ export class City {
           const d = segDist(x, z, ax, az, bx, bz);
           if (d > R) return h;
           const target = Math.min(ys[i], ys[i + 1]) - depth;
-          return Math.min(h, target + (h - target) * smooth(half - 1, R, d));
+          const carved = Math.min(h, target + (h - target) * smooth(half - 1, R, d));
+          return h + (carved - h) * keep(x, z);
         });
       }
     }
@@ -167,7 +173,7 @@ export class City {
     for (let j = 0; j < t.nz; j++) for (let i = 0; i < t.nx; i++) {
       const k = j * t.nx + i; if (!this.mask[k]) continue;
       const x = t.x0 + i * t.cell, z = t.z0 + j * t.cell, lv = this.levelAt(x, z);
-      if (lv !== null) t.h[k] = Math.min(t.h[k], lv - 2.2);
+      if (lv !== null) { const c = Math.min(t.h[k], lv - 2.2); t.h[k] += (c - t.h[k]) * keep(x, z); }
     }
   }
 
@@ -261,8 +267,9 @@ export class City {
       // ponte: pista reta entre as cabeceiras (altura original, antes de escavar o rio)
       let Y = null;
       if (r.br) {
-        const h0 = this.orig(...pts[0]), h1 = this.orig(...pts[n - 1]), L = pathLen(pts);
-        let acc = 0; Y = pts.map((p, i) => { if (i) acc += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); return Math.max(h0, h1) * 0.3 + (h0 + (h1 - h0) * acc / L) * 0.7 + 0.6; });
+        const h0 = t.heightAt(...pts[0]) + 0.08, h1 = t.heightAt(...pts[n - 1]) + 0.08, L = pathLen(pts);
+        const arch = Math.min(0.8, L * 0.015);
+        let acc = 0; Y = pts.map((p, i) => { if (i) acc += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); const f = acc / L; return h0 + (h1 - h0) * f + arch * Math.sin(Math.PI * f); });
       }
       const hy = (p, i) => (Y ? Y[i] : t.heightAt(p[0], p[1]) + 0.08);
       const NRM = pts.map((_, i) => perp(pts, i, true));
