@@ -1,11 +1,11 @@
-// Busca um arquivo que pode estar compactado em gzip (.gz). Se o servidor já descompactou
-// (Content-Encoding: gzip), usa direto; senão descompacta no navegador (DecompressionStream).
-export async function fetchBytes(url) {
+// Dados do jogo empacotados em JSON: { "gzip_base64": "..." }. Funciona em qualquer hospedagem estática
+// (só .json é servido em alguns servidores). O navegador descompacta com DecompressionStream.
+export async function fetchPacked(url) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(url + ' HTTP ' + r.status);
-  const buf = new Uint8Array(await r.arrayBuffer());
-  if (buf[0] !== 0x1f || buf[1] !== 0x8b) return buf;
-  const ds = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const { gzip_base64 } = await r.json();
+  const bin = Uint8Array.from(atob(gzip_base64), c => c.charCodeAt(0));
+  const ds = new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new Uint8Array(await new Response(ds).arrayBuffer());
 }
-export const fetchJSON = async url => JSON.parse(new TextDecoder().decode(await fetchBytes(url)));
+export const fetchPackedJSON = async url => JSON.parse(new TextDecoder().decode(await fetchPacked(url)));

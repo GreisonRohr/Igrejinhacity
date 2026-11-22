@@ -5,7 +5,7 @@ import zlib from 'node:zlib';
 
 export function loadTerrain() {
   const meta = JSON.parse(fs.readFileSync('public/data/terrain.json'));
-  const raw = fs.existsSync('public/data/terrain.bin.gz') ? zlib.gunzipSync(fs.readFileSync('public/data/terrain.bin.gz')) : fs.readFileSync('public/data/terrain.bin');
+  const raw = fs.existsSync('public/data/terrain.data.json') ? zlib.gunzipSync(Buffer.from(JSON.parse(fs.readFileSync('public/data/terrain.data.json')).gzip_base64, 'base64')) : fs.readFileSync('public/data/terrain.bin');
   const q = new Int16Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
   if (meta.delta) for (let j = 0; j < meta.nz; j++) { let acc = 0; for (let i = 0; i < meta.nx; i++) { acc += q[j * meta.nx + i]; q[j * meta.nx + i] = acc; } }
   const hi = (i, j) => q[Math.max(0, Math.min(meta.nz - 1, j)) * meta.nx + Math.max(0, Math.min(meta.nx - 1, i))] * meta.scale;

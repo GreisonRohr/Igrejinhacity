@@ -10,7 +10,7 @@ import { Minimap } from './ui/minimap.js';
 import { LANDMARKS, byId, PLACE_STYLE } from './landmarks.js';
 import { City } from './world/city.js';
 import { buildGroundCanvas, groundTexture } from './world/ground.js';
-import { fetchJSON } from './util/load.js';
+import { fetchPackedJSON } from './util/load.js';
 import { placeLandmarks, buildLandmarks, landmarkBlocked } from './world/landmarks3d.js';
 
 const $ = id => document.getElementById(id);
@@ -51,7 +51,7 @@ function toast(title, txt = '', sec = 4) {
 
 /* ---------- carregamento ---------- */
 const BASE = import.meta.env.BASE_URL;
-const [terrain, world] = await Promise.all([Terrain.load(BASE), fetchJSON(BASE + 'data/world.json.gz')]);
+const [terrain, world] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json')]);
 const T = (name, fn) => { const t0 = performance.now(); const r = fn(); if (DEBUG) console.log(name, Math.round(performance.now() - t0) + ' ms'); return r; };
 const LM = placeLandmarks(world, terrain);
 const city = new City(world, terrain, Q, LM.exclusions);

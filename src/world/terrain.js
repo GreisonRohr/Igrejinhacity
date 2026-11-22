@@ -1,6 +1,6 @@
 // Terreno real (Terrarium) em chunks com LOD por distância e "saias" para esconder emendas.
 import * as THREE from 'three';
-import { fetchBytes } from '../util/load.js';
+import { fetchPacked } from '../util/load.js';
 
 const CHUNK_M = 640;           // tamanho do pedaço de terreno em metros
 const LODS = [                 // distância (m) até a borda do pedaço → passo da grade
@@ -12,7 +12,7 @@ export class Terrain {
   static async load(base) {
     const [meta, bytes] = await Promise.all([
       fetch(base + 'data/terrain.json').then(r => r.json()),
-      fetchBytes(base + 'data/terrain.bin.gz'),
+      fetchPacked(base + 'data/terrain.data.json'),
     ]);
     const q = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
     if (meta.delta) for (let j = 0; j < meta.nz; j++) { let acc = 0; for (let i = 0; i < meta.nx; i++) { const k = j * meta.nx + i; acc += q[k]; q[k] = acc; } }

@@ -117,8 +117,9 @@ for (let j = 1; j < nz - 1; j++) for (let i = 1; i < nx - 1; i++) {
 const q = new Int16Array(N); let min = Infinity, max = -Infinity;
 for (let j = 0; j < nz; j++) { let prev = 0; for (let i = 0; i < nx; i++) { const c = j * nx + i, v = Math.round(out[c] * 10); min = Math.min(min, out[c]); max = Math.max(max, out[c]); q[c] = v - prev; prev = v; } }
 const gz = zlib.gzipSync(Buffer.from(q.buffer), { level: 9 });
-fs.writeFileSync('public/data/terrain.bin.gz', gz);
+fs.writeFileSync('public/data/terrain.data.json', JSON.stringify({ gzip_base64: gz.toString('base64') }));
+for (const f of ['public/data/terrain.bin.gz']) if (fs.existsSync(f)) fs.unlinkSync(f);
 fs.writeFileSync('public/data/terrain.json', JSON.stringify({ x0, z0, nx, nz, cell: CELL, scale: 0.1, delta: true, min, max,
   fonte: 'Curvas de nível GEO Igrejinha (1 m, 4 m, 10 m) + AWS Terrain Tiles' }, null, 1));
 if (fs.existsSync('public/data/terrain.bin')) fs.unlinkSync('public/data/terrain.bin');
-log('terrain.bin.gz', (gz.length / 1048576).toFixed(2), 'MB', { min: min.toFixed(1), max: max.toFixed(1) });
+log('terrain.data.json', (gz.length / 1048576).toFixed(2), 'MB', { min: min.toFixed(1), max: max.toFixed(1) });
