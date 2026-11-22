@@ -9,6 +9,8 @@ export class FollowCam {
     this.idle = 0;
     this.pos = new THREE.Vector3(); this.look = new THREE.Vector3();
     this.first = true;
+    this.blocked = null;                 // (x, z, r) → bool
+    this.roofAt = () => Infinity;        // altura do telhado no ponto (acima dele a câmera passa)
   }
 
   update(dt, target, look, { followYaw = null, height = 1.6, autoBehind = true } = {}) {
@@ -28,6 +30,18 @@ export class FollowCam {
     let z = target.z - Math.cos(this.yaw) * cp * this.dist;
     let y = ty + Math.sin(this.pitch) * this.dist;
     y = Math.max(y, this.terrain.heightAt(x, z) + 1.2);
+    // não deixa a câmera entrar nos prédios: aproxima até o primeiro ponto livre
+    if (this.blocked) {
+      const N = 14;
+      for (let k = 1; k <= N; k++) {
+        const f = k / N, qx = target.x + (x - target.x) * f, qz = target.z + (z - target.z) * f, qy = ty + (y - ty) * f;
+        if (qy < this.roofAt(qx, qz) && this.blocked(qx, qz, 0.4)) {
+          const g = Math.max(0.15, (k - 1) / N);
+          x = target.x + (x - target.x) * g; z = target.z + (z - target.z) * g; y = ty + (y - ty) * g;
+          break;
+        }
+      }
+    }
     const k = this.first ? 1 : 1 - Math.exp(-dt * 12);
     this.pos.x += (x - this.pos.x) * k; this.pos.y += (y - this.pos.y) * k; this.pos.z += (z - this.pos.z) * k;
     this.pos.y = Math.max(this.pos.y, this.terrain.heightAt(this.pos.x, this.pos.z) + 1.0);

@@ -8,6 +8,8 @@ import { Walker } from './player/walker.js';
 import { FollowCam } from './camera.js';
 import { Minimap } from './ui/minimap.js';
 import { LANDMARKS, byId } from './landmarks.js';
+import { City } from './world/city.js';
+import { buildGroundCanvas, groundTexture } from './world/ground.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -15,8 +17,8 @@ const DEBUG = params.has('debug');
 
 /* ---------- qualidade (celular x computador) ---------- */
 const Q = isTouch
-  ? { pixelRatio: 1.25, shadowSize: 1024, shadowRange: 45, fogFar: 5000, antialias: false }
-  : { pixelRatio: 1.5, shadowSize: 2048, shadowRange: 60, fogFar: 8000, antialias: true };
+  ? { pixelRatio: 1.25, shadowSize: 1024, shadowRange: 45, fogFar: 5000, antialias: false, ground: 2048, buildDist: 2200, roadDist: 700 }
+  : { pixelRatio: 1.5, shadowSize: 2048, shadowRange: 60, fogFar: 8000, antialias: true, ground: 4096, buildDist: 4000, roadDist: 950 };
 
 const renderer = new THREE.WebGLRenderer({ antialias: Q.antialias, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, Q.pixelRatio));
@@ -47,8 +49,14 @@ function toast(title, txt = '', sec = 4) {
 
 /* ---------- carregamento ---------- */
 const BASE = import.meta.env.BASE_URL;
-const terrain = await Terrain.load(BASE);
-scene.add(terrain.build());
+const [terrain, world] = await Promise.all([Terrain.load(BASE), fetch(BASE + 'data/world.json').then(r => r.json())]);
+const T = (name, fn) => { const t0 = performance.now(); const r = fn(); if (DEBUG) console.log(name, Math.round(performance.now() - t0) + ' ms'); return r; };
+const city = new City(world, terrain, Q);
+T('rio', () => city.carveWater());                   // escava o leito do rio antes de montar a malha
+const groundCanvas = T('textura do chão', () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize)));
+terrain.material.map = groundTexture(groundCanvas, renderer);
+T('terreno', () => scene.add(terrain.build()));
+T('cidade', () => scene.add(city.build()));
 const sky = new Sky(scene, Q);
 
 // placas dos pontos marcantes
@@ -66,11 +74,16 @@ for (const l of LANDMARKS) {
 let spawn = byId.praca;
 if (params.get('spawn') && byId[params.get('spawn')]) spawn = byId[params.get('spawn')];
 const player = new Walker(scene, terrain, spawn.x + 6, spawn.z + 6);
+player.blocked = (x, z, r) => city.blocked(x, z, r);
+// se nasceu dentro de um prédio, procura um lugar livre em espiral
+for (let k = 0; k < 400 && city.blocked(player.x, player.z, 0.6); k++) { const a = k * 0.7, r = 1 + k * 0.25; player.x = spawn.x + Math.cos(a) * r; player.z = spawn.z + Math.sin(a) * r; }
 if (params.has('x')) { player.x = +params.get('x'); player.z = +params.get('z'); }
 const input = new Input(renderer.domElement);
 const cam = new FollowCam(camera, terrain);
+cam.blocked = (x, z, r) => city.blocked(x, z, r);
+cam.roofAt = (x, z) => { const h = city.roofAt(x, z); return h === -Infinity ? -Infinity : h; };
 cam.yaw = Math.PI;                                   // começa olhando para o norte (morros)
-const minimap = new Minimap($('map'), terrain);
+const minimap = new Minimap($('map'), terrain, groundCanvas);
 
 /* ---------- laço ---------- */
 let running = false, last = performance.now(), lodT = 0, lastMin = -1;
@@ -91,6 +104,8 @@ function frame(now) {
   if (lodT <= 0) {
     lodT = 0.3;
     terrain.update(camera.position.x, camera.position.z);
+    city.update(camera.position.x, camera.position.z);
+    city.setNight(sky.night);
     for (const s of labels) s.visible = s.position.distanceTo(camera.position) < s.userData.maxDist;
   }
 
@@ -124,4 +139,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { scene, camera, renderer, terrain, player, cam, sky };
+window.__game = { scene, camera, renderer, terrain, player, cam, sky, city, world };

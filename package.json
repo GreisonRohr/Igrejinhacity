@@ -7,8 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "data:terrain": "node scripts/fetch-terrain.mjs",
-    "data:osm": "node scripts/fetch-osm.mjs",
-    "data:preview": "node scripts/preview.mjs"
+    "data:osm": "NODE_USE_ENV_PROXY=1 node --no-warnings scripts/fetch-osm.mjs",
+    "data:preview": "node scripts/preview.mjs",
+    "data:world": "node scripts/build-world.mjs"
   },
   "repository": {
     "type": "git",

@@ -98,7 +98,8 @@ const named = n => roads.filter(r => r.n && r.n.includes(n)).reduce((s, r) => s 
 const world = { fonte: raw.fonte, baixado: raw.baixado, roads, water, areas, buildings, pois };
 // casas geradas: [x, z, y, largura, profundidade, rotação, altura, tipo(h casa | c comércio | i indústria)]
 const t0 = Date.now();
-world.gen = generateBuildings(world, LANDMARKS, loadTerrain());
+// Por decisão do projeto, só prédios reais do OSM. O gerador fica disponível com --gerar-casas.
+world.gen = process.argv.includes('--gerar-casas') ? generateBuildings(world, LANDMARKS, loadTerrain()) : [];
 console.log('geradas', world.gen.length, 'construções em', Date.now() - t0, 'ms');
 fs.writeFileSync('public/data/world.json', JSON.stringify(world));
 console.log({ roads: roads.length, water: water.length, areas: areas.length, buildings: buildings.length, pois: pois.length, geradas: world.gen.length,

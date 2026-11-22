@@ -25,6 +25,7 @@ export class Terrain {
     this.group = new THREE.Group();
     this.chunks = [];
     this.material = new THREE.MeshLambertMaterial({ vertexColors: true });
+    this.W = (this.nx - 1) * this.cell; this.H = (this.nz - 1) * this.cell;
   }
 
   /** Altura do grid bruto (índices inteiros, com clamp). */
@@ -39,7 +40,8 @@ export class Terrain {
     const fx = (x - this.x0) / this.cell, fz = (z - this.z0) / this.cell;
     const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j;
     const a = this.hi(i, j), b = this.hi(i + 1, j), c = this.hi(i, j + 1), d = this.hi(i + 1, j + 1);
-    return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+    // mesma divisão em triângulos da malha (diagonal de (i+1,j) a (i,j+1)) → o chão bate exato
+    return u + v <= 1 ? a + (b - a) * u + (c - a) * v : d + (c - d) * (1 - u) + (b - d) * (1 - v);
   }
 
   inside(x, z, margin = 0) {
@@ -85,18 +87,19 @@ export class Terrain {
     for (let j = j0; j < j1; j += step) js.push(j); js.push(j1);
     const W = is.length, Hn = js.length;
     const nv = W * Hn + 2 * (W + Hn);
-    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), col = new Float32Array(nv * 3);
+    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), col = new Float32Array(nv * 3), uv = new Float32Array(nv * 2);
     const idx = [];
     const tmp = new THREE.Color();
     let k = 0;
     const put = (i, j, drop) => {
       const x = this.x0 + i * this.cell, z = this.z0 + j * this.cell, y = this.hi(i, j);
       pos[k * 3] = x; pos[k * 3 + 1] = y - drop; pos[k * 3 + 2] = z;
+      uv[k * 2] = (x - this.x0) / this.W; uv[k * 2 + 1] = 1 - (z - this.z0) / this.H;
       // normal analítica no grid original (igual em todos os LODs → menos emendas visíveis)
       const dx = this.hi(i + 1, j) - this.hi(i - 1, j), dz = this.hi(i, j + 1) - this.hi(i, j - 1);
       const nx = -dx, ny = 2 * this.cell, nz = -dz, l = Math.hypot(nx, ny, nz);
       nor[k * 3] = nx / l; nor[k * 3 + 1] = ny / l; nor[k * 3 + 2] = nz / l;
-      groundColor(y, ny / l, i * 7.13 + j * 3.71, tmp);
+      if (this.material.map) groundTint(ny / l, i * 7.13 + j * 3.71, tmp); else groundColor(y, ny / l, i * 7.13 + j * 3.71, tmp);
       col[k * 3] = tmp.r; col[k * 3 + 1] = tmp.g; col[k * 3 + 2] = tmp.b;
       return k++;
     };
@@ -129,9 +132,27 @@ export class Terrain {
     g.setAttribute('position', new THREE.BufferAttribute(pos.subarray(0, k * 3), 3));
     g.setAttribute('normal', new THREE.BufferAttribute(nor.subarray(0, k * 3), 3));
     g.setAttribute('color', new THREE.BufferAttribute(col.subarray(0, k * 3), 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(uv.subarray(0, k * 2), 2));
     g.setIndex(idx);
     g.computeBoundingSphere();
     return g;
+  }
+}
+
+/** Com textura de chão: a cor vem da textura; o vértice só escurece encostas e varia um pouco. */
+function groundTint(ny, seed, out) {
+  const n = Math.sin(seed * 12.9898) * 43758.5453, r = (n - Math.floor(n) - 0.5) * 0.06;
+  const steep = Math.min(1, Math.max(0, (0.82 - ny) / 0.25));
+  out.setRGB(1 + r - steep * 0.12, 1 + r - steep * 0.1, 1 + r - steep * 0.05);
+  return out;
+}
+
+/** Rebaixa o terreno (ex.: leito do rio) antes de montar a malha. fn(x, z, h) → nova altura. */
+export function editHeights(t, minX, minZ, maxX, maxZ, fn) {
+  const i0 = Math.max(0, Math.floor((minX - t.x0) / t.cell)), i1 = Math.min(t.nx - 1, Math.ceil((maxX - t.x0) / t.cell));
+  const j0 = Math.max(0, Math.floor((minZ - t.z0) / t.cell)), j1 = Math.min(t.nz - 1, Math.ceil((maxZ - t.z0) / t.cell));
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    const k = j * t.nx + i; t.h[k] = fn(t.x0 + i * t.cell, t.z0 + j * t.cell, t.h[k]);
   }
 }
 
