@@ -17,7 +17,7 @@ const DEBUG = params.has('debug');
 
 /* ---------- qualidade (celular x computador) ---------- */
 const Q = isTouch
-  ? { pixelRatio: 1.25, shadowSize: 1024, shadowRange: 45, fogFar: 5000, antialias: false, ground: 2048, buildDist: 2200, roadDist: 700 }
+  ? { pixelRatio: 1.25, shadowSize: 1024, shadowRange: 45, fogFar: 4000, antialias: false, ground: 2048, buildDist: 1700, roadDist: 600 }
   : { pixelRatio: 1.5, shadowSize: 2048, shadowRange: 60, fogFar: 8000, antialias: true, ground: 4096, buildDist: 4000, roadDist: 950 };
 
 const renderer = new THREE.WebGLRenderer({ antialias: Q.antialias, powerPreference: 'high-performance' });
@@ -75,9 +75,11 @@ const places = world.places
   .filter(p => !LANDMARKS.some(l => Math.hypot(l.x - p.x, l.z - p.z) < 60))
   .map(p => ({ ...p, ...PLACE_STYLE[p.k], nome: p.n }));
 for (const p of places) {
-  const s = makeLabel(p.n, 9);
-  s.position.set(p.x, terrain.heightAt(p.x, p.z) + 12, p.z);
-  s.userData.maxDist = 350;
+  if (p.k === 'onibus') continue;                      // paradas: só o ícone no minimapa
+  const big = p.k === 'localidade';                    // morros e localidades: placa grande, vista de longe
+  const s = makeLabel(p.n, big ? 60 : 9);
+  s.position.set(p.x, terrain.heightAt(p.x, p.z) + (big ? 60 : 12), p.z);
+  s.userData.maxDist = big ? 6000 : 350;
   scene.add(s); labels.push(s);
 }
 

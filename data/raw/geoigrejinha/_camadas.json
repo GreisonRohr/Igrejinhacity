@@ -1,0 +1,132 @@
+{
+ "fonte": "https://pmirs.nextgis.com/resource/4673/display",
+ "baixado": "2026-11-22T13:19:36.559Z",
+ "camadas": [
+  {
+   "name": "pontes",
+   "layer": 4479,
+   "titulo": "Pontes",
+   "features": 6
+  },
+  {
+   "name": "linhas_onibus",
+   "layer": 4481,
+   "titulo": "Linhas Municipais de Ônibus",
+   "features": 2454
+  },
+  {
+   "name": "pontos_referencia",
+   "layer": 5328,
+   "titulo": "Pontos Referência Municipal",
+   "features": 75
+  },
+  {
+   "name": "paradas_onibus",
+   "layer": 5843,
+   "titulo": "Paradas de Ônibus na Área Urbana",
+   "features": 80
+  },
+  {
+   "name": "limite_municipal",
+   "layer": 5959,
+   "titulo": "Limite Municipal",
+   "features": 1
+  },
+  {
+   "name": "pracas_lazer",
+   "layer": 6412,
+   "titulo": "Praças e Espaços de Lazer",
+   "features": 50
+  },
+  {
+   "name": "cemiterios",
+   "layer": 6593,
+   "titulo": "Cemitérios Igrejinha",
+   "features": 16
+  },
+  {
+   "name": "cemiterios_poligonal",
+   "layer": 6597,
+   "titulo": "Cemitérios Igrejinha (Limites)",
+   "features": 16
+  },
+  {
+   "name": "rio_paranhana",
+   "layer": 7041,
+   "titulo": "Rio Paranhana",
+   "features": 1
+  },
+  {
+   "name": "lagos",
+   "layer": 7043,
+   "titulo": "Lagos e Lagoas",
+   "features": 350
+  },
+  {
+   "name": "bairros",
+   "layer": 7263,
+   "titulo": "Bairros PDDURA 2020",
+   "features": 15
+  },
+  {
+   "name": "quadras",
+   "layer": 7577,
+   "titulo": "Quadras",
+   "features": 861
+  },
+  {
+   "name": "ciclovias",
+   "layer": 7683,
+   "titulo": "Ciclovias",
+   "features": 4
+  },
+  {
+   "name": "localidades_toponimos",
+   "layer": 7856,
+   "titulo": "Localidades e Topônimos",
+   "features": 28
+  },
+  {
+   "name": "patrimonio_historico",
+   "layer": 8354,
+   "titulo": "Inventário Patrimônio Histórico PDDURA 2020",
+   "features": 122
+  },
+  {
+   "name": "saude",
+   "layer": 9392,
+   "titulo": "Equipamentos de Saúde",
+   "features": 17
+  },
+  {
+   "name": "edificacoes",
+   "layer": 9629,
+   "titulo": "Edificações",
+   "features": 11091
+  },
+  {
+   "name": "open_buildings_google_2024",
+   "layer": 10139,
+   "titulo": "Edificações Open Buildings Google 2024",
+   "features": 36341
+  },
+  {
+   "name": "escolas",
+   "layer": 10171,
+   "titulo": "Escolas",
+   "features": 35
+  },
+  {
+   "name": "ruas_estradas",
+   "layer": 10223,
+   "titulo": "RUAS E ESTRADAS PDDURA 2020",
+   "features": 1112
+  },
+  {
+   "name": "vias_tipo_pavimento",
+   "layer": 10223,
+   "titulo": "RUAS E ESTRADAS PDDURA 2020",
+   "features": 1112
+  }
+ ]
+}

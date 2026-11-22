@@ -30,4 +30,6 @@ export const PLACE_STYLE = {
   escola: { icon: 'E', cor: '#2e8b57' }, banco: { icon: '$', cor: '#2f6fd0' }, posto: { icon: 'G', cor: '#f08a24' },
   farmacia: { icon: '+', cor: '#d6322c' }, saude: { icon: 'H', cor: '#d6322c' }, cascata: { icon: '≋', cor: '#4fb6e0' },
   social: { icon: 'S', cor: '#1d4e9e' }, loja: { icon: 'L', cor: '#8a5a32' },
+  praca: { icon: 'P', cor: '#3d8a2e' }, bombeiros: { icon: 'B', cor: '#d6322c' }, ponte: { icon: '=', cor: '#9a9a92' },
+  mirante: { icon: '▲', cor: '#ff7a1a' }, ref: { icon: '•', cor: '#ffffff' }, localidade: { icon: '◆', cor: '#f4b41a' }, onibus: { icon: '▪', cor: '#f4b41a' },
 };

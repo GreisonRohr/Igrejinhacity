@@ -9,7 +9,8 @@
     "data:terrain": "node scripts/fetch-terrain.mjs",
     "data:osm": "NODE_USE_ENV_PROXY=1 node --no-warnings scripts/fetch-osm.mjs",
     "data:preview": "node scripts/preview.mjs",
-    "data:world": "node scripts/build-world.mjs"
+    "data:world": "node scripts/build-world.mjs",
+    "data:geo": "NODE_USE_ENV_PROXY=1 node --no-warnings scripts/fetch-geo-igrejinha.mjs"
   },
   "repository": {
     "type": "git",

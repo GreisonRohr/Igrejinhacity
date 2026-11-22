@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { toXZ } from '../src/geo.js';
 import { LANDMARKS } from '../src/landmarks.js';
 import { generateBuildings, loadTerrain } from './gen-buildings.mjs';
+import { hasGeo, mergeBuildings, enrichRoads, extras } from './geo-igrejinha.mjs';
 
 const raw = JSON.parse(fs.readFileSync('data/raw/osm.json'));
 const r1 = v => Math.round(v * 10) / 10;
@@ -107,13 +108,30 @@ for (const e of raw.elements) {
 
 // estatísticas para conferência
 const named = n => roads.filter(r => r.n && r.n.includes(n)).reduce((s, r) => s + r.p.slice(1).reduce((a, q, i) => a + Math.hypot(q[0] - r.p[i][0], q[1] - r.p[i][1]), 0), 0);
-const world = { fonte: raw.fonte, baixado: raw.baixado, roads, water, areas, buildings, pois, places };
+// GEO Igrejinha (Prefeitura): prédios cadastrados, pavimento/perfil das ruas, rio, praças, escolas, saúde…
+let finalBuildings = buildings, pools = [], ciclovias = [];
+if (hasGeo()) {
+  const m = mergeBuildings(buildings);
+  finalBuildings = m.buildings; pools = m.pools;
+  console.log('prédios:', m.stats);
+  console.log('ruas com dados da Prefeitura:', enrichRoads(roads));
+  const ex = extras();
+  // praças/água da Prefeitura substituem as do OSM no mesmo lugar
+  const inside = (p, q) => { const [x, z] = [p.reduce((s, v) => s + v[0], 0) / p.length, p.reduce((s, v) => s + v[1], 0) / p.length]; let c = false; for (let i = 0, j = q.length - 1; i < q.length; j = i++) if ((q[i][1] > z) !== (q[j][1] > z) && x < (q[j][0] - q[i][0]) * (z - q[i][1]) / (q[j][1] - q[i][1]) + q[i][0]) c = !c; return c; };
+  const keep = areas.filter(a => !(['park', 'water', 'cemetery'].includes(a.k) && ex.areas.some(b => inside(a.p, b.p))));
+  areas.length = 0; areas.push(...keep, ...ex.areas);
+  // lugares: Prefeitura + OSM (sem repetir o mesmo tipo a menos de 80 m)
+  for (const p of ex.places) if (!places.some(q => q.k === p.k && Math.hypot(q.x - p.x, q.z - p.z) < 80)) places.push(p);
+  ciclovias = ex.ciclovias;
+}
+const world = { fonte: raw.fonte, baixado: raw.baixado, roads, water, areas, buildings: finalBuildings, pools, ciclovias, pois, places,
+  creditos: ['© OpenStreetMap contributors (ODbL)', 'GEO Igrejinha – Prefeitura Municipal de Igrejinha', 'Google Open Buildings (CC BY 4.0 / ODbL)'] };
 // casas geradas: [x, z, y, largura, profundidade, rotação, altura, tipo(h casa | c comércio | i indústria)]
 const t0 = Date.now();
 // Por decisão do projeto, só prédios reais do OSM. O gerador fica disponível com --gerar-casas.
 world.gen = process.argv.includes('--gerar-casas') ? generateBuildings(world, LANDMARKS, loadTerrain()) : [];
 console.log('geradas', world.gen.length, 'construções em', Date.now() - t0, 'ms');
 fs.writeFileSync('public/data/world.json', JSON.stringify(world));
-console.log({ roads: roads.length, water: water.length, areas: areas.length, buildings: buildings.length, pois: pois.length, places: places.length, geradas: world.gen.length,
+console.log({ roads: roads.length, water: water.length, areas: areas.length, buildings: finalBuildings.length, pois: pois.length, places: places.length, geradas: world.gen.length,
   kmCasteloBranco: (named('Castelo Branco') / 1000).toFixed(2), kmRios: (water.filter(w => w.k === 'river').reduce((s, w) => s + w.p.length, 0)),
   tamanhoKB: Math.round(fs.statSync('public/data/world.json').size / 1024) });

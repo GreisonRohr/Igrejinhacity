@@ -6,7 +6,7 @@ const RAMP = [[20, [143, 186, 92]], [60, [122, 168, 80]], [160, [92, 145, 64]], 
 
 export const AREA_COLORS = {
   park: '#6dae4f', garden: '#6dae4f', grass: '#82b65c', pitch: '#4f9a3a', forest: '#3f6e34', cemetery: '#a9ab98',
-  water: '#3f86bd', pool: '#4fb6e0', parking: '#9a9a94', industrial: '#b9b2a6', retail: '#c9bfb2', commercial: '#c9bfb2',
+  water: '#3f86bd', river: '#3f86bd', pool: '#4fb6e0', plaza: '#cfc6b4', parking: '#9a9a94', industrial: '#b9b2a6', retail: '#c9bfb2', commercial: '#c9bfb2',
   quarry: '#b8ab92', farmland: '#a7b56a', residential: null,
 };
 
@@ -51,6 +51,7 @@ export function buildGroundCanvas(terrain, world, maxSize) {
     void k;
   }
   for (const bd of world.buildings) { path(bd.p, true); g.fill(); }
+  g.fillStyle = '#7fd6ff'; for (const p of world.pools || []) { path(p, true); g.fill(); }
   // rio e córregos
   for (const w of world.water) { path(w.p, false); g.strokeStyle = '#3f86bd'; g.lineWidth = w.w; g.stroke(); }
   // calçadas e ruas
@@ -58,13 +59,16 @@ export function buildGroundCanvas(terrain, world, maxSize) {
   const roads = [...world.roads].sort((a, b) => order(a) - order(b) || a.w - b.w);
   for (const r of roads) {
     if (order(r) === 0) continue;
-    path(r.p, false); g.strokeStyle = '#cfc8ba'; g.lineWidth = r.w + (r.k === 'service' ? 1 : 4); g.stroke();
+    const sw = r.sw ? r.sw[0] + r.sw[1] : r.k === 'service' ? 1 : 4;
+    path(r.p, false); g.strokeStyle = '#cfc8ba'; g.lineWidth = r.w + sw; g.stroke();
   }
   for (const r of roads) {
     path(r.p, false);
-    g.strokeStyle = r.k === 'track' ? '#a88a5e' : r.k === 'path' || r.k === 'footway' ? '#c8b48e' : r.sf === 'unpaved' || r.sf === 'gravel' || r.sf === 'dirt' ? '#a8916a' : '#55585e';
+    g.strokeStyle = r.pav === 'terra' ? '#a8916a' : r.pav === 'pedra' ? '#857e74' : r.pav === 'bloco' ? '#a29d94' : r.k === 'track' ? '#a88a5e' : r.k === 'path' || r.k === 'footway' ? '#c8b48e' : r.sf === 'unpaved' || r.sf === 'gravel' || r.sf === 'dirt' ? '#a8916a' : '#55585e';
     g.lineWidth = Math.max(r.w, 1 / sx); g.stroke();
   }
+  // ciclovias
+  for (const l of world.ciclovias || []) { path(l, false); g.strokeStyle = '#c0392b'; g.lineWidth = 1.5; g.stroke(); }
   g.restore();
   return c;
 }
