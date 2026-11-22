@@ -6,6 +6,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { byId } from '../landmarks.js';
 import { makeLabel } from './labels.js';
 import { planOktober, buildOktober } from './oktoberfest.js';
+import { buildAvenida } from './avenida.js';
+import { buildPraca } from './praca.js';
 import { mergeStatic } from './merge.js';
 
 const PI = Math.PI;
@@ -20,9 +22,11 @@ const matCache = new Map();
 export const lambert = (color, o = {}) => {
   if (o.map || o.emissiveMap) return new THREE.MeshLambertMaterial({ color, ...o });
   const k = color + JSON.stringify(o);
-  let m = matCache.get(k); if (!m) matCache.set(k, m = new THREE.MeshLambertMaterial({ color, ...o }));
+  let m = matCache.get(k); if (!m) { matCache.set(k, m = new THREE.MeshLambertMaterial({ color, ...o })); m.userData.plain = Object.keys(o).length === 0; }
   return m;
 };
+/** Material único de cor por vértice: todas as peças de cor lisa de um Kit viram uma malha só (menos draw calls). */
+const VC = new THREE.MeshLambertMaterial({ vertexColors: true });
 export const inPoly = (x, z, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c; };
 export const segClosest = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l = dx * dx + dz * dz; const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l)); return [a[0] + dx * t, a[1] + dz * t]; };
 
@@ -41,11 +45,17 @@ export class Kit {
   }
   box(w, h, d, mat, x, y, z, ry = 0) { return this.add(new THREE.BoxGeometry(w, h, d), mat, x, y + h / 2, z, ry); }
   build(group, shadow = true) {
+    const vc = [];
     for (const [mat, geos] of this.parts) {
+      if (mat.userData.plain) {
+        for (const g of geos) { const n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[3 * i] = mat.color.r; a[3 * i + 1] = mat.color.g; a[3 * i + 2] = mat.color.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); vc.push(g); }
+        continue;
+      }
       const m = new THREE.Mesh(mergeGeometries(geos), mat);
       m.castShadow = shadow && !mat.transparent; m.receiveShadow = true;
       group.add(m);
     }
+    if (vc.length) { const m = new THREE.Mesh(mergeGeometries(vc), VC); m.castShadow = shadow; m.receiveShadow = true; group.add(m); }
     for (const o of this.extra) group.add(o);
     return group;
   }
@@ -93,7 +103,7 @@ export function placeLandmarks(world, terrain) {
     P.ruacoberta = { x: cx, z: cz, ux, uz, hl, hw, poly: p };
   }
   // Praça Dona Luiza
-  P.praca = { poly: world.areas.find(q => q.k === 'park' && /Dona Lu/.test(q.n || ''))?.p };
+  P.praca = { poly: world.areas.find(q => q.k === 'park' && /Dona Lu/.test(q.n || ''))?.p, erni: world.areas.find(q => q.k === 'park' && /Erni Engelmann/.test(q.n || ''))?.p };
   // Bar do Waldir: o prédio da Prefeitura que contém o ponto
   {
     const l = byId.waldir;
@@ -106,6 +116,7 @@ export function placeLandmarks(world, terrain) {
   ex.push(obb(P.igreja));
   ex.push(obb({ ...P.ruacoberta, hl: P.ruacoberta.hl + 2, hw: P.ruacoberta.hw + 1 }));
   if (P.praca.poly) ex.push((x, z) => inPoly(x, z, P.praca.poly));
+  if (P.praca.erni) ex.push((x, z) => inPoly(x, z, P.praca.erni));
   if (P.waldir.poly) { const wp = P.waldir.poly; ex.push((x, z) => inPoly(x, z, wp)); }
   P.oktober = planOktober(world);
   if (P.oktober) ex.push(P.oktober.excl);
@@ -114,7 +125,7 @@ export function placeLandmarks(world, terrain) {
 }
 
 /* ======================================================================= */
-export function buildLandmarks(P, world, terrain, scene) {
+export function buildLandmarks(P, world, terrain, scene, city = null) {
   const root = new THREE.Group(); scene.add(root);
   const colliders = [];          // {p: polígono} para colisão
   const updaters = [];
@@ -256,177 +267,19 @@ export function buildLandmarks(P, world, terrain, scene) {
     for (let i = 0; i <= N; i++) for (let j = 0; j <= cols; j++) { const p = arcPt(j / cols); pos.push(-o.hl + i * (o.hl * 2 / N), ys[i] + p.y + 0.12, p.z); }
     for (let i = 0; i < N; i++) for (let j = 0; j < cols; j++) { const a = i * (cols + 1) + j, b = a + cols + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); rg.setIndex(idx); rg.computeVertexNormals();
-    const roofM = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ color: 0xe6f2fb, transparent: true, opacity: 0.38, side: THREE.DoubleSide, depthWrite: false }));
-    roofM.renderOrder = 2; k.extra.push(roofM);
-    // bandeirolas preto-vermelho-amarelo e corações
-    const flagT = tex(64, 96, (c, w, h) => {
-      c.beginPath(); c.moveTo(0, 0); c.lineTo(w, 0); c.lineTo(w, h); c.lineTo(w / 2, h * 0.78); c.lineTo(0, h); c.closePath(); c.clip();
-      c.fillStyle = '#111'; c.fillRect(0, 0, w / 3, h); c.fillStyle = '#d4202a'; c.fillRect(w / 3, 0, w / 3, h); c.fillStyle = '#f3c614'; c.fillRect(2 * w / 3, 0, w / 3, h);
-    });
-    const flagG = new THREE.PlaneGeometry(0.75, 1.1);
-    const fm = new THREE.MeshLambertMaterial({ map: flagT, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
-    const rows = 5, per = Math.round(o.hl * 2 / 1.6), flags = new THREE.InstancedMesh(flagG, fm, rows * per), d = new THREE.Object3D();
-    let n = 0;
-    for (let r = 0; r < rows; r++) for (let i = 0; i < per; i++) {
-      const lx = -o.hl + (i + 0.5) * (o.hl * 2 / per), lz = (r / (rows - 1) - 0.5) * span * 0.7;
-      const sag = Math.sin(((i % 4) + 0.5) / 4 * PI) * 0.5;
-      d.position.set(lx, yMid + colH + rise * 0.55 - sag - Math.abs(lz) * 0.12, lz); d.rotation.set(0, PI / 2 + (r % 2) * 0.2, 0); d.updateMatrix();
-      flags.setMatrixAt(n++, d.matrix);
-    }
-    k.extra.push(flags);
-    const heartT = tex(64, 64, c => { c.fillStyle = '#e0303a'; c.beginPath(); c.moveTo(32, 58); c.bezierCurveTo(-12, 26, 14, -6, 32, 16); c.bezierCurveTo(50, -6, 76, 26, 32, 58); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 3; c.stroke(); });
-    const hm = new THREE.MeshLambertMaterial({ map: heartT, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
-    for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), hm); m.position.set(-o.hl + (i + 0.7) * (o.hl * 2 / 6), yMid + colH + rise * 0.7, (i % 2 ? 1 : -1) * 1.5); m.rotation.y = PI / 2; k.extra.push(m); }
+    // policarbonato bege fosco com nervuras (fotos de abr/2026): deixa passar luz difusa e faz sombra embaixo
+    const ribT = tex(64, 64, (c, w, h) => { c.fillStyle = '#e4d8bf'; c.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 8) { c.fillStyle = 'rgba(120,100,70,0.18)'; c.fillRect(0, y, w, 2); c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(0, y + 3, w, 1); } }, true);
+    const uvs = []; for (let i = 0; i <= N; i++) for (let j = 0; j <= cols; j++) uvs.push(i * 3, j * 1.5);
+    rg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    const roofM = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ map: ribT, color: 0xf4ecdc, emissive: 0x6a5e48, side: THREE.DoubleSide }));
+    roofM.castShadow = true; roofM.receiveShadow = true; k.extra.push(roofM);
     k.build(g);
     const lab = makeLabel('Rua Coberta', 16); lab.position.set(o.x, yMid + colH + rise + 4, o.z); lab.userData.maxDist = 1500; root.add(lab);
     for (const s of [-1, 1]) for (let i = 0; i <= N; i++) { const [wx, wz] = toWorld(o, -o.hl + i * (o.hl * 2 / N), s * half); colliders.push({ p: [[wx - 0.4, wz - 0.4], [wx + 0.4, wz - 0.4], [wx + 0.4, wz + 0.4], [wx - 0.4, wz + 0.4]] }); }
   }
 
-  /* ---------------- Praça Dona Luiza ---------------- */
-  if (P.praca.poly) buildPraca(P.praca.poly);
-  function buildPraca(poly) {
-    const k = new Kit(), g = new THREE.Group(); root.add(g);
-    const wood = lambert(0x5a3a2a), concrete = lambert(0xd9d6cf), white = lambert(0xf6f4ee), paver = lambert(0xa9a39a),
-      trunk = lambert(0x6b4a2f), leaf = lambert(0x6aa84a), leaf2 = lambert(0x5a9a40), palm = lambert(0x5d9a3d), bamboo = lambert(0x7fa04a),
-      stone = lambert(0x8a8170), sand = lambert(0xe3d3a8), red = lambert(0xd6322c), yellow = lambert(0xf2c12e), blue = lambert(0x2f6fd0), vine = lambert(0x5f9b3f);
-    const cx = poly.reduce((s, q) => s + q[0], 0) / poly.length, cz = poly.reduce((s, q) => s + q[1], 0) / poly.length;
-    const inside = (x, z, m = 0) => inPoly(x, z, poly) && [[m, 0], [-m, 0], [0, m], [0, -m]].every(([a, b]) => inPoly(x + a, z + b, poly));
-    const Y = (x, z) => H(x, z);
-    // arroio Koetz: trechos que passam dentro da praça (paredes de pedra + ponte de madeira)
-    const stream = [];
-    for (const w of world.water) if (w.k === 'stream' && /Koetz/.test(w.n || '')) for (let i = 0; i < w.p.length - 1; i++) {
-      const a = w.p[i], b = w.p[i + 1];
-      if (inPoly(a[0], a[1], poly) || inPoly(b[0], b[1], poly) || Math.hypot((a[0] + b[0]) / 2 - cx, (a[1] + b[1]) / 2 - cz) < 45) stream.push([a, b]);
-    }
-    const nearStream = (x, z, d) => stream.some(([a, b]) => { const q = segClosest(x, z, a, b); return Math.hypot(q[0] - x, q[1] - z) < d; });
-    for (const [a, b] of stream) {
-      const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, ry = Math.atan2(-uz, ux);
-      for (const s of [-1, 1]) {
-        const mx = (a[0] + b[0]) / 2 - uz * s * 2.6, mz = (a[1] + b[1]) / 2 + ux * s * 2.6;
-        const top = Y(mx, mz);
-        k.add(new THREE.BoxGeometry(L + 0.4, 2.4, 0.5), stone, mx, top - 1.1, mz, ry);
-      }
-    }
-    // ponte de madeira rústica onde o arroio passa mais perto do centro da praça
-    if (stream.length) {
-      let best = null;
-      for (const [a, b] of stream) { const q = segClosest(cx, cz, a, b), d = Math.hypot(q[0] - cx, q[1] - cz); if (!best || d < best.d) best = { d, q, a, b }; }
-      const L = Math.hypot(best.b[0] - best.a[0], best.b[1] - best.a[1]), ux = (best.b[0] - best.a[0]) / L, uz = (best.b[1] - best.a[1]) / L;
-      const bg = new THREE.Group(); bg.position.set(best.q[0], Y(best.q[0], best.q[1]) + 0.35, best.q[1]); bg.rotation.y = Math.atan2(-uz, ux); g.add(bg);
-      const bk = new Kit(), log = lambert(0xb08a5a), plank = lambert(0x8a6a48), BL = 9;
-      bk.box(1.6, 0.12, BL, plank, 0, 0, 0);
-      for (const s of [-1, 1]) {
-        const rail = new THREE.CylinderGeometry(0.09, 0.09, BL, 8); rail.rotateX(PI / 2);
-        bk.add(rail, log, s * 0.8, 1.0, 0); bk.add(rail, log, s * 0.8, 0.5, 0);
-        for (let i = 0; i <= 4; i++) {
-          bk.add(new THREE.CylinderGeometry(0.11, 0.11, 1.25, 8), log, s * 0.8, 0.55, -BL / 2 + i * BL / 4);
-          if (i < 4) { const x = new THREE.CylinderGeometry(0.06, 0.06, 2.4, 6); x.rotateX(PI / 2); x.rotateX(s * 0.42); bk.add(x, log, s * 0.8, 0.75, -BL / 2 + (i + 0.5) * BL / 4); }
-        }
-      }
-      bk.build(bg);
-      colliders.push({ bridge: true });
-    }
-    // caminhos de pavimento (cruz e diagonal) e piso sob a pérgola
-    const pathQuad = (x0, z0, x1, z1, w) => {
-      const L = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(L / 3);
-      for (let i = 0; i < n; i++) {
-        const t0 = i / n, t1 = (i + 1) / n, ax = x0 + (x1 - x0) * t0, az = z0 + (z1 - z0) * t0, bx = x0 + (x1 - x0) * t1, bz = z0 + (z1 - z0) * t1;
-        const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (!inside(mx, mz)) continue;
-        k.add(new THREE.BoxGeometry(L / n + 0.1, 0.12, w), paver, mx, Y(mx, mz) + 0.04, mz, Math.atan2(-(z1 - z0), x1 - x0));
-      }
-    };
-    const xs = poly.map(q => q[0]), zs = poly.map(q => q[1]);
-    const X0 = Math.min(...xs), X1 = Math.max(...xs), Z0 = Math.min(...zs), Z1 = Math.max(...zs);
-    pathQuad(X0, cz, X1, cz, 3); pathQuad(cx, Z0, cx, Z1, 3); pathQuad(X0 + 3, Z0 + 3, X1 - 3, Z1 - 3, 2.4);
-    // pérgola de madeira escura com trepadeira, ao longo do lado oeste (Av. Castelo Branco)
-    {
-      const px = X0 + 7, pz0 = cz - 18, pz1 = cz + 4, W2 = 3.6, n = 9;
-      for (let i = 0; i <= n; i++) {
-        const z = pz0 + (pz1 - pz0) * i / n;
-        for (const s of [-1, 1]) {
-          const x = px + s * W2 / 2, y = Y(x, z);
-          k.box(0.5, 0.9, 0.5, concrete, x, y, z); k.box(0.35, 2.5, 0.35, wood, x, y + 0.9, z);
-        }
-        const y = Y(px, z); k.box(W2 + 1.2, 0.3, 0.22, wood, px, y + 3.4, z);
-      }
-      for (const s of [-1, 1]) { const y = Y(px, (pz0 + pz1) / 2); k.box(0.25, 0.35, pz1 - pz0 + 1, wood, px + s * W2 / 2, y + 3.05, (pz0 + pz1) / 2); }
-      for (let i = 0; i < 18; i++) { const z = pz0 + (pz1 - pz0) * (i + 0.5) / 18, y = Y(px, z); k.add(new THREE.SphereGeometry(0.9, 6, 4), vine, px + (i % 3 - 1) * 1.1, y + 3.75, z, 0, 0, 0, 1.2, 0.35, 1); }
-      pathQuad(px, pz0 - 1, px, pz1 + 1, W2 - 0.4);
-      for (let i = 0; i < 4; i++) for (const s of [-1, 1]) { const z = pz0 + 2 + i * (pz1 - pz0 - 4) / 3, x = px + s * 1.15, y = Y(x, z); k.box(0.5, 0.42, 0.5, concrete, x, y, z); k.box(0.7, 0.12, 1.9, wood, x, y + 0.42, z); }
-    }
-    // monumento branco com canteiro de flores (muretas brancas)
-    {
-      const mx = cx - 8, mz = cz + 9, y = Y(mx, mz);
-      k.box(7, 0.5, 7, white, mx, y, mz); k.box(6, 0.55, 6, lambert(0x5a8a3a), mx, y, mz);
-      k.add(new THREE.CylinderGeometry(0.75, 0.9, 2.6, 8), white, mx, y + 1.3, mz); k.add(new THREE.CylinderGeometry(1.25, 0.7, 0.6, 12), white, mx, y + 2.9, mz);
-      for (let i = 0; i < 26; i++) { const a = i / 26 * PI * 2, r = 2.1 + (i % 3) * 0.3; k.add(new THREE.SphereGeometry(0.22, 5, 4), [red, yellow, lambert(0xf28ab0)][i % 3], mx + Math.cos(a) * r, y + 0.62, mz + Math.sin(a) * r); }
-    }
-    // coreto octogonal
-    {
-      const qx = cx + 9, qz = cz - 10, y = Y(qx, qz);
-      k.add(new THREE.CylinderGeometry(4.2, 4.4, 0.7, 8), concrete, qx, y + 0.35, qz);
-      for (let i = 0; i < 8; i++) { const a = i / 8 * PI * 2; k.add(new THREE.CylinderGeometry(0.13, 0.13, 3.2, 8), white, qx + Math.cos(a) * 3.8, y + 2.3, qz + Math.sin(a) * 3.8); }
-      k.add(new THREE.CylinderGeometry(4.6, 4.6, 0.3, 8), white, qx, y + 4.0, qz);
-      k.add(new THREE.ConeGeometry(4.9, 2.4, 8), lambert(0x7a3a28), qx, y + 5.3, qz);
-      colliders.push({ circle: [qx, qz, 4.4] });
-    }
-    // playground perto do arroio
-    {
-      const ax = cx + 13, az = cz + 14; let px = ax, pz = az;
-      if (!inside(px, pz, 4)) { px = cx + 6; pz = cz + 12; }
-      const y = Y(px, pz);
-      k.add(new THREE.CylinderGeometry(5, 5, 0.1, 20), sand, px, y + 0.05, pz);
-      // balanço
-      for (const s of [-1, 1]) { const leg = new THREE.CylinderGeometry(0.08, 0.08, 2.9, 6); k.add(leg, yellow, px - 2 + s * 1.4, y + 1.35, pz - 1, 0, 0, 0.25); k.add(leg, yellow, px - 2 + s * 1.4, y + 1.35, pz + 1, 0, 0, -0.25); }
-      { const top = new THREE.CylinderGeometry(0.08, 0.08, 3.4, 6); top.rotateZ(PI / 2); k.add(top, red, px - 2, y + 2.72, pz); }
-      for (const s of [-1, 1]) { k.box(0.5, 0.06, 0.25, lambert(0x333333), px - 2 + s * 0.7, y + 0.55, pz); k.box(0.03, 2.15, 0.03, lambert(0x888888), px - 2 + s * 0.7 - 0.2, y + 0.58, pz); k.box(0.03, 2.15, 0.03, lambert(0x888888), px - 2 + s * 0.7 + 0.2, y + 0.58, pz); }
-      // escorregador
-      k.box(1.2, 1.6, 1.2, blue, px + 2.2, y, pz - 1); k.box(1.4, 0.1, 1.4, red, px + 2.2, y + 1.6, pz - 1);
-      { const sl = new THREE.BoxGeometry(0.8, 0.08, 3.2); sl.rotateX(-0.5); k.add(sl, yellow, px + 2.2, y + 0.85, pz + 1.2); }
-      // gangorra
-      k.box(0.3, 0.5, 0.3, red, px, y, pz + 3); { const tb = new THREE.BoxGeometry(3, 0.08, 0.3); tb.rotateZ(0.15); k.add(tb, yellow, px, y + 0.55, pz + 3); }
-    }
-    // árvores, palmeiras e bambus (instanciados)
-    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    const trees = [], palms = [], bamboos = [];
-    for (let i = 0; i < 400 && trees.length < 11; i++) {
-      const x = X0 + rnd() * (X1 - X0), z = Z0 + rnd() * (Z1 - Z0);
-      if (!inside(x, z, 3) || nearStream(x, z, 4) || Math.abs(x - cx) < 2.5 || Math.abs(z - cz) < 2.5) continue;
-      if (Math.hypot(x - (cx + 9), z - (cz - 10)) < 7 || Math.hypot(x - (cx - 8), z - (cz + 9)) < 6 || Math.abs(x - (X0 + 7)) < 3.5) continue;
-      if (trees.some(t => Math.hypot(t[0] - x, t[1] - z) < 10)) continue;
-      trees.push([x, z, 0.9 + rnd() * 0.6]);
-    }
-    for (let i = 0; i < 200 && palms.length < 6; i++) {
-      const x = X0 + rnd() * (X1 - X0), z = Z0 + rnd() * (Z1 - Z0);
-      if (!inside(x, z, 2) || nearStream(x, z, 3.5) || [...trees, ...palms].some(t => Math.hypot(t[0] - x, t[1] - z) < 5)) continue;
-      palms.push([x, z, 0.9 + rnd() * 0.3]);
-    }
-    for (const [a, b] of stream) for (const t of [0.3, 0.8]) { const x = a[0] + (b[0] - a[0]) * t + (rnd() - 0.5) * 2, z = a[1] + (b[1] - a[1]) * t; if (Math.hypot(x - cx, z - cz) < 45) bamboos.push([x + 4, z, 1]); }
-    const inst = (geo, mat, list, f) => { const im = new THREE.InstancedMesh(geo, mat, list.length), d = new THREE.Object3D(); list.forEach((t, i) => { f(d, t); d.updateMatrix(); im.setMatrixAt(i, d.matrix); }); im.castShadow = true; im.receiveShadow = true; g.add(im); };
-    const trunkG = new THREE.CylinderGeometry(0.25, 0.4, 6.5, 7).translate(0, 3.25, 0), crownG = new THREE.IcosahedronGeometry(2.9, 1);
-    inst(trunkG, trunk, trees, (d, [x, z, s]) => { d.position.set(x, Y(x, z), z); d.scale.setScalar(s); d.rotation.set(0, 0, 0); });
-    inst(crownG, leaf, trees.filter((_, i) => i % 2 === 0), (d, [x, z, s]) => { d.position.set(x, Y(x, z) + 8.2 * s, z); d.scale.set(s * 1.25, s * 0.7, s * 1.25); });
-    inst(crownG, leaf2, trees.filter((_, i) => i % 2 === 1), (d, [x, z, s]) => { d.position.set(x, Y(x, z) + 8.6 * s, z); d.scale.set(s * 1.3, s * 0.65, s * 1.3); });
-    const palmT = new THREE.CylinderGeometry(0.16, 0.24, 7, 6).translate(0, 3.5, 0), frond = new THREE.ConeGeometry(0.5, 3.4, 4).rotateX(PI / 2).translate(0, 0, 1.7);
-    inst(palmT, lambert(0x8d7a5e), palms, (d, [x, z, s]) => { d.position.set(x, Y(x, z), z); d.scale.setScalar(s); });
-    const fr = []; palms.forEach(([x, z, s]) => { for (let i = 0; i < 7; i++) fr.push([x, z, s, i]); });
-    inst(frond, palm, fr, (d, [x, z, s, i]) => { d.position.set(x, Y(x, z) + 7 * s, z); d.rotation.set(0.5, i / 7 * PI * 2, 0, 'YXZ'); d.scale.set(s, s * 0.3, s); });
-    const bambooG = new THREE.CylinderGeometry(0.07, 0.07, 9, 5).translate(0, 4.5, 0), bl = [];
-    bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) bl.push([x + (rnd() - 0.5) * 2.4, z + (rnd() - 0.5) * 2.4, rnd()]); });
-    inst(bambooG, bamboo, bl, (d, [x, z, r]) => { d.position.set(x, Y(x, z), z); d.rotation.set((r - 0.5) * 0.3, 0, (r - 0.4) * 0.3); d.scale.set(1, 0.8 + r * 0.4, 1); });
-    inst(new THREE.IcosahedronGeometry(1.6, 0), leaf, bamboos, (d, [x, z]) => { d.position.set(x, Y(x, z) + 8, z); d.scale.set(1.3, 1.6, 1.3); });
-    // bancos e postes
-    const benches = [], lamps = [];
-    for (let i = -2; i <= 2; i++) if (i) { benches.push([cx + i * 6.5, cz + 2.4, 0]); benches.push([cx + 2.4, cz + i * 6.5, PI / 2]); }
-    for (const [x, z] of [[cx - 10, cz - 2], [cx + 10, cz - 2], [cx - 2, cz - 12], [cx - 2, cz + 12], [cx + 16, cz + 2], [cx - 16, cz + 2]]) if (inside(x, z)) lamps.push([x, z]);
-    benches.forEach(([x, z, r]) => { if (!inside(x, z)) return; const y = Y(x, z);
-      for (const s of [-0.5, 0.5]) { const sx = x + Math.cos(r) * s, sz = z - Math.sin(r) * s, f = r + (Math.hypot(sx - Math.sin(r) - cx, sz - Math.cos(r) - cz) < Math.hypot(sx + Math.sin(r) - cx, sz + Math.cos(r) - cz) ? PI : 0); seats.push({ x: sx, y: y + 0.46, z: sz, face: f }); } k.add(new THREE.BoxGeometry(1.9, 0.1, 0.55), wood, x, y + 0.46, z, r); k.add(new THREE.BoxGeometry(1.9, 0.5, 0.08), wood, x, y + 0.8, z + 0.0, r); for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(0.1, 0.45, 0.5), lambert(0x333333), x + Math.cos(r) * s * 0.8, y + 0.22, z - Math.sin(r) * s * 0.8, r); });
-    const lampMat = new THREE.MeshLambertMaterial({ color: 0xfff3c4, emissive: 0xffd27a, emissiveIntensity: 0 });
-    lamps.forEach(([x, z]) => { const y = Y(x, z); k.add(new THREE.CylinderGeometry(0.08, 0.11, 3.6, 6), lambert(0x2f3440), x, y + 1.8, z); k.add(new THREE.SphereGeometry(0.3, 10, 8), lampMat, x, y + 3.75, z); });
-    updaters.push((dt, s) => { lampMat.emissiveIntensity = s.night * 1.4; });
-    k.build(g);
-    for (const [x, z] of trees) colliders.push({ circle: [x, z, 0.5] });
-  }
+  /* ---------------- Praça Dona Luiza (src/world/praca.js) ---------------- */
+  const praca = P.praca.poly ? buildPraca({ root, colliders, updaters, seats, H, world, poly: P.praca.poly, erni: P.praca.erni }) : {};
 
   /* ---------------- Bar do Waldir ---------------- */
   let waldirNpc = null;
@@ -520,11 +373,12 @@ export function buildLandmarks(P, world, terrain, scene) {
   }
 
   buildOktober(P.oktober, world, terrain, root, colliders, updaters);
+  if (city) colliders.push(...buildAvenida(world, terrain, city, root).colliders);
   // junta as peças estáticas por material e região de 250 m; regiões distantes somem
   const cells = mergeStatic(root, 500);
 
   return {
-    colliders, root, waldir: waldirNpc, cells, seats,
+    colliders, root, waldir: waldirNpc, cells, seats, pipoca: praca.pipoca, parking: praca.parking || [], trees: praca.trees || [],
     cull(px, pz, dist) { for (const c of cells) { const v = Math.hypot(px - c.cx, pz - c.cz) < dist; for (const m of c.meshes) m.visible = v; } },
     update(dt, state) { for (const u of updaters) u(dt, state); },
   };

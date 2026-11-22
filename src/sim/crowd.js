@@ -73,7 +73,7 @@ export class Crowd {
       const m = new THREE.InstancedMesh(g, mat, n);
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       m.setColorAt(0, new THREE.Color(1, 1, 1));
-      m.castShadow = true; m.frustumCulled = false; m.count = 0;
+      m.castShadow = !['hairShort', 'hairLong', 'cuia', 'shoe', 'foreArm'].includes(name); m.frustumCulled = false; m.count = 0;   // partes pequenas sem sombra
       m.userData.dynamic = true;
       this.meshes[name] = m; scene.add(m);
     }

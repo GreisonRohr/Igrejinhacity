@@ -14,3 +14,9 @@ Fotos usadas só como referência para modelar (não são copiadas para o jogo).
 | Morro da Cruz / Monte da Fé | Cruz branca de 35 m iluminada no topo de morro com mata, a 630 m; mirante, escadaria e café. | Commons "Morro-da-cruz02/03-igrejinha.jpg" (CC BY-SA 3.0, Gustavo.kunst); buser.com.br/destinos/pontos-turisticos/rs/igrejinha/monte-da-fe |
 | Cascata da Solitária | Rocha avermelhada, poço, estrada de chão ao lado, mata densa. | Commons "Cascata da Solitária - Igrejinha - RS - panoramio.jpg" (CC BY-SA 3.0) |
 | Bierhalle | Fica no antigo ginásio do parque, onde foi a 1ª Oktoberfest (1988); decoração bávara. | Jornal do Comércio, 2026 |
+
+## Centro (fotos do diretor, 22/11/2026)
+Capturas do Google Street View (abr/2026) e do TripAdvisor enviadas na conversa; não ficam no repositório (direitos dos
+autores). Usadas para: Praça Dona Luísa (monumento com mastros, totem do relógio, pérgola, piso, bancos, lampiões, pedra),
+prédio Erni Engelmann e feira (R. Osvaldo Cruz 561/647), Rua Coberta (cobertura bege, colunas brancas, vagas em ângulo),
+Av. Castelo Branco 269/311 (canteiro, casinhas enxaimel nas faixas, palmeiras em vaso, pipoqueiro "PIPOCA E BATATA").

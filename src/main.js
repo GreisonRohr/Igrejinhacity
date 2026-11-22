@@ -21,6 +21,7 @@ import { events } from './core/events.js';
 import { NavGraph } from './nav/graph.js';
 import { Pedestrians } from './sim/pedestrians.js';
 import { Interactions } from './interact/interact.js';
+import { TreeLOD } from './world/trees.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -84,8 +85,12 @@ const groundCanvas = await stage('Pintando o chão…', 0.1, 0.18, () => buildGr
 terrain.material.map = groundTexture(groundCanvas, renderer);
 await stage('Erguendo a Serra…', 0.18, 0.22, () => scene.add(terrain.build()));
 await stage('Construindo a cidade…', 0.22, 0.7, async tick => scene.add(await city.build(tick)));
-const landmarks = await stage('Montando a Igreja, a praça e a Oktoberfest…', 0.7, 0.82, () => buildLandmarks(LM, world, terrain, scene));
-const street = await stage('Plantando árvores…', 0.82, 0.88, () => buildStreetLife(world, terrain, city, Q));
+const landmarks = await stage('Montando a Igreja, a praça e a Oktoberfest…', 0.7, 0.82, () => buildLandmarks(LM, world, terrain, scene, city));
+const street = await stage('Plantando árvores…', 0.82, 0.88, () => buildStreetLife(world, terrain, city, Q, landmarks.parking));
+// árvores detalhadas perto da câmera (cartões de folha, vento); longe ficam as copas simples
+const treeLOD = new TreeLOD(scene, { cap: isTouch ? { leafy: 90, big: 24, palm: 24 } : { leafy: 160, big: 30, palm: 40 }, radius: isTouch ? 100 : 130 });
+for (const t of street.trees) treeLOD.add(t);
+for (const t of landmarks.trees) treeLOD.add(t, true);
 scene.add(street.group);
 if (DEBUG) console.log('rua:', JSON.stringify(street.counts));
 const sky = new Sky(scene, Q);
@@ -174,6 +179,27 @@ if (waldir) interact.add((px, pz) => {
     waldir.rotation.y = Math.atan2(player.x - waldir.position.x, player.z - waldir.position.z);
   } } : null;
 });
+/* ---------- o tio da pipoca (esquina da praça com a Castelo Branco) ---------- */
+let pipoqueiro = null, pipocaI = 0;
+const FALAS_PIPOCA = ['Olha a pipoca quentinha! Doce ou salgada, tchê?', 'Batata frita na hora, guri! Bah, tá tri crocante.',
+  'Trinta anos nessa esquina, conheço todo mundo da praça.', 'Na Oktoberfest a fila aqui dobra a quadra!'];
+if (landmarks.pipoca) {
+  const pc = landmarks.pipoca;
+  pipoqueiro = makePerson({ shirt: 0xf2f2ee, pants: 0x6d6f73, skin: 0xd9a77e, hair: 0x9a9a9a, shoes: 0x2b2b2b, hairStyle: 'bald', mustache: true, build: 1.12 });
+  pipoqueiro.position.set(pc.x, pc.y, pc.z); pipoqueiro.rotation.y = pc.face;
+  scene.add(pipoqueiro);
+  const sh = makeContactShadow(0.55); sh.position.set(pc.x, pc.y + 0.03, pc.z); scene.add(sh);
+  interact.add((px, pz) => {
+    const d = Math.hypot(px - pc.cart[0], pz - pc.cart[1]);
+    return d < 3.2 ? { dist: d - 0.5, label: 'E · comprar pipoca', touchLabel: 'Toque em FALAR para comprar pipoca', button: 'Falar', run() {
+      const buy = pipocaI % 2 === 1;
+      toast('Pipoqueiro', buy ? ': “Saiu uma pipoca salgada no capricho! Bom proveito, tchê!”' : ': “' + FALAS_PIPOCA[(pipocaI >> 1) % FALAS_PIPOCA.length] + '”', 5);
+      pipocaI++; events.emit('pipoca', { comprou: buy });
+      pipoqueiro.rotation.y = Math.atan2(player.x - pc.x, player.z - pc.z);
+    } } : null;
+  });
+}
+
 /* ---------- pedestres (src/sim/pedestrians.js, spec em docs/spec-pedestres.md) ---------- */
 const peds = new Pedestrians({ scene, nav, spatial, terrain, city, world, landmarks, places: world.places, quality: isTouch ? 'medium' : 'high',
   groundAt: (x, z) => player.groundAt(x, z, terrain.heightAt(x, z)), hours: () => sky.hours });
@@ -220,6 +246,8 @@ function frame(now) {
   sky.update(running ? dt : 0, pv, camera.position);
   landmarks.update(dt, sky);
   if (waldir) waldir.userData.animate(dt, 0);
+  if (pipoqueiro) pipoqueiro.userData.animate(dt, 0);
+  treeLOD.update(dt, camera.position.x, camera.position.z, now / 1000);
 
   lodT -= dt;
   if (lodT <= 0) {

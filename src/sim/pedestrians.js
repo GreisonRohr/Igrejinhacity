@@ -210,7 +210,7 @@ export class Pedestrians {
     for (let i = 1; i < P.length; i++) {
       const dx = P[i][0] - P[i - 1][0], dz = P[i][1] - P[i - 1][1], l = Math.hypot(dx, dz) || 1;
       if (f > l && i < P.length - 1) { f -= l; continue; }
-      const t = Math.min(1, f / l), o = this._offset(e) * (e.med > 0 ? (e.a === n ? -1 : 1) : r() < 0.5 ? 1 : -1);
+      const t = Math.min(1, f / l), o = this._offset(e) * (e.med > 0 ? (e.a === n ? 1 : -1) : r() < 0.5 ? 1 : -1);
       return [P[i - 1][0] + dx * t - dz / l * o, P[i - 1][1] + dz * t + dx / l * o];
     }
     return P[0];
@@ -263,7 +263,7 @@ export class Pedestrians {
       };
       let side;
       if (o === 0) side = 0;
-      else if (e.med > 0) side = -1;                                         // pista dupla: calçada só do lado de fora
+      else if (e.med > 0) side = 1;                                          // pista dupla: calçada só do lado de fora (direita do sentido)
       else {
         // fica do lado mais perto de onde está (último trecho: do lado do destino)
         const ref = i === path.length - 1 && final ? final : last;

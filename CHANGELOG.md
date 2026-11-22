@@ -2,6 +2,22 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-22 — Centro real: Praça Dona Luísa, Rua Coberta, Av. Castelo Branco e árvores
+- Praça refeita a partir das fotos do diretor (Street View abr/2026, TripAdvisor): piso de lajotas de pedra, canteiros
+  elevados com árvores grandes, pérgola de madeira com trepadeira e bancos, monumento com 4 mastros sobre canteiro
+  revestido de madeira, totem do relógio, prédio enxaimel Erni Engelmann (oitão de madeira, varanda com guarda-corpo em
+  X, faixa do festival, painel preto-vermelho-amarelo, chaminé de pedra), feira do produtor com balcão de tijolo e
+  frutas, lampiões pretos, pedra grande com banco vermelho, floreiras redondas, parquinho.
+- O tio da pipoca na esquina com a Castelo Branco ("PIPOCA E BATATA"): conversa e vende pipoca (E / Falar).
+- Rua Coberta: cobertura bege fosca com nervuras e sombra embaixo (era azulada e transparente); vagas em ângulo com carros.
+- Av. Castelo Branco: canteiro central gramado com meio-fio amarelo, casinhas enxaimel (telhado de telha, oitão de
+  tábuas com treliça e floreira de gerânios) nas faixas de pedestre, palmeiras em vaso.
+- Corrigido: em todas as avenidas de pista dupla a calçada era desenhada no canteiro central (e os pedestres andavam
+  nele); agora calçada fica do lado de fora e o canteiro no meio.
+- Árvores: perto da câmera, tronco com galhos e copa de folhas recortadas com sombreamento de volume e vento; longe,
+  a copa simples. Ipês continuam rosa e amarelo.
+- Desempenho: peças de cor lisa dos marcos agora são uma malha só (−90 draw calls); orçamento mantido (747/750).
+
 ## 2026-11-22 — Ciclo 3 (pedestres) e protagonista
 - Pessoas na cidade: moradores, trabalhadores, estudantes e idosos (muitos com cuia de chimarrão) andando nas calçadas
   até destinos reais (lojas, praças, escolas, igrejas, casas, Bar do Waldir) conforme a hora; centro cheio de dia,

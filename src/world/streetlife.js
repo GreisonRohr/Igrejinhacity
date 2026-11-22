@@ -18,7 +18,7 @@ function resample(p, step) {
 }
 const mergeAt = (parts) => mergeGeometries(parts.map(([g, x, y, z, rx = 0, sx = 1, sy = 1, sz = 1]) => { const q = (g.index ? g.toNonIndexed() : g.clone()); if (rx) q.rotateX(rx); q.scale(sx, sy, sz); q.translate(x, y, z); return q; }));
 
-export function buildStreetLife(world, terrain, city, Q) {
+export function buildStreetLife(world, terrain, city, Q, extraCars = []) {
   const group = new THREE.Group();
   let seed = 1234; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   // cruzamentos (vértices compartilhados por 3+ pontas de via)
@@ -44,7 +44,7 @@ export function buildStreetLife(world, terrain, city, Q) {
       const [ax, az] = pts[i], [bx, bz] = pts[i + 1], L = Math.hypot(bx - ax, bz - az) || 1, ux = (bx - ax) / L, uz = (bz - az) / L, nx = -uz, nz = ux;
       acc += L;
       for (const [si, s] of [[0, 1], [1, -1]]) {
-        if (dual && s > 0) continue;   // pista dupla: só o lado de fora
+        if (dual && s < 0) continue;   // pista dupla: só o lado de fora (à direita do sentido do trânsito)
         // árvore na borda externa da calçada
         if (STREET_TREES.has(r.k) && acc >= nextTree[si] && sw[si] >= 1.8) {
           nextTree[si] = acc + 11 + rnd() * 12;
@@ -67,6 +67,8 @@ export function buildStreetLife(world, terrain, city, Q) {
     }
   }
 
+  // vagas extras (estacionamento em ângulo sob a Rua Coberta etc.)
+  for (const c of extraCars) cars.push({ x: c.x, z: c.z, y: terrain.heightAt(c.x, c.z) + 0.08, yaw: c.yaw, c: rnd() });
   // geometrias
   const trunk = new THREE.CylinderGeometry(0.16, 0.26, 3.2, 6).translate(0, 1.6, 0);
   const crownLeafy = mergeAt([[new THREE.IcosahedronGeometry(2.6, 0), 0, 5.2, 0, 0, 1.25, 0.72, 1.25], [new THREE.IcosahedronGeometry(1.8, 0), 1.4, 4.6, 0.6, 0, 1.1, 0.7, 1.0], [new THREE.IcosahedronGeometry(1.7, 0), -1.3, 4.8, -0.5, 0, 1.0, 0.75, 1.1]]);
@@ -88,19 +90,19 @@ export function buildStreetLife(world, terrain, city, Q) {
   const col = new THREE.Color(), d = new THREE.Object3D();
   const cells = new Map();
   const cellOf = (x, z) => { const k = Math.floor(x / CELL) + ',' + Math.floor(z / CELL); let c = cells.get(k); if (!c) cells.set(k, c = { cx: (Math.floor(x / CELL) + 0.5) * CELL, cz: (Math.floor(z / CELL) + 0.5) * CELL, trees: [], cars: [], meshes: [] }); return c; };
-  for (const t of trees) cellOf(t.x, t.z).trees.push(t);
+  for (const t of trees) { cellOf(t.x, t.z).trees.push(t); t.far = []; const a = LEAF[t.kind]; t.color = a[Math.floor((t.rot * 10) % a.length)]; }
   for (const c of cars) cellOf(c.x, c.z).cars.push(c);
   const inst = (cell, geo, mat, list, place, color, shadow = true) => {
     if (!list.length) return;
     const im = new THREE.InstancedMesh(geo, mat, list.length);
-    list.forEach((o, i) => { place(d, o); d.updateMatrix(); im.setMatrixAt(i, d.matrix); if (color) im.setColorAt(i, col.set(color(o))); });
+    list.forEach((o, i) => { place(d, o); d.updateMatrix(); im.setMatrixAt(i, d.matrix); if (color) im.setColorAt(i, col.set(color(o))); if (o.far) o.far.push([im, i]); });
     im.computeBoundingSphere(); im.castShadow = shadow; im.receiveShadow = true;
     group.add(im); cell.meshes.push(im);
   };
   for (const cell of cells.values()) {
     const round = cell.trees.filter(t => t.kind !== 'palm'), palms = cell.trees.filter(t => t.kind === 'palm');
     inst(cell, trunk, M.bark, round, (d, t) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0, t.rot, 0); d.scale.setScalar(t.s); });
-    inst(cell, crownLeafy, M.leaf, round, (d, t) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0, t.rot, 0); d.scale.setScalar(t.s); }, t => { const a = LEAF[t.kind]; return a[Math.floor((t.rot * 10) % a.length)]; });
+    inst(cell, crownLeafy, M.leaf, round, (d, t) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0, t.rot, 0); d.scale.setScalar(t.s); }, t => t.color);
     inst(cell, palmTrunk, M.bark, palms, (d, t) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0.04, t.rot, 0); d.scale.setScalar(t.s); });
     inst(cell, palmCrown, M.leaf, palms, (d, t) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0.04, t.rot, 0); d.scale.setScalar(t.s); }, () => LEAF.palm[0]);
     const place = (d, c) => { d.position.set(c.x, c.y, c.z); d.rotation.set(0, c.yaw, 0); d.scale.setScalar(1); };
@@ -116,7 +118,7 @@ export function buildStreetLife(world, terrain, city, Q) {
   }
   const dist = Math.min(1100, Q.buildDist * 0.4);
   return {
-    group, counts: { arvores: trees.length, carros: cars.length, celulas: cells.size },
+    group, trees, counts: { arvores: trees.length, carros: cars.length, celulas: cells.size },
     update(px, pz) { for (const c of cells.values()) { const v = Math.hypot(px - c.cx, pz - c.cz) < dist + CELL * 0.7; for (const m of c.meshes) m.visible = v; } },
   };
 }

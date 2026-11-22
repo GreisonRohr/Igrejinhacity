@@ -1,0 +1,401 @@
+// Praça Dona Luísa (centro de Igrejinha), refeita a partir das fotos do diretor (Street View abr/2026 e TripAdvisor):
+// piso de lajotas de pedra, canteiros elevados com árvores grandes de copa larga, pérgola de madeira com trepadeira e
+// bancos, monumento com 4 mastros sobre canteiro revestido de madeira, totem do relógio, prédio enxaimel
+// "Erni Engelmann" (frente para a Rua Coberta), feira do produtor, lampiões pretos, pedra grande com banco vermelho,
+// floreiras redondas, parquinho, o Arroio Koetz com muros de pedra e ponte de madeira, e o carrinho do pipoqueiro.
+import * as THREE from 'three';
+import { Kit, lambert, tex, inPoly, segClosest } from './landmarks3d.js';
+
+const PI = Math.PI;
+
+/* ------------------------------ texturas ------------------------------ */
+const paverTex = () => tex(256, 256, (c, w, h) => {
+  // lajotas de pedra (basalto/arenito claro) em fiadas desencontradas, juntas escuras
+  c.fillStyle = '#8f8a82'; c.fillRect(0, 0, w, h);
+  let s = 3; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let y = 0; y < h; y += 32) for (let x = ((y / 32) % 2) * -24; x < w; x += 48) {
+    const v = 150 + r() * 40 | 0; c.fillStyle = `rgb(${v},${v - 4},${v - 10})`; c.fillRect(x + 2, y + 2, 44, 28);
+    c.fillStyle = 'rgba(0,0,0,0.06)'; c.fillRect(x + 2 + r() * 30, y + 4 + r() * 18, 8, 5);
+  }
+}, true);
+const woodCladTex = () => tex(128, 64, (c, w, h) => {
+  c.fillStyle = '#8a6448'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 12) { c.fillStyle = y % 24 ? '#7d5a40' : '#94704f'; c.fillRect(0, y, w, 11); c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(0, y + 11, w, 1); }
+  for (let x = 0; x < w; x += 9) { c.fillStyle = 'rgba(60,35,20,0.12)'; c.fillRect(x, 0, 1, h); }
+}, true);
+const brickTex = () => tex(128, 64, (c, w, h) => {
+  c.fillStyle = '#d8d0c4'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 10) for (let x = ((y / 10) % 2) * -11; x < w; x += 22) { c.fillStyle = ['#a9583c', '#9c4d33', '#b5643f'][(x + y) % 3]; c.fillRect(x + 1, y + 1, 20, 8); }
+}, true);
+const totemTex = () => tex(64, 256, (c, w, h) => {
+  // coluna do relógio: blocos marrom-avermelhados e brancos alternados (como enxaimel)
+  c.fillStyle = '#f2efe8'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 32) for (let x = 0; x < w; x += 32) if (((x + y) / 32) % 2) { c.fillStyle = '#9a4a2e'; c.fillRect(x + 3, y + 3, 26, 26); }
+});
+const clockTex = () => tex(64, 64, (c, w) => {
+  c.fillStyle = '#f7f5ee'; c.beginPath(); c.arc(32, 32, 30, 0, 7); c.fill(); c.strokeStyle = '#222'; c.lineWidth = 3; c.stroke();
+  c.fillStyle = '#222'; for (let i = 0; i < 12; i++) { const a = i / 12 * PI * 2; c.fillRect(32 + Math.sin(a) * 24 - 1, 32 - Math.cos(a) * 24 - 1, 3, 3); }
+  c.lineWidth = 3; c.beginPath(); c.moveTo(32, 32); c.lineTo(32, 14); c.moveTo(32, 32); c.lineTo(45, 36); c.stroke();
+});
+const railTex = () => tex(128, 64, (c, w, h) => {
+  // guarda-corpo de madeira em X (varanda do Erni Engelmann)
+  c.strokeStyle = '#b8783e'; c.lineWidth = 7;
+  c.strokeRect(4, 4, w - 8, h - 8);
+  c.beginPath(); c.moveTo(4, 4); c.lineTo(w / 2, h - 4); c.lineTo(w - 4, 4); c.moveTo(4, h - 4); c.lineTo(w / 2, 4); c.lineTo(w - 4, h - 4); c.stroke();
+});
+const gableWoodTex = () => tex(256, 256, (c, w, h) => {
+  c.fillStyle = '#c98a4a'; c.fillRect(0, 0, w, h);
+  c.strokeStyle = 'rgba(80,40,10,0.35)'; c.lineWidth = 2; for (let x = 0; x < w; x += 12) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+  // vidros do oitão
+  c.fillStyle = '#2d3a44'; c.fillRect(w * 0.22, h * 0.45, w * 0.56, h * 0.45);
+  c.strokeStyle = '#c98a4a'; c.lineWidth = 6; for (let x = w * 0.22; x <= w * 0.78; x += w * 0.14) { c.beginPath(); c.moveTo(x, h * 0.45); c.lineTo(x, h * 0.9); c.stroke(); }
+  c.strokeStyle = '#6e3c18'; c.lineWidth = 10; c.beginPath(); c.moveTo(w / 2, 10); c.lineTo(w / 2, h * 0.45); c.moveTo(w * 0.18, h * 0.62); c.lineTo(w / 2, h * 0.3); c.lineTo(w * 0.82, h * 0.62); c.stroke();
+  c.fillStyle = '#6e3c18'; c.fillRect(0, h - 26, w, 26);
+  c.fillStyle = '#f0d9b0'; c.font = 'bold 18px serif'; c.textAlign = 'center'; c.fillText('E r n i   E n g e l m a n n', w / 2, h - 7);
+});
+const bannerTex = () => tex(256, 128, (c, w, h) => {
+  c.fillStyle = '#f19a2e'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff3d6'; c.fillRect(8, 8, w - 16, h - 16);
+  c.fillStyle = '#7a3a12'; c.font = 'bold 20px sans-serif'; c.textAlign = 'center'; c.fillText('FESTIVAL DE', 70, 46); c.fillText('CERVEJA', 70, 70); c.font = '13px sans-serif'; c.fillText('E GASTRONOMIA', 70, 92);
+  c.fillStyle = '#2f6a3a'; c.beginPath(); c.arc(175, 60, 32, 0, 7); c.fill(); c.fillStyle = '#f2c12e'; c.beginPath(); c.arc(175, 60, 20, 0, 7); c.fill();
+});
+const flagPanelTex = () => tex(64, 128, (c, w, h) => { c.fillStyle = '#111'; c.fillRect(0, 0, w / 3, h); c.fillStyle = '#d4202a'; c.fillRect(w / 3, 0, w / 3, h); c.fillStyle = '#f3c614'; c.fillRect(2 * w / 3, 0, w / 3, h); });
+const pipocaTex = () => tex(256, 48, (c, w, h) => { c.fillStyle = '#d6232a'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = 'bold 26px serif'; c.textAlign = 'center'; c.fillText('PIPOCA E BATATA', w / 2, 34); });
+
+/* ------------------------------ peças ------------------------------ */
+/**
+ * ctx: { root, colliders, updaters, seats, H, world, poly (praça), erni (canto Erni Engelmann) }
+ * Devolve { pipoca: {x, y, z, face}, parking: [{x, z, yaw}] }.
+ */
+export function buildPraca(ctx) {
+  const { root, colliders, updaters, seats, H, world, poly } = ctx;
+  const erni = ctx.erni || [];
+  const g = new THREE.Group(); root.add(g);
+  const k = new Kit(), kd = new Kit();          // kd: detalhes chapados sem sombra (placas, mostradores)
+  const inside = (x, z) => inPoly(x, z, poly) || (erni.length && inPoly(x, z, erni));
+  const xs = [...poly, ...erni].map(q => q[0]), zs = [...poly, ...erni].map(q => q[1]);
+  const X0 = Math.min(...xs), X1 = Math.max(...xs), Z0 = Math.min(...zs), Z1 = Math.max(...zs);
+  const M = {
+    wood: lambert(0x6b4a33), darkWood: lambert(0x4a2f1f), concrete: lambert(0xd8d4cc), white: lambert(0xf3f1ea), stone: lambert(0x8a8170),
+    grass: lambert(0x5f8f3e), shrub: lambert(0x3f7330), shrub2: lambert(0x4e8a3a), vine: lambert(0x4d8a36), pinkFlower: lambert(0xd86aa0),
+    red: lambert(0xc8282d), yellow: lambert(0xf2c12e), blue: lambert(0x2f6fd0), black: lambert(0x1d1f22), metal: lambert(0x55595e),
+    pedestal: lambert(0xb9b6ae), plaque: lambert(0x9c9890), glassDark: lambert(0x2d3a44), roofSlate: lambert(0x4b4f55), roofTile: lambert(0x7a3a28),
+    rock: lambert(0x8c6f55), sand: lambert(0xe3d3a8), fruitR: lambert(0xd23a2a), fruitG: lambert(0x7ab83a), fruitO: lambert(0xf09a20), fruitY: lambert(0xf2d03a),
+    clad: new THREE.MeshLambertMaterial({ map: woodCladTex() }), brick: new THREE.MeshLambertMaterial({ map: brickTex() }),
+    totem: new THREE.MeshLambertMaterial({ map: totemTex() }), clock: new THREE.MeshLambertMaterial({ map: clockTex() }),
+    rail: new THREE.MeshLambertMaterial({ map: railTex(), transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
+    gable: new THREE.MeshLambertMaterial({ map: gableWoodTex(), side: THREE.DoubleSide }), banner: new THREE.MeshLambertMaterial({ map: bannerTex() }),
+    flag: new THREE.MeshLambertMaterial({ map: flagPanelTex() }), pipoca: new THREE.MeshLambertMaterial({ map: pipocaTex(), side: THREE.DoubleSide }),
+  };
+  M.clad.map.repeat.set(4, 1); M.brick.map.repeat.set(3, 1);
+  const lampGlass = new THREE.MeshLambertMaterial({ color: 0xfff1c8, emissive: 0xffd27a, emissiveIntensity: 0 });
+  updaters.push((dt, s) => { lampGlass.emissiveIntensity = s.night * 1.5; });
+  const Y = (x, z) => H(x, z);
+  const solids = [];                                   // áreas ocupadas (piso não vira canteiro, árvores não nascem)
+  const occupy = (x0, z0, x1, z1) => solids.push([x0, z0, x1, z1]);
+  const occupied = (x, z, m = 0) => solids.some(([a, b, c, d]) => x > a - m && x < c + m && z > b - m && z < d + m);
+  const rectCol = (x0, z0, x1, z1) => colliders.push({ p: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]] });
+
+  /* ---------- arroio Koetz: muros de pedra e ponte de madeira (mantidos) ---------- */
+  const stream = [];
+  const cx = (X0 + X1) / 2, cz = (Z0 + Z1) / 2;
+  for (const w of world.water) if (w.k === 'stream' && /Koetz/.test(w.n || '')) for (let i = 0; i < w.p.length - 1; i++) {
+    const a = w.p[i], b = w.p[i + 1];
+    if (inside(a[0], a[1]) || inside(b[0], b[1]) || Math.hypot((a[0] + b[0]) / 2 - cx, (a[1] + b[1]) / 2 - cz) < 45) stream.push([a, b]);
+  }
+  const nearStream = (x, z, d) => stream.some(([a, b]) => { const q = segClosest(x, z, a, b); return Math.hypot(q[0] - x, q[1] - z) < d; });
+  for (const [a, b] of stream) {
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, ry = Math.atan2(-uz, ux);
+    for (const s of [-1, 1]) { const mx = (a[0] + b[0]) / 2 - uz * s * 2.6, mz = (a[1] + b[1]) / 2 + ux * s * 2.6; k.add(new THREE.BoxGeometry(L + 0.4, 2.4, 0.5), M.stone, mx, Y(mx, mz) - 1.1, mz, ry); }
+  }
+  if (stream.length) {
+    let best = null;
+    for (const [a, b] of stream) { const q = segClosest(cx, cz, a, b), d = Math.hypot(q[0] - cx, q[1] - cz); if (!best || d < best.d) best = { d, q, a, b }; }
+    const L = Math.hypot(best.b[0] - best.a[0], best.b[1] - best.a[1]), ux = (best.b[0] - best.a[0]) / L, uz = (best.b[1] - best.a[1]) / L;
+    const bg = new THREE.Group(); bg.position.set(best.q[0], Y(best.q[0], best.q[1]) + 0.35, best.q[1]); bg.rotation.y = Math.atan2(-uz, ux); g.add(bg);
+    const bk = new Kit(), log = lambert(0xb08a5a), plank = lambert(0x8a6a48), BL = 9;
+    bk.box(1.6, 0.12, BL, plank, 0, 0, 0);
+    for (const s of [-1, 1]) {
+      const rail = new THREE.CylinderGeometry(0.09, 0.09, BL, 8); rail.rotateX(PI / 2);
+      bk.add(rail, log, s * 0.8, 1.0, 0); bk.add(rail, log, s * 0.8, 0.5, 0);
+      for (let i = 0; i <= 4; i++) bk.add(new THREE.CylinderGeometry(0.11, 0.11, 1.25, 8), log, s * 0.8, 0.55, -BL / 2 + i * BL / 4);
+    }
+    bk.build(bg);
+    colliders.push({ bridge: true });
+  }
+
+  /* ---------- prédio Erni Engelmann (enxaimel, frente para a Rua Coberta) ---------- */
+  // canto nordeste da praça; frente ao norte, 4 m recuado da borda
+  const eN = (erni.length ? Math.min(...erni.map(q => q[1])) : Z0) + 4.5;   // borda norte + recuo
+  {
+    const x0 = 13, x1 = 25, z0 = eN + 2.6, z1 = z0 + 10.5, wallH = 3.3, ridge = 5.6, y = Y((x0 + x1) / 2, (z0 + z1) / 2) + 0.6;
+    const mx = (x0 + x1) / 2, W = x1 - x0, D = z1 - z0;
+    k.box(W + 0.4, 0.6, D + 0.4, M.brick, mx, y - 0.6, (z0 + z1) / 2);                     // embasamento de tijolo
+    k.box(W, wallH, D, M.white, mx, y, (z0 + z1) / 2);
+    k.add(new THREE.BoxGeometry(W - 1.2, 2.3, 0.08), M.glassDark, mx, y + 1.35, z0 - 0.02);  // vitrine da frente
+    for (let i = 0; i <= 5; i++) k.add(new THREE.BoxGeometry(0.12, 2.5, 0.14), M.darkWood, x0 + 0.6 + i * (W - 1.2) / 5, y + 1.3, z0 - 0.05);
+    k.add(new THREE.BoxGeometry(W + 0.2, 0.25, 0.3), M.darkWood, mx, y + wallH - 0.1, z0 - 0.05);
+    // oitão de madeira com vidros e o nome (frente), telhado de ardósia escura bem inclinado
+    const tri = new THREE.BufferGeometry();
+    tri.setAttribute('position', new THREE.Float32BufferAttribute([-W / 2 - 0.4, 0, 0, W / 2 + 0.4, 0, 0, 0, ridge, 0], 3));
+    tri.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, -1, 0, 0, -1, 0, 0, -1], 3));
+    tri.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2));
+    k.add(tri, M.gable, mx, y + wallH, z0 - 0.9);
+    k.add(tri, M.white, mx, y + wallH, z1);
+    const sl = Math.hypot(W / 2 + 1.2, ridge + 0.5), sa = Math.atan2(ridge + 0.5, W / 2 + 1.2);
+    for (const s of [-1, 1]) {
+      k.add(new THREE.BoxGeometry(sl, 0.2, D + 2.2), M.roofSlate, mx + s * (W / 4 + 0.3), y + wallH + ridge / 2 - 0.05, (z0 + z1) / 2 - 0.45, 0, 0, -s * sa);
+      k.add(new THREE.BoxGeometry(sl, 0.35, 0.18), M.darkWood, mx + s * (W / 4 + 0.3), y + wallH + ridge / 2 - 0.2, z0 - 1.5, 0, 0, -s * sa);   // beiral frontal
+    }
+    // chaminé de pedra (fundo esquerdo)
+    k.box(1.1, wallH + ridge + 1, 1.1, M.stone, x0 + 1.5, y, z1 - 2);
+    // ala leste mais baixa (telhado escuro)
+    const wx0 = x1, wx1 = Math.min(x1 + 7, X1 - 1);
+    if (wx1 - wx0 > 3) {
+      const wm = (wx0 + wx1) / 2, wW = wx1 - wx0;
+      k.box(wW, 2.9, D - 2, M.white, wm, y, (z0 + z1) / 2 + 1);
+      for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(Math.hypot(wW / 2 + 0.6, 2), 0.18, D), M.roofSlate, wm + s * (wW / 4 + 0.15), y + 3.9, (z0 + z1) / 2 + 1, 0, 0, -s * Math.atan2(2, wW / 2 + 0.6));
+      kd.add(new THREE.BoxGeometry(wW * 0.35, 1.2, 0.1), M.flag, wm, y + 1.6, z0 + 1 - 0.05);   // painel preto-vermelho-amarelo
+      rectCol(wx0, z0 + 1, wx1, z1); occupy(wx0, z0, wx1, z1);
+    }
+    // varanda de madeira com guarda-corpo em X sobre base de tijolo
+    k.box(W + 1, 0.15, 2.6, M.wood, mx, y - 0.15, z0 - 1.3);
+    k.box(W + 1, 0.6, 0.3, M.brick, mx, y - 0.6, z0 - 2.6);
+    for (let i = 0; i < 9; i++) { const lx = x0 - 0.5 + (i + 0.5) * (W + 1) / 9; if (Math.abs(lx - mx) < 1) continue; kd.add(new THREE.PlaneGeometry((W + 1) / 9, 0.9), M.rail, lx, y + 0.45, z0 - 2.6); }
+    kd.add(new THREE.PlaneGeometry(3.6, 1.8), M.banner, x0 + 2.6, y + 1.5, z0 - 0.08, PI);  // faixa do festival na fachada
+    rectCol(x0, z0, x1, z1); occupy(x0 - 0.5, z0 - 3, x1, z1);
+  }
+
+  /* ---------- feira do produtor (à esquerda do Erni Engelmann) ---------- */
+  {
+    const x0 = 1, x1 = 11, z0 = eN + 3.5, z1 = z0 + 6.5, y = Y((x0 + x1) / 2, (z0 + z1) / 2), W = x1 - x0, D = z1 - z0, mx = (x0 + x1) / 2;
+    k.box(W, 3.2, 0.25, M.white, mx, y, z1); k.box(0.25, 3.2, D, M.white, x0, y, (z0 + z1) / 2); k.box(0.25, 3.2, D, M.white, x1, y, (z0 + z1) / 2);
+    k.box(W, 1.0, 0.5, M.brick, mx, y, z0 + 0.4);                                             // balcão de tijolo
+    for (const s of [-1, 1]) k.box(0.3, 3.2, 0.3, M.wood, mx + s * (W / 2 - 0.2), y, z0 + 0.1);
+    k.box(W + 0.6, 0.4, 0.3, M.wood, mx, y + 3.2, z0 + 0.05);
+    const sl = Math.hypot(W / 2 + 0.6, 2.2), sa = Math.atan2(2.2, W / 2 + 0.6);
+    for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(sl, 0.16, D + 1.4), M.roofTile, mx + s * (W / 4 + 0.15), y + 4.3, (z0 + z1) / 2, 0, 0, -s * sa);
+    const tri = new THREE.BufferGeometry();
+    tri.setAttribute('position', new THREE.Float32BufferAttribute([-W / 2, 0, 0, W / 2, 0, 0, 0, 2.2, 0], 3)); tri.computeVertexNormals();
+    k.add(tri, M.wood, mx, y + 3.3, z0 - 0.1, PI); k.add(tri, M.white, mx, y + 3.3, z1);
+    // frutas e verduras em caixotes sobre o balcão
+    const fr = [M.fruitR, M.fruitG, M.fruitO, M.fruitY];
+    for (let i = 0; i < 8; i++) { const fx = x0 + 0.8 + i * (W - 1.6) / 7; k.box(0.9, 0.22, 0.45, M.wood, fx, y + 1.0, z0 + 0.4); for (let j = 0; j < 5; j++) k.add(new THREE.SphereGeometry(0.09, 5, 4), fr[(i + j) % 4], fx - 0.32 + j * 0.16, y + 1.3, z0 + 0.4 + ((j % 2) - 0.5) * 0.15); }
+    rectCol(x0, z0 + 0.2, x1, z1); occupy(x0 - 0.5, z0 - 1, x1 + 0.5, z1 + 0.5);
+  }
+
+  /* ---------- monumento: canteiro elevado revestido de madeira, pedestal de pedra e 4 mastros ---------- */
+  const mon = [X0 + 15, cz - 6];
+  {
+    const [mx, mz] = mon, y = Y(mx, mz), S = 8, h = 0.85;
+    for (const [dx, dz, w, d] of [[0, -S / 2, S, 0.3], [0, S / 2, S, 0.3], [-S / 2, 0, 0.3, S], [S / 2, 0, 0.3, S]]) k.box(w, h, d, M.clad, mx + dx, y, mz + dz);
+    k.box(S - 0.4, h - 0.1, S - 0.4, M.grass, mx, y, mz);
+    for (let i = 0; i < 28; i++) { const a = i / 28 * PI * 2, r = S / 2 - 0.9; k.add(new THREE.IcosahedronGeometry(0.55, 0), i % 3 ? M.shrub : M.shrub2, mx + Math.cos(a) * r * 1.05, y + h + 0.25, mz + Math.sin(a) * r * 1.05, i, 0, 0, 1.2, 0.7, 1.2); }
+    k.box(3.4, 0.25, 3.4, M.pedestal, mx, y + h - 0.1, mz);
+    k.box(1.4, 0.4, 1.4, M.pedestal, mx, y + h + 0.15, mz);
+    k.box(1.0, 1.7, 1.0, M.plaque, mx, y + h + 0.55, mz);
+    for (const [dx, dz, ry] of [[0, 0.51, 0], [0.51, 0, PI / 2], [0, -0.51, PI], [-0.51, 0, -PI / 2]]) k.add(new THREE.BoxGeometry(0.7, 1.1, 0.03), M.pedestal, mx + dx, y + h + 1.4, mz + dz, ry);
+    k.box(1.4, 0.35, 1.4, M.pedestal, mx, y + h + 2.25, mz);
+    for (const [dx, dz] of [[-1.1, -2.2], [1.1, -2.2], [-2.2, 1.1], [-2.2, -1.1]]) k.add(new THREE.CylinderGeometry(0.05, 0.07, 11, 6), M.black, mx + dx, y + h + 5.5, mz + dz);
+    rectCol(mx - S / 2, mz - S / 2, mx + S / 2, mz + S / 2); occupy(mx - S / 2 - 1, mz - S / 2 - 1, mx + S / 2 + 1, mz + S / 2 + 1);
+  }
+  /* ---------- totem do relógio ---------- */
+  {
+    const tx = mon[0] + 9, tz = mon[1] + 9, y = Y(tx, tz);
+    k.add(new THREE.CylinderGeometry(0.75, 1.1, 0.7, 4), M.white, tx, y + 0.35, tz, PI / 4);
+    k.add(new THREE.BoxGeometry(0.7, 3.6, 0.7), M.totem, tx, y + 2.5, tz);
+    k.add(new THREE.BoxGeometry(0.9, 0.9, 0.9), M.white, tx, y + 4.6, tz);
+    for (const [dx, dz, ry] of [[0, 0.46, 0], [0.46, 0, PI / 2], [0, -0.46, PI], [-0.46, 0, -PI / 2]]) kd.add(new THREE.CircleGeometry(0.36, 16), M.clock, tx + dx, y + 4.6, tz + dz, ry);
+    k.add(new THREE.ConeGeometry(0.7, 0.6, 4), M.roofTile, tx, y + 5.35, tz, PI / 4);
+    colliders.push({ circle: [tx, tz, 0.8] }); occupy(tx - 1.5, tz - 1.5, tx + 1.5, tz + 1.5);
+  }
+
+  /* ---------- pérgola de madeira com trepadeira, bancos embaixo ---------- */
+  const pg = { x: cx + 1, z0: cz - 10, z1: cz + 20, w: 4.2 };
+  {
+    const n = 10;
+    for (let i = 0; i <= n; i++) {
+      const z = pg.z0 + (pg.z1 - pg.z0) * i / n;
+      for (const s of [-1, 1]) { const x = pg.x + s * pg.w / 2, y = Y(x, z); k.box(0.55, 0.6, 0.55, M.concrete, x, y, z); k.box(0.3, 2.6, 0.3, M.wood, x, y + 0.6, z); colliders.push({ circle: [x, z, 0.3] }); }
+      const y = Y(pg.x, z); k.box(pg.w + 1.4, 0.28, 0.2, M.wood, pg.x, y + 3.2, z);
+    }
+    for (const s of [-1, 1]) { const y = Y(pg.x, (pg.z0 + pg.z1) / 2); k.box(0.25, 0.32, pg.z1 - pg.z0 + 1.2, M.wood, pg.x + s * pg.w / 2, y + 2.9, (pg.z0 + pg.z1) / 2); }
+    for (let z = pg.z0; z <= pg.z1; z += 0.9) { const y = Y(pg.x, z); k.box(pg.w + 0.8, 0.12, 0.1, M.wood, pg.x, y + 3.48, z); }
+    for (let i = 0; i < 30; i++) {
+      const z = pg.z0 + (pg.z1 - pg.z0) * (i + 0.5) / 30, y = Y(pg.x, z), x = pg.x + ((i * 7) % 5 - 2) * 0.8;
+      k.add(new THREE.IcosahedronGeometry(1, 0), i % 7 === 3 ? M.pinkFlower : M.vine, x, y + 3.75, z, i, 0, 0, 1.3, 0.45, 1.2);
+    }
+    for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
+      const z = pg.z0 + 2.5 + i * (pg.z1 - pg.z0 - 5) / 4, x = pg.x + s * 1.15, y = Y(x, z);
+      k.box(0.45, 0.42, 0.45, M.concrete, x, y, z - 0.6); k.box(0.45, 0.42, 0.45, M.concrete, x, y, z + 0.6); k.box(0.6, 0.1, 1.9, M.wood, x, y + 0.42, z);
+      for (const o of [-0.5, 0.5]) seats.push({ x, y: y + 0.47, z: z + o, face: s > 0 ? -PI / 2 : PI / 2 });
+    }
+    occupy(pg.x - pg.w / 2 - 1, pg.z0 - 1, pg.x + pg.w / 2 + 1, pg.z1 + 1);
+  }
+  /* ---------- parquinho atrás da pérgola ---------- */
+  {
+    const px = pg.x + 9, pz = (pg.z0 + pg.z1) / 2 - 4;
+    if (inside(px, pz) && !nearStream(px, pz, 6)) {
+      const y = Y(px, pz);
+      k.add(new THREE.CylinderGeometry(5.5, 5.5, 0.12, 20), M.sand, px, y + 0.06, pz);
+      for (const s of [-1, 1]) { const leg = new THREE.CylinderGeometry(0.08, 0.08, 2.9, 6); k.add(leg, M.yellow, px - 2 + s * 1.4, y + 1.35, pz - 1, 0, 0, 0.25); k.add(leg, M.yellow, px - 2 + s * 1.4, y + 1.35, pz + 1, 0, 0, -0.25); }
+      { const top = new THREE.CylinderGeometry(0.08, 0.08, 3.4, 6); top.rotateZ(PI / 2); k.add(top, M.red, px - 2, y + 2.72, pz); }
+      for (const s of [-1, 1]) k.box(0.5, 0.06, 0.25, M.black, px - 2 + s * 0.7, y + 0.55, pz);
+      k.box(1.2, 1.6, 1.2, M.blue, px + 2.2, y, pz - 1); k.box(1.4, 0.1, 1.4, M.red, px + 2.2, y + 1.6, pz - 1);
+      { const sl = new THREE.BoxGeometry(0.8, 0.08, 3.2); sl.rotateX(-0.5); k.add(sl, M.yellow, px + 2.2, y + 0.85, pz + 1.2); }
+      occupy(px - 5.5, pz - 5.5, px + 5.5, pz + 5.5);
+    }
+  }
+  /* ---------- pedra grande com banco vermelho; floreiras redondas ---------- */
+  {
+    const rx = X0 + 6, rz = cz + 6, y = Y(rx, rz);
+    k.add(new THREE.DodecahedronGeometry(1.3, 0), M.rock, rx, y + 0.8, rz, 0.4, 0.2, 0.1, 1.3, 1, 1.1);
+    k.box(1.8, 0.08, 0.5, M.red, rx + 2.4, y + 0.45, rz); k.box(1.8, 0.45, 0.06, M.red, rx + 2.4, y + 0.55, rz + 0.24);
+    for (const s of [-1, 1]) k.box(0.08, 0.45, 0.45, M.black, rx + 2.4 + s * 0.8, y, rz);
+    seats.push({ x: rx + 2.4, y: y + 0.49, z: rz - 0.05, face: PI });
+    colliders.push({ circle: [rx, rz, 1.4] }); occupy(rx - 2, rz - 2, rx + 4, rz + 1.5);
+    for (const [fx, fz] of [[X0 + 7, Z0 + 8], [X0 + 7, cz - 14], [cx - 8, Z0 + 10], [X0 + 24, cz + 4]]) {
+      if (!inside(fx, fz) || occupied(fx, fz, 1.6)) continue;
+      const fy = Y(fx, fz);
+      k.add(new THREE.CylinderGeometry(1.6, 1.6, 0.5, 16), M.concrete, fx, fy + 0.25, fz);
+      for (let i = 0; i < 9; i++) { const a = i / 9 * PI * 2; k.add(new THREE.IcosahedronGeometry(0.45, 0), i % 2 ? M.shrub2 : M.pinkFlower, fx + Math.cos(a) * 0.9, fy + 0.7, fz + Math.sin(a) * 0.9); }
+      k.add(new THREE.IcosahedronGeometry(0.7, 0), M.shrub, fx, fy + 0.9, fz);
+      colliders.push({ circle: [fx, fz, 1.6] }); occupy(fx - 1.7, fz - 1.7, fx + 1.7, fz + 1.7);
+    }
+  }
+
+  /* ---------- canteiros elevados com árvores grandes (metade sul, sombra densa das fotos aéreas) ---------- */
+  const beds = [[X0 + 2, cz + 10, cx - 8, Z1 - 2], [pg.x + 4, cz + 12, X1 - 2, Z1 - 2], [X1 - 14, cz - 10, X1 - 2, cz + 6]];
+  const inBed = (x, z) => beds.some(([a, b, c, d]) => x > a && x < c && z > b && z < d);
+
+  /* ---------- piso: lajotas em toda a praça, grama nos canteiros (grade drapeada no relevo) ---------- */
+  {
+    const S = 2, pav = [], pavUV = [], grass = [], curb = [];
+    const pushQ = (arr, uv, a, b, c, d) => { arr.push(...a, ...b, ...c, ...a, ...c, ...d); if (uv) uv.push(a[0] / 4, a[2] / 4, b[0] / 4, b[2] / 4, c[0] / 4, c[2] / 4, a[0] / 4, a[2] / 4, c[0] / 4, c[2] / 4, d[0] / 4, d[2] / 4); };
+    const cell = (i, j) => { const x = X0 + (i + 0.5) * S, z = Z0 + (j + 0.5) * S; if (!inside(x, z) || nearStream(x, z, 3.1)) return 0; return inBed(x, z) ? 2 : 1; };
+    const ni = Math.ceil((X1 - X0) / S), nj = Math.ceil((Z1 - Z0) / S);
+    for (let i = 0; i < ni; i++) for (let j = 0; j < nj; j++) {
+      const t = cell(i, j); if (!t) continue;
+      const x0 = X0 + i * S, z0 = Z0 + j * S, x1 = x0 + S, z1 = z0 + S, lift = t === 2 ? 0.32 : 0.06;
+      const P = (x, z) => [x, Y(x, z) + lift, z];
+      if (t === 1) pushQ(pav, pavUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
+      else {
+        pushQ(grass, null, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
+        // meio-fio de concreto onde o canteiro encontra o piso
+        const edge = (ax, az, bx, bz) => { const A0 = [ax, Y(ax, az) + 0.04, az], B0 = [bx, Y(bx, bz) + 0.04, bz]; pushQ(curb, null, A0, B0, [bx, B0[1] + 0.32, bz], [ax, A0[1] + 0.32, az]); };
+        if (cell(i - 1, j) !== 2) edge(x0, z1, x0, z0); if (cell(i + 1, j) !== 2) edge(x1, z0, x1, z1);
+        if (cell(i, j - 1) !== 2) edge(x0, z0, x1, z0); if (cell(i, j + 1) !== 2) edge(x1, z1, x0, z1);
+      }
+    }
+    const mk = (pos, uv, mat) => { if (!pos.length) return; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); if (uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); };
+    mk(pav, pavUV, new THREE.MeshLambertMaterial({ map: paverTex() }));
+    mk(grass, null, M.grass);
+    mk(curb, null, new THREE.MeshLambertMaterial({ color: 0xd8d4cc, side: THREE.DoubleSide }));
+  }
+
+  /* ---------- árvores grandes, palmeiras e bambus (instanciados) ---------- */
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const trees = [], palms = [], bamboos = [];
+  for (let i = 0; i < 900 && trees.length < 12; i++) {
+    const x = X0 + rnd() * (X1 - X0), z = Z0 + rnd() * (Z1 - Z0);
+    const bed = inBed(x, z);
+    if (!inside(x, z) || nearStream(x, z, 3.5) || occupied(x, z, 2) || (!bed && rnd() < 0.85)) continue;
+    if (trees.some(t => Math.hypot(t[0] - x, t[1] - z) < 11)) continue;
+    trees.push([x, z, 0.8 + rnd() * 0.35, rnd() * 6.28]);
+  }
+  for (let i = 0; i < 300 && palms.length < 5; i++) {
+    const x = X0 + rnd() * (X1 - X0), z = Z0 + rnd() * (Z1 - Z0);
+    if (!inside(x, z) || nearStream(x, z, 3) || occupied(x, z, 1.5) || [...trees, ...palms].some(t => Math.hypot(t[0] - x, t[1] - z) < 6)) continue;
+    palms.push([x, z, 0.9 + rnd() * 0.3]);
+  }
+  for (const [a, b] of stream) for (const t of [0.3, 0.8]) { const x = a[0] + (b[0] - a[0]) * t + (rnd() - 0.5) * 2, z = a[1] + (b[1] - a[1]) * t; if (Math.hypot(x - cx, z - cz) < 45) bamboos.push([x + 4, z, 1]); }
+  const inst = (geo, mat, list, f, color) => { if (!list.length) return; const im = new THREE.InstancedMesh(geo, mat, list.length), d = new THREE.Object3D(), c = new THREE.Color(); list.forEach((t, i) => { f(d, t); d.updateMatrix(); im.setMatrixAt(i, d.matrix); if (color) im.setColorAt(i, c.setHex(color(t, i))); }); im.castShadow = true; im.receiveShadow = true; im.computeBoundingSphere(); g.add(im); };
+  // árvores grandes e palmeiras vão para o sistema de árvores detalhadas (src/world/trees.js)
+  const treeList = [];
+  trees.forEach(([x, z, sc, r], i) => treeList.push({ x, y: Y(x, z) + (inBed(x, z) ? 0.3 : 0), z, s: sc, rot: r, kind: 'big', color: [0x4f7f33, 0x5a8a3a, 0x46752f, 0x628f3f][i % 4] }));
+  palms.forEach(([x, z, sc]) => treeList.push({ x, y: Y(x, z), z, s: sc, rot: x * 7 % 6.28, kind: 'palm', color: 0x5d9a3d }));
+  const bambooG = new THREE.CylinderGeometry(0.07, 0.07, 9, 5).translate(0, 4.5, 0), bl = [];
+  bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) bl.push([x + (rnd() - 0.5) * 2.4, z + (rnd() - 0.5) * 2.4, rnd()]); });
+  inst(bambooG, lambert(0x7fa04a), bl, (d, [x, z, r]) => { d.position.set(x, Y(x, z), z); d.rotation.set((r - 0.5) * 0.3, 0, (r - 0.4) * 0.3); d.scale.set(1, 0.8 + r * 0.4, 1); });
+  for (const [x, z] of trees) colliders.push({ circle: [x, z, 0.65] });
+  for (const [x, z] of palms) colliders.push({ circle: [x, z, 0.3] });
+
+  /* ---------- bancos modernos (pés de concreto branco, assento de madeira) e lampiões pretos ---------- */
+  {
+    const spots = [];
+    for (let i = 0; i < 400 && spots.length < 12; i++) {
+      const x = X0 + 3 + rnd() * (X1 - X0 - 6), z = Z0 + 3 + rnd() * (Z1 - Z0 - 6);
+      if (!inside(x, z) || inBed(x, z) || nearStream(x, z, 4) || occupied(x, z, 1.5) || spots.some(s => Math.hypot(s[0] - x, s[1] - z) < 6)) continue;
+      // de costas para o canteiro/árvore mais próxima, virado para o piso aberto
+      const t = trees.reduce((b, q) => (!b || Math.hypot(q[0] - x, q[1] - z) < Math.hypot(b[0] - x, b[1] - z) ? q : b), null);
+      const face = t ? Math.atan2(x - t[0], z - t[1]) : rnd() * 6.28;
+      spots.push([x, z, face]);
+    }
+    for (const [x, z, face] of spots) {
+      const y = Y(x, z), c = Math.cos(face), s = Math.sin(face);
+      const L = (a, b) => [x + a * c + b * s, z - a * s + b * c];
+      for (const a of [-0.75, 0.75]) { const [px, pz] = L(a, 0); k.add(new THREE.BoxGeometry(0.12, 0.45, 0.55), M.white, px, y + 0.22, pz, face); }
+      k.add(new THREE.BoxGeometry(1.9, 0.08, 0.5), M.wood, x, y + 0.47, z, face);
+      { const [px, pz] = L(0, -0.24); k.add(new THREE.BoxGeometry(1.9, 0.4, 0.06), M.wood, px, y + 0.78, pz, face, 0.15); }
+      for (const a of [-0.45, 0.45]) { const [px, pz] = L(a, 0.05); seats.push({ x: px, y: y + 0.51, z: pz, face }); }
+      occupy(x - 1, z - 1, x + 1, z + 1);
+    }
+    const lamps = [];
+    for (let i = 0; i < 300 && lamps.length < 12; i++) {
+      const x = X0 + 2 + rnd() * (X1 - X0 - 4), z = Z0 + 2 + rnd() * (Z1 - Z0 - 4);
+      if (!inside(x, z) || inBed(x, z) || nearStream(x, z, 3) || occupied(x, z, 1) || lamps.some(l => Math.hypot(l[0] - x, l[1] - z) < 9)) continue;
+      lamps.push([x, z]);
+    }
+    for (const [x, z] of lamps) {
+      const y = Y(x, z);
+      k.add(new THREE.CylinderGeometry(0.16, 0.2, 0.5, 8), M.black, x, y + 0.25, z);
+      k.add(new THREE.CylinderGeometry(0.05, 0.07, 3.2, 6), M.black, x, y + 1.8, z);
+      k.add(new THREE.CylinderGeometry(0.22, 0.14, 0.12, 6), M.black, x, y + 3.42, z);
+      k.add(new THREE.CylinderGeometry(0.18, 0.13, 0.5, 6), lampGlass, x, y + 3.72, z);
+      k.add(new THREE.ConeGeometry(0.28, 0.25, 6), M.black, x, y + 4.08, z);
+      colliders.push({ circle: [x, z, 0.2] });
+    }
+  }
+
+  /* ---------- carrinho do pipoqueiro (esquina noroeste, junto à faixa da Castelo Branco) ---------- */
+  let pipoca = null;
+  {
+    // canto noroeste do polígono, um pouco para dentro
+    const nw = [...poly].sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]))[0];
+    const px = nw[0] + 3.5, pz = nw[1] + 3.2, y = Y(px, pz), face = -PI / 4;
+    const cg = new THREE.Group(); cg.position.set(px, y, pz); cg.rotation.y = face; g.add(cg);
+    const ck = new Kit();
+    ck.box(1.5, 0.75, 0.8, M.white, 0, 0.35, 0);
+    ck.box(1.5, 0.08, 0.8, M.red, 0, 1.1, 0);
+    ck.add(new THREE.BoxGeometry(0.7, 0.55, 0.6), new THREE.MeshLambertMaterial({ color: 0xfff7dc, emissive: 0xffe2a0, emissiveIntensity: 0.25 }), -0.3, 1.45, 0);   // vitrine com pipoca
+    for (const [a, b] of [[-0.7, -0.38], [0.7, -0.38], [-0.7, 0.38], [0.7, 0.38]]) ck.add(new THREE.CylinderGeometry(0.03, 0.03, 1.3, 5), M.metal, a, 1.75, b);
+    ck.add(new THREE.BoxGeometry(2.1, 0.06, 1.5), M.red, 0, 2.42, 0, 0, -0.06);                                // toldo vermelho
+    ck.add(new THREE.PlaneGeometry(2.1, 0.38), M.pipoca, 0, 2.2, 0.75);
+    ck.add(new THREE.PlaneGeometry(2.1, 0.38), M.pipoca, 0, 2.2, -0.75, PI);
+    for (const s of [-1, 1]) { const wh = new THREE.CylinderGeometry(0.28, 0.28, 0.08, 12); wh.rotateX(PI / 2); ck.add(wh, M.black, s * 0.55, 0.28, 0.42); }
+    for (let i = 0; i < 4; i++) ck.box(0.18, 0.3, 0.12, lambert(0xf3e7c4), -0.55 + i * 0.12, 1.14, 0.25);   // saquinhos prontos
+    ck.build(cg);
+    colliders.push({ circle: [px, pz, 1.0] });
+    // o pipoqueiro fica atrás do carrinho
+    const bx = px - Math.sin(face) * 1.1, bz = pz - Math.cos(face) * 1.1;
+    pipoca = { x: bx, y: Y(bx, bz), z: bz, face, cart: [px, pz] };
+  }
+
+  /* ---------- vagas em ângulo sob a Rua Coberta (lado da praça) ---------- */
+  const parking = [];
+  const coberta = world.areas.find(q => q.k === 'plaza' && /Rua Coberta/.test(q.n || ''));
+  if (coberta) {
+    const cp = coberta.p, czMax = Math.max(...cp.map(q => q[1]));     // borda sul da cobertura (lado da praça)
+    const xA = Math.min(...cp.map(q => q[0])) + 8, xB = Math.max(...cp.map(q => q[0])) - 6;
+    const lineM = new THREE.MeshBasicMaterial({ color: 0xf2f2ee });
+    const lines = new Kit();
+    for (let x = xA; x < xB; x += 2.7) {
+      const z = czMax - 3.2, y = Y(x, z) + 0.11;
+      lines.add(new THREE.BoxGeometry(0.1, 0.02, 5), lineM, x, y, z, 0.45);
+      if (x + 1.35 < xB && (Math.floor(x * 7) % 5) !== 0) parking.push({ x: x + 1.35, z, yaw: PI + 0.45 });
+    }
+    lines.build(g, false);
+  }
+
+  k.build(g); kd.build(g, false);
+  return { pipoca, parking, trees: treeList, bounds: [X0, Z0, X1, Z1] };
+}

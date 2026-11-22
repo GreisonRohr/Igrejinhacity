@@ -256,6 +256,10 @@ export class City {
     const lampGrid = new Set(), lampKey = (x, z) => Math.round(x / 10) + ',' + Math.round(z / 10);
     const addLamp = (x, z, y, yaw) => { const k = lampKey(x, z); if (lampGrid.has(k)) return; lampGrid.add(k); this.lampPos.push([x, y, z, yaw]); };
     const crossings = this.findCrossings();
+    this.zebras = [];                                  // faixas de pedestre (para decoração: casinhas da avenida)
+    const duals = this.world.roads.filter(q => q.ow && q.med && !q.br);
+    // distância do ponto até a outra pista da mesma avenida (largura real do canteiro)
+    const otherDist = (r, x, z) => { let best = Infinity; for (const q of duals) { if (q === r || q.n !== r.n) continue; for (let i = 0; i < q.p.length - 1; i++) { const a = q.p[i], b = q.p[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)); best = Math.min(best, Math.hypot(x - a[0] - dx * u, z - a[1] - dz * u)); } } return best; };
     for (const r of this.world.roads) {
       const pts = resample(r.p, 4), n = pts.length;
       const unpaved = r.pav === 'terra' || (!r.pav && (r.k === 'track' || ['unpaved', 'gravel', 'dirt', 'ground', 'compacted'].includes(r.sf)));
@@ -269,7 +273,7 @@ export class City {
       const half = width / 2;
       const swAvg = r.sw ? (r.sw[0] + r.sw[1]) / 2 : (urban ? 2.2 : 0);
       const side = r.br ? (urban ? 1.5 : 0.4) : swAvg;
-      const sideL = dual && !r.br ? 0 : side, sideR = side;
+      const sideL = side, sideR = dual && !r.br ? 0 : side;   // pista dupla (sentido do OSM = sentido do trânsito): canteiro à esquerda (−), calçada à direita (+)
       // ponte: pista reta entre as cabeceiras (altura original, antes de escavar o rio)
       let Y = null;
       if (r.br) {
@@ -317,6 +321,16 @@ export class City {
           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.curb, 0, [nx, 0, nz]); }
         // canteiro central (pista única com canteiro)
         if (r.med && !dual) { strip(ch.roads, r.med / 2, -r.med / 2, 0.2, C.median, 4, F()); }
+        // pista dupla: canteiro gramado até o meio do vão entre as pistas, meio-fio pintado de amarelo
+        if (dual && !r.br && !foot) {
+          const G = []; for (let i = i0; i <= i1; i++) { const d = otherDist(r, pts[i][0], pts[i][1]); G.push(d === Infinity ? 0 : Math.max(0, Math.min(r.med / 2 + 1, (d - 2 * half) / 2))); }
+          for (let i = i0; i < i1; i++) {
+            const g0 = G[i - i0], g1 = G[i + 1 - i0]; if (g0 < 0.4 || g1 < 0.4) continue;
+            const a0 = off(i, -half), a1 = off(i + 1, -half), b0 = off(i, -half - g0), b1 = off(i + 1, -half - g1), [nx, nz] = NRM[i];
+            ch.roads.quad([a0[0], hy(a0, i) + 0.15, a0[1]], [a1[0], hy(a1, i + 1) + 0.15, a1[1]], [b1[0], hy(b1, i + 1) + 0.15, b1[1]], [b0[0], hy(b0, i) + 0.15, b0[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.median, 0, up);
+            ch.roads.quad([a0[0], hy(a0, i), a0[1]], [a1[0], hy(a1, i + 1), a1[1]], [a1[0], hy(a1, i + 1) + 0.15, a1[1]], [a0[0], hy(a0, i) + 0.15, a0[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.yellow, 0, [nx, 0, nz]);
+          }
+        }
         // sinalização horizontal (padrão brasileiro: amarelo separa sentidos, branco separa faixas/bordas)
         if (asphalt && !foot && width >= 5.5) {
           const M = ch.marks, lw = 0.12, dash = (a) => Math.floor(a / 4) % 2 === 0;
@@ -339,6 +353,7 @@ export class City {
           const cx = pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, cz = pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f;
           const L = Math.hypot(pts[k + 1][0] - pts[k][0], pts[k + 1][1] - pts[k][1]) || 1, ux = (pts[k + 1][0] - pts[k][0]) / L, uz = (pts[k + 1][1] - pts[k][1]) / L;
           const ch = this.chunk(cx, cz), y = t.heightAt(cx, cz) + 0.115;
+          this.zebras.push({ x: cx, z: cz, ux, uz, half, name: r.n, dual, med: r.med || 0 });
           for (let o = -half + 0.5; o <= half - 0.4; o += 0.9) {
             const px = cx - uz * o, pz = cz + ux * o;
             const P = (a, b) => [px + ux * a - uz * b, y, pz + uz * a + ux * b];

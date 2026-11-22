@@ -22,7 +22,8 @@ export function mergeStatic(root, cell = 250) {
     dynamic = dynamic || o.userData.dynamic;
     if (o.isMesh && !o.isInstancedMesh && !dynamic && !Array.isArray(o.material)) {
       let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
-      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+      const keep = o.material.vertexColors ? ['position', 'normal', 'uv', 'color'] : ['position', 'normal', 'uv'];   // cor por vértice (Kit)
+      for (const k of Object.keys(g.attributes)) if (!keep.includes(k)) g.deleteAttribute(k);
       if (!g.attributes.normal) g.computeVertexNormals();
       if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
       g.applyMatrix4(o.matrixWorld);
