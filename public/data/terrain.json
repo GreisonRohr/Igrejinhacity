@@ -1,10 +1,12 @@
 {
  "x0": -5620,
  "z0": -5900,
- "nx": 775,
- "nz": 946,
- "cell": 10,
+ "nx": 1549,
+ "nz": 1891,
+ "cell": 5,
  "scale": 0.1,
- "min": 21.683231019888687,
- "max": 725.8566094092123
+ "delta": true,
+ "min": 24.600770950317383,
+ "max": 724,
+ "fonte": "Curvas de nível GEO Igrejinha (1 m, 4 m, 10 m) + AWS Terrain Tiles"
 }

@@ -10,6 +10,7 @@ import { Minimap } from './ui/minimap.js';
 import { LANDMARKS, byId, PLACE_STYLE } from './landmarks.js';
 import { City } from './world/city.js';
 import { buildGroundCanvas, groundTexture } from './world/ground.js';
+import { fetchJSON } from './util/load.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -49,7 +50,7 @@ function toast(title, txt = '', sec = 4) {
 
 /* ---------- carregamento ---------- */
 const BASE = import.meta.env.BASE_URL;
-const [terrain, world] = await Promise.all([Terrain.load(BASE), fetch(BASE + 'data/world.json').then(r => r.json())]);
+const [terrain, world] = await Promise.all([Terrain.load(BASE), fetchJSON(BASE + 'data/world.json.gz')]);
 const T = (name, fn) => { const t0 = performance.now(); const r = fn(); if (DEBUG) console.log(name, Math.round(performance.now() - t0) + ' ms'); return r; };
 const city = new City(world, terrain, Q);
 T('rio', () => city.carveWater());                   // escava o leito do rio antes de montar a malha

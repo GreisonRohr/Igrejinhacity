@@ -1,5 +1,6 @@
 // Converte data/raw/osm.json em public/data/world.json (metros locais, x = leste, z = sul).
 import fs from 'node:fs';
+import zlib from 'node:zlib';
 import { toXZ } from '../src/geo.js';
 import { LANDMARKS } from '../src/landmarks.js';
 import { generateBuildings, loadTerrain } from './gen-buildings.mjs';
@@ -131,7 +132,8 @@ const t0 = Date.now();
 // Por decisão do projeto, só prédios reais do OSM. O gerador fica disponível com --gerar-casas.
 world.gen = process.argv.includes('--gerar-casas') ? generateBuildings(world, LANDMARKS, loadTerrain()) : [];
 console.log('geradas', world.gen.length, 'construções em', Date.now() - t0, 'ms');
-fs.writeFileSync('public/data/world.json', JSON.stringify(world));
+fs.writeFileSync('public/data/world.json.gz', zlib.gzipSync(JSON.stringify(world), { level: 9 }));
+if (fs.existsSync('public/data/world.json')) fs.unlinkSync('public/data/world.json');
 console.log({ roads: roads.length, water: water.length, areas: areas.length, buildings: finalBuildings.length, pois: pois.length, places: places.length, geradas: world.gen.length,
   kmCasteloBranco: (named('Castelo Branco') / 1000).toFixed(2), kmRios: (water.filter(w => w.k === 'river').reduce((s, w) => s + w.p.length, 0)),
-  tamanhoKB: Math.round(fs.statSync('public/data/world.json').size / 1024) });
+  tamanhoKB_gz: Math.round(fs.statSync('public/data/world.json.gz').size / 1024) });

@@ -1,19 +1,22 @@
 // Terreno real (Terrarium) em chunks com LOD por distância e "saias" para esconder emendas.
 import * as THREE from 'three';
+import { fetchBytes } from '../util/load.js';
 
-const CH = 64;                 // células por chunk (64 × 10 m = 640 m)
-const LODS = [                 // distância máxima do centro do chunk → passo da grade
-  [900, 1], [1800, 2], [3600, 4], [Infinity, 8],
+const CHUNK_M = 640;           // tamanho do pedaço de terreno em metros
+const LODS = [                 // distância (m) até a borda do pedaço → passo da grade
+  [550, 1], [1300, 2], [2800, 4], [5500, 8], [Infinity, 16],
 ];
 const SKIRT = 25;
 
 export class Terrain {
   static async load(base) {
-    const [meta, buf] = await Promise.all([
+    const [meta, bytes] = await Promise.all([
       fetch(base + 'data/terrain.json').then(r => r.json()),
-      fetch(base + 'data/terrain.bin').then(r => r.arrayBuffer()),
+      fetchBytes(base + 'data/terrain.bin.gz'),
     ]);
-    return new Terrain(meta, new Int16Array(buf));
+    const q = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+    if (meta.delta) for (let j = 0; j < meta.nz; j++) { let acc = 0; for (let i = 0; i < meta.nx; i++) { const k = j * meta.nx + i; acc += q[k]; q[k] = acc; } }
+    return new Terrain(meta, q);
   }
 
   constructor(meta, q) {
@@ -49,6 +52,7 @@ export class Terrain {
   }
 
   build() {
+    const CH = this.CH = Math.round(CHUNK_M / this.cell);
     const ncx = Math.ceil((this.nx - 1) / CH), ncz = Math.ceil((this.nz - 1) / CH);
     for (let cj = 0; cj < ncz; cj++) for (let ci = 0; ci < ncx; ci++) {
       const i0 = ci * CH, j0 = cj * CH, i1 = Math.min(i0 + CH, this.nx - 1), j1 = Math.min(j0 + CH, this.nz - 1);
@@ -57,7 +61,7 @@ export class Terrain {
       mesh.matrixAutoUpdate = false;
       const c = { i0, j0, i1, j1, mesh, lod: -1, geos: {},
         cx: this.x0 + (i0 + i1) / 2 * this.cell, cz: this.z0 + (j0 + j1) / 2 * this.cell };
-      this.setLod(c, 3);
+      this.setLod(c, LODS.length - 1);
       this.group.add(mesh);
       this.chunks.push(c);
     }
@@ -67,8 +71,9 @@ export class Terrain {
   /** Atualiza LOD conforme a posição da câmera (barato: chamado algumas vezes por segundo). */
   update(px, pz) {
     for (const c of this.chunks) {
-      const d = Math.max(0, Math.hypot(px - c.cx, pz - c.cz) - CH * this.cell * 0.5);
+      const d = Math.max(0, Math.hypot(px - c.cx, pz - c.cz) - CHUNK_M * 0.5);
       let lod = 0; while (d > LODS[lod][0]) lod++;
+      if (LODS[lod][1] > this.CH / 2) lod = LODS.findIndex(l => l[1] >= this.CH / 2);
       if (lod !== c.lod) this.setLod(c, lod);
     }
   }
@@ -97,7 +102,7 @@ export class Terrain {
       uv[k * 2] = (x - this.x0) / this.W; uv[k * 2 + 1] = 1 - (z - this.z0) / this.H;
       // normal analítica no grid original (igual em todos os LODs → menos emendas visíveis)
       const dx = this.hi(i + 1, j) - this.hi(i - 1, j), dz = this.hi(i, j + 1) - this.hi(i, j - 1);
-      const nx = -dx, ny = 2 * this.cell, nz = -dz, l = Math.hypot(nx, ny, nz);
+      const nx = -dx, ny = 2 * this.cell, nz = -dz, l = Math.hypot(nx, ny, nz);   // (diferenças centrais)
       nor[k * 3] = nx / l; nor[k * 3 + 1] = ny / l; nor[k * 3 + 2] = nz / l;
       if (this.material.map) groundTint(ny / l, i * 7.13 + j * 3.71, tmp); else groundColor(y, ny / l, i * 7.13 + j * 3.71, tmp);
       col[k * 3] = tmp.r; col[k * 3 + 1] = tmp.g; col[k * 3 + 2] = tmp.b;

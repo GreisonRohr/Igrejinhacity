@@ -1,11 +1,14 @@
 // Gera uma visão de cima do mapa (relevo sombreado + dados do OSM, se houver) em preview/mapa.png
-import fs from 'node:fs'; import { createRequire } from 'node:module';
+import fs from 'node:fs'; import zlib from 'node:zlib'; import { createRequire } from 'node:module';
 const req = createRequire(import.meta.url); let chromium;
 try { ({ chromium } = req('playwright')); } catch { ({ chromium } = req(req('child_process').execSync('npm root -g').toString().trim() + '/playwright')); }
 import { toXZ } from '../src/geo.js'; import { LANDMARKS } from '../src/landmarks.js';
 const meta = JSON.parse(fs.readFileSync('public/data/terrain.json'));
-const hb = fs.readFileSync('public/data/terrain.bin');
-const world = fs.existsSync('public/data/world.json') ? JSON.parse(fs.readFileSync('public/data/world.json')) : null;
+const hraw = zlib.gunzipSync(fs.readFileSync('public/data/terrain.bin.gz'));
+const hq = new Int16Array(hraw.buffer.slice(hraw.byteOffset, hraw.byteOffset + hraw.byteLength));
+if (meta.delta) for (let j = 0; j < meta.nz; j++) { let a = 0; for (let i = 0; i < meta.nx; i++) { a += hq[j * meta.nx + i]; hq[j * meta.nx + i] = a; } }
+const hb = Buffer.from(hq.buffer);
+const world = fs.existsSync('public/data/world.json.gz') ? JSON.parse(zlib.gunzipSync(fs.readFileSync('public/data/world.json.gz'))) : null;
 const lm = LANDMARKS.map(l => { const [x, z] = toXZ(l.lat, l.lon); return { ...l, x, z }; });
 const out = process.argv[2] || 'preview/mapa.png', zoom = process.argv[3]; // zoom: "centro" para recorte do centro
 fs.mkdirSync('preview', { recursive: true });

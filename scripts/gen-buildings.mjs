@@ -1,10 +1,13 @@
 // Gera casas e comércio ao longo das ruas reais onde o OSM não tem prédios mapeados.
 // Determinístico (semente fixa): o mapa é sempre o mesmo.
 import fs from 'node:fs';
+import zlib from 'node:zlib';
 
 export function loadTerrain() {
   const meta = JSON.parse(fs.readFileSync('public/data/terrain.json'));
-  const q = new Int16Array(fs.readFileSync('public/data/terrain.bin').buffer.slice(0));
+  const raw = fs.existsSync('public/data/terrain.bin.gz') ? zlib.gunzipSync(fs.readFileSync('public/data/terrain.bin.gz')) : fs.readFileSync('public/data/terrain.bin');
+  const q = new Int16Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+  if (meta.delta) for (let j = 0; j < meta.nz; j++) { let acc = 0; for (let i = 0; i < meta.nx; i++) { acc += q[j * meta.nx + i]; q[j * meta.nx + i] = acc; } }
   const hi = (i, j) => q[Math.max(0, Math.min(meta.nz - 1, j)) * meta.nx + Math.max(0, Math.min(meta.nx - 1, i))] * meta.scale;
   const height = (x, z) => {
     const fx = (x - meta.x0) / meta.cell, fz = (z - meta.z0) / meta.cell, i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j;

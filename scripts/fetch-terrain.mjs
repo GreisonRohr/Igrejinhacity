@@ -34,6 +34,7 @@ for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
 }
 // Int16 em decímetros (cabeçalho JSON separado)
 const q = new Int16Array(nx * nz); for (let k = 0; k < q.length; k++) q[k] = Math.round(h[k] * 10);
-fs.writeFileSync('public/data/terrain.bin', Buffer.from(q.buffer));
-fs.writeFileSync('public/data/terrain.json', JSON.stringify({ x0, z0, nx, nz, cell: CELL, scale: 0.1, min, max }, null, 1));
+fs.mkdirSync('data/raw', { recursive: true });
+fs.writeFileSync('data/raw/terrarium.bin', Buffer.from(q.buffer));   // fonte de reserva; o relevo final sai de build-terrain.mjs
+fs.writeFileSync('data/raw/terrarium.json', JSON.stringify({ x0, z0, nx, nz, cell: CELL, scale: 0.1, min, max }, null, 1));
 console.log({ tiles: tiles.size, nx, nz, x0, z0, min: min.toFixed(1), max: max.toFixed(1) });
