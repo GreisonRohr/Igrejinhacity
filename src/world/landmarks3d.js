@@ -6,6 +6,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { byId } from '../landmarks.js';
 import { makeLabel } from './labels.js';
 import { planOktober, buildOktober } from './oktoberfest.js';
+import { mergeStatic } from './merge.js';
 
 const PI = Math.PI;
 export const tex = (w, h, draw, repeat = false) => {
@@ -14,7 +15,14 @@ export const tex = (w, h, draw, repeat = false) => {
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 };
-export const lambert = (color, o = {}) => new THREE.MeshLambertMaterial({ color, ...o });
+const matCache = new Map();
+/** Material Lambert; sem textura, a mesma cor+opções reaproveita o mesmo material (permite juntar malhas). */
+export const lambert = (color, o = {}) => {
+  if (o.map || o.emissiveMap) return new THREE.MeshLambertMaterial({ color, ...o });
+  const k = color + JSON.stringify(o);
+  let m = matCache.get(k); if (!m) matCache.set(k, m = new THREE.MeshLambertMaterial({ color, ...o }));
+  return m;
+};
 export const inPoly = (x, z, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c; };
 export const segClosest = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l = dx * dx + dz * dz; const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l)); return [a[0] + dx * t, a[1] + dz * t]; };
 
@@ -510,9 +518,12 @@ export function buildLandmarks(P, world, terrain, scene) {
   }
 
   buildOktober(P.oktober, world, terrain, root, colliders, updaters);
+  // junta as peças estáticas por material e região de 250 m; regiões distantes somem
+  const cells = mergeStatic(root, 500);
 
   return {
-    colliders, root, waldir: waldirNpc,
+    colliders, root, waldir: waldirNpc, cells,
+    cull(px, pz, dist) { for (const c of cells) { const v = Math.hypot(px - c.cx, pz - c.cz) < dist; for (const m of c.meshes) m.visible = v; } },
     update(dt, state) { for (const u of updaters) u(dt, state); },
   };
 }

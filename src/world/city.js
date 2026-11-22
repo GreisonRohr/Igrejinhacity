@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GeoBuilder, litMaterial } from './geo-builder.js';
 import { editHeights } from './terrain.js';
+import { freeAfterUpload } from './merge.js';
 
 const CHUNK = 600;
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -101,7 +102,7 @@ export class City {
   constructor(world, terrain, { buildDist = 3500, roadDist = 950 } = {}, exclusions = []) {
     this.world = world; this.t = terrain;
     this.exclusions = exclusions;     // pontos marcantes com modelo próprio: o prédio genérico sai
-    this.buildDist = buildDist; this.roadDist = roadDist;
+    this.buildDist = buildDist; this.roadDist = roadDist; this.detailDist = Math.min(400, roadDist * 0.5);
     this.group = new THREE.Group();
     this.chunks = new Map();
     this.colGrid = new Map();
@@ -200,6 +201,7 @@ export class City {
       for (const [key, mat, shadow] of [['walls', this.wallMat, true], ['roofs', this.roofMat, true], ['roads', this.roadMat, false], ['cobble', this.cobbleMat, false], ['walk', this.walkMat, false], ['marks', this.markMat, false], ['bridge', this.bridgeMat, true]]) {
         const g = c[key].build(); c[key] = null;
         if (!g) continue;
+        freeAfterUpload(g);
         const m = new THREE.Mesh(g, mat);
         m.castShadow = shadow; m.receiveShadow = true; m.matrixAutoUpdate = false;
         m.userData.kind = key;
@@ -450,6 +452,15 @@ export class City {
       this.lampPos.forEach(([x, y, z, yaw], i) => { d.position.set(x, y, z); d.rotation.set(0, yaw, 0); d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
       im.castShadow = geo === pole; this.group.add(im);
     }
+    // mancha de luz no chão sob cada poste (aditiva, só à noite): ilusão barata de luz real
+    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,214,150,1)'); gr.addColorStop(0.45, 'rgba(255,190,120,.45)'); gr.addColorStop(1, 'rgba(255,170,100,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    const pt = new THREE.CanvasTexture(c); pt.colorSpace = THREE.SRGBColorSpace;
+    this.poolMat = new THREE.MeshBasicMaterial({ map: pt, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -16, fog: true });
+    const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(14, 14).rotateX(-Math.PI / 2), this.poolMat, N);
+    this.lampPos.forEach(([x, y, z, yaw], i) => { d.position.set(x + Math.sin(yaw) * 1.5, this.t.heightAt(x + Math.sin(yaw) * 1.5, z + Math.cos(yaw) * 1.5) + 0.2, z + Math.cos(yaw) * 1.5); d.rotation.set(0, 0, 0); d.updateMatrix(); pool.setMatrixAt(i, d.matrix); });
+    pool.renderOrder = 3; this.pools = pool; this.group.add(pool);
   }
 
   buildBuildings() {
@@ -560,11 +571,14 @@ export class City {
   update(px, pz) {
     for (const c of this.chunks.values()) {
       const d = Math.max(0, Math.hypot(px - c.cx, pz - c.cz) - CHUNK * 0.7);
-      for (const m of c.meshes) m.visible = d < (['roads', 'cobble', 'walk', 'marks'].includes(m.userData.kind) ? this.roadDist : this.buildDist);
+      for (const m of c.meshes) {
+        const k = m.userData.kind;
+        m.visible = d < (k === 'marks' || k === 'walk' ? this.detailDist : k === 'roads' || k === 'cobble' ? this.roadDist : this.buildDist);
+      }
     }
   }
 
-  setNight(n) { this.wallMat.emissiveIntensity = n * 0.95; if (this.lampMat) this.lampMat.emissiveIntensity = n * 1.6; }
+  setNight(n) { this.wallMat.emissiveIntensity = n * 0.95; if (this.lampMat) this.lampMat.emissiveIntensity = n * 1.6; if (this.poolMat) { this.poolMat.opacity = n * 0.55; this.pools.visible = n > 0.05; } }
 }
 
 /** Marca na máscara as células da grade do terreno dentro do polígono (varredura por linha). */

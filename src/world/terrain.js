@@ -1,6 +1,7 @@
 // Terreno real (Terrarium) em chunks com LOD por distância e "saias" para esconder emendas.
 import * as THREE from 'three';
 import { fetchPacked } from '../util/load.js';
+import { freeAfterUpload } from './merge.js';
 
 const CHUNK_M = 640;           // tamanho do pedaço de terreno em metros
 const LODS = [                 // distância (m) até a borda do pedaço → passo da grade
@@ -140,6 +141,7 @@ export class Terrain {
     g.setAttribute('uv', new THREE.BufferAttribute(uv.subarray(0, k * 2), 2));
     g.setIndex(idx);
     g.computeBoundingSphere();
+    freeAfterUpload(g);
     return g;
   }
 }

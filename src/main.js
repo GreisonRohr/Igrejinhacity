@@ -5,6 +5,7 @@ import { Sky } from './world/sky.js';
 import { makeLabel } from './world/labels.js';
 import { Input, isTouch } from './input.js';
 import { Walker, makePerson } from './player/walker.js';
+import { makeContactShadow } from './player/person.js';
 import { tryLoadGLB } from './player/glbmodel.js';
 import { FollowCam } from './camera.js';
 import { Minimap } from './ui/minimap.js';
@@ -21,13 +22,16 @@ const DEBUG = params.has('debug');
 /* ---------- qualidade (celular x computador) ---------- */
 const Q = isTouch
   ? { pixelRatio: 1.25, shadowSize: 1024, shadowRange: 45, fogFar: 4000, antialias: false, ground: 2048, buildDist: 1700, roadDist: 600 }
-  : { pixelRatio: 1.5, shadowSize: 2048, shadowRange: 60, fogFar: 8000, antialias: true, ground: 4096, buildDist: 4000, roadDist: 950 };
+  : { pixelRatio: 1.5, shadowSize: 2048, shadowRange: 60, fogFar: 8000, antialias: true, ground: 4096, buildDist: 3000, roadDist: 900 };
 
 const renderer = new THREE.WebGLRenderer({ antialias: Q.antialias, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, Q.pixelRatio));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;   // curva filmica: altas luzes suaves, cores naturais
+renderer.toneMappingExposure = 1.0;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 $('game').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -53,7 +57,7 @@ function toast(title, txt = '', sec = 4) {
 /* ---------- carregamento ---------- */
 const BASE = import.meta.env.BASE_URL;
 const [terrain, world] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json')]);
-const T = (name, fn) => { const t0 = performance.now(); const r = fn(); if (DEBUG) console.log(name, Math.round(performance.now() - t0) + ' ms'); return r; };
+const T = (name, fn) => { const t0 = performance.now(); const r = fn(); if (DEBUG) console.log(name, Math.round(performance.now() - t0) + ' ms', performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB' : ''); return r; };
 const LM = placeLandmarks(world, terrain);
 const city = new City(world, terrain, Q, LM.exclusions);
 T('rio', () => city.carveWater());                   // escava o leito do rio antes de montar a malha
@@ -128,6 +132,7 @@ if (landmarks.waldir) {
   waldir = makePerson({ shirt: 0xf6f6f6, pants: 0x3b3b3b, skin: 0xdcae86, hair: 0x9c9c9c, shoes: 0x2b2b2b, mustache: true, apron: 0xd9161e, build: 1.18 });
   waldir.position.set(w.x, w.y, w.z); waldir.rotation.y = w.face + Math.PI / 2;
   scene.add(waldir);
+  const wb = makeContactShadow(0.6); wb.position.set(w.x, w.y + 0.03, w.z); scene.add(wb);
   const tag = makeLabel('Waldir', 3); tag.position.set(w.x, w.y + 2.9, w.z); tag.userData.maxDist = 40; scene.add(tag); labels.push(tag);
 }
 input.on('jump', () => { if (running) player.jump(); });
@@ -152,7 +157,7 @@ function frame(now) {
   const moving = Math.hypot(ax.f, ax.t) > 0.1;
   cam.update(dt, { x: player.x, y: player.y, z: player.z }, running ? look : { dx: dt * 6, dy: 0, zoom: 0 },
     { followYaw: moving && ax.f > 0.5 ? player.ang : null, height: 1.6 });
-  sky.update(running ? dt : 0, { x: player.x, y: player.y, z: player.z });
+  sky.update(running ? dt : 0, { x: player.x, y: player.y, z: player.z }, camera.position);
   landmarks.update(dt, sky);
   if (waldir) waldir.userData.animate(dt, 0);
 
@@ -161,6 +166,7 @@ function frame(now) {
     lodT = 0.3;
     terrain.update(camera.position.x, camera.position.z);
     city.update(camera.position.x, camera.position.z);
+    landmarks.cull(camera.position.x, camera.position.z, Q.buildDist * 0.45);
     city.setNight(sky.night);
     for (const s of labels) s.visible = s.position.distanceTo(camera.position) < s.userData.maxDist;
   }

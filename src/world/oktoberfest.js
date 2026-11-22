@@ -337,7 +337,7 @@ export function buildOktober(O, world, terrain, root, colliders, updaters) {
     const k = new Kit(), gy = H(sSpiel[0], sSpiel[1]);
     const g = new THREE.Group(); g.position.set(sSpiel[0], gy, sSpiel[1]); root.add(g);
     const wheelR = Math.min(10, sSpiel[2] - 3);
-    const holder = new THREE.Group(); holder.position.set(-wheelR * 0.4, wheelR + 2, 0); g.add(holder);
+    const holder = new THREE.Group(); holder.position.set(-wheelR * 0.4, wheelR + 2, 0); holder.userData.dynamic = true; g.add(holder);
     for (const s of [-1, 1]) for (const z of [-1.6, 1.6]) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, wheelR + 3, 6), M.white); leg.position.set(s * (wheelR * 0.28), -(wheelR + 2) / 2, z); leg.rotation.z = s * 0.28; holder.add(leg); }
     const wheel = new THREE.Group(); holder.add(wheel);
     for (const z of [-1.2, 1.2]) { const t = new THREE.Mesh(new THREE.TorusGeometry(wheelR, 0.18, 6, 48), M.white); t.position.z = z; wheel.add(t); }
@@ -355,7 +355,7 @@ export function buildOktober(O, world, terrain, root, colliders, updaters) {
     const cx = wheelR * 0.75, car = new THREE.Group(); car.position.set(cx, 0, 0); g.add(car);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.4, 0.5, 20), M.white); base.position.y = 0.25; car.add(base);
     const top = new THREE.Mesh(new THREE.ConeGeometry(4.8, 2.2, 20), lambert(0xffffff, { map: stripes(['#c4161f', '#f6f6f2', '#3f8fd8', '#f2b01e'], 16) })); top.position.y = 5.2; car.add(top);
-    const spin = new THREE.Group(); car.add(spin);
+    const spin = new THREE.Group(); spin.userData.dynamic = true; car.add(spin);
     for (let i = 0; i < 10; i++) { const a = i / 10 * PI * 2; const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4, 6), lambert(0xd8b445)); pole.position.set(Math.cos(a) * 3.3, 2.5, Math.sin(a) * 3.3); spin.add(pole);
       const horse = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 1.2), [M.white, lambert(0x8a5a32)][i % 2]); horse.position.set(Math.cos(a) * 3.3, 1.6, Math.sin(a) * 3.3); horse.rotation.y = -a; spin.add(horse); }
     updaters.push((dt) => { spin.rotation.y += dt * 0.6; });

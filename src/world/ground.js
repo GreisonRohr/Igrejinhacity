@@ -2,10 +2,10 @@
 // Serve de "LOD" das ruas: de longe a rua é só a textura; de perto vira geometria (roads.js).
 import * as THREE from 'three';
 
-const RAMP = [[20, [143, 186, 92]], [60, [122, 168, 80]], [160, [92, 145, 64]], [350, [74, 122, 54]], [550, [88, 122, 60]], [750, [128, 138, 92]]];
+const RAMP = [[20, [126, 150, 84]], [60, [110, 140, 74]], [160, [84, 120, 60]], [350, [70, 104, 52]], [550, [84, 108, 60]], [750, [128, 138, 92]]];
 
 export const AREA_COLORS = {
-  park: '#6dae4f', garden: '#6dae4f', grass: '#82b65c', pitch: '#4f9a3a', forest: '#3f6e34', cemetery: '#a9ab98',
+  park: '#6f9450', garden: '#6f9450', grass: '#7e9c5e', pitch: '#5a8c44', forest: '#3f6234', cemetery: '#a9ab98',
   water: '#3f86bd', river: '#3f86bd', pool: '#4fb6e0', plaza: '#cfc6b4', parking: '#9a9a94', industrial: '#b9b2a6', retail: '#c9bfb2', commercial: '#c9bfb2',
   quarry: '#b8ab92', farmland: '#a7b56a', residential: null,
 };
@@ -33,8 +33,8 @@ export function buildGroundCanvas(terrain, world, maxSize) {
   g.drawImage(b, 0, 0, W, H);
   // manchas de variação (pasto/mato) para quebrar a uniformidade
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let n = 0; n < 2500; n++) {
-    g.fillStyle = rnd() < 0.5 ? 'rgba(60,100,40,0.10)' : 'rgba(190,200,120,0.08)';
+  for (let n = 0; n < 6000; n++) {
+    const r0 = rnd(); g.fillStyle = r0 < 0.45 ? 'rgba(50,80,35,0.12)' : r0 < 0.85 ? 'rgba(190,185,120,0.10)' : 'rgba(140,110,80,0.10)';
     g.beginPath(); g.ellipse(rnd() * W, rnd() * H, 4 + rnd() * 30, 4 + rnd() * 30, rnd() * 3, 0, 7); g.fill();
   }
 

@@ -1,5 +1,5 @@
 // Jogador a pé: movimento relativo à câmera, andar e correr, bonequinho com pernas animadas.
-import { makePerson } from './person.js';
+import { makePerson, makeContactShadow } from './person.js';
 
 export { makePerson } from './person.js';
 
@@ -17,6 +17,7 @@ export class Walker {
     this.mesh = makePerson(PROTAGONISTA);
     this.runTime = 0; this.y0 = 0; this.vy = 0; this.air = 0; this.onGround = true;
     scene.add(this.mesh);
+    this.blob = makeContactShadow(); scene.add(this.blob);
     this.blocked = () => false;          // substituído quando houver colisão com prédios
     this.groundAt = (x, z) => terrain.heightAt(x, z);   // substituído para incluir pontes
     this.surf = terrain.heightAt(x, z);
@@ -66,6 +67,8 @@ export class Walker {
     this.air += ((this.onGround ? 0 : 1) - this.air) * Math.min(1, dt * 12);
     const m = this.mesh;
     m.position.set(this.x, ground + this.y0, this.z);
+    this.blob.position.set(this.x, ground + 0.03, this.z);
+    const bs = 1 / (1 + this.y0 * 0.6); this.blob.scale.set(bs, 1, bs); this.blob.material.opacity = bs;
     m.rotation.set(0, this.ang, 0);
     m.rotation.z = this.lean;
     m.userData.animate(dt, this.onGround ? this.speed : 0, this.speed > 5, this.air);
