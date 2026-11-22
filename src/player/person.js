@@ -19,7 +19,7 @@ function geo() {
     neck: new THREE.CylinderGeometry(0.048, 0.055, 0.12, 10),
     head: lathe([[0.001, -0.13], [0.06, -0.125], [0.095, -0.09], [0.112, -0.03], [0.118, 0.03], [0.112, 0.09], [0.085, 0.135], [0.04, 0.155], [0.001, 0.158]], 20),
     hairCap: new THREE.SphereGeometry(0.124, 20, 12, 0, PI * 2, 0, PI * 0.5),
-    nape: new THREE.SphereGeometry(0.123, 16, 8, PI, PI, PI * 0.5, PI * 0.3),   // meia faixa de trás, do meio para baixo
+    nape: new THREE.SphereGeometry(0.123, 16, 8, PI, PI, PI * 0.45, PI * 0.33),   // meia faixa de trás, do meio para baixo
         fringe: new THREE.SphereGeometry(0.05, 8, 6),
     ponytail: cap(0.045, 0.12, 8), hairLong: cap(0.1, 0.2, 12),
     ear: new THREE.SphereGeometry(0.026, 8, 6), eyeW: new THREE.SphereGeometry(0.02, 10, 8), iris: new THREE.SphereGeometry(0.011, 8, 6),
@@ -36,6 +36,20 @@ function geo() {
     shoe: (() => { const g = new THREE.CapsuleGeometry(0.055, 0.15, 4, 10); g.rotateX(PI / 2); g.scale(1, 0.75, 1); return g; })(),
     sole: new THREE.BoxGeometry(0.11, 0.03, 0.27),
     belt: new THREE.CylinderGeometry(0.162, 0.162, 0.04, 20), buckle: new THREE.BoxGeometry(0.04, 0.03, 0.01),
+    // jaqueta bomber aberta na frente (vão de ~0,5 rad em +z)
+    jacket: new THREE.LatheGeometry([[0.172, -0.07], [0.176, -0.02], [0.168, 0.06], [0.163, 0.16], [0.17, 0.27], [0.196, 0.38], [0.205, 0.44], [0.172, 0.5], [0.09, 0.535]].map(([r, y]) => V(r, y)), 20, 0.24, PI * 2 - 0.48),
+    jacketHem: new THREE.TorusGeometry(0.176, 0.022, 6, 20, PI * 2 - 0.5),
+    jacketCollar: new THREE.TorusGeometry(0.085, 0.024, 6, 16, PI * 2 - 0.9),
+    zip: new THREE.BoxGeometry(0.005, 0.56, 0.005),
+    jSleeveUp: lathe([[0.07, 0.02], [0.072, -0.1], [0.064, -0.28], [0.001, -0.29]], 12),
+    jSleeveLow: lathe([[0.062, 0.02], [0.062, -0.1], [0.054, -0.2], [0.001, -0.21]], 12),
+    jCuff: new THREE.CylinderGeometry(0.046, 0.05, 0.05, 12),
+    pocket: new THREE.BoxGeometry(0.04, 0.14, 0.12), flap: new THREE.BoxGeometry(0.045, 0.02, 0.125),
+    watchBand: new THREE.CylinderGeometry(0.041, 0.041, 0.022, 14), watchFace: new THREE.CylinderGeometry(0.022, 0.022, 0.012, 16),
+    // barba: faixa de esfera cobrindo mandíbula, queixo e bochechas (frente-baixo)
+    beard: new THREE.LatheGeometry([[0.001, -0.139], [0.066, -0.134], [0.102, -0.096], [0.118, -0.045], [0.12, -0.026]].map(([r, y]) => V(r, y)), 22, -1.5, 3.0),
+    hairSides: new THREE.SphereGeometry(0.123, 22, 6, PI / 2 + 0.95, PI * 2 - 1.9, PI * 0.26, PI * 0.3),
+    teeth: new THREE.BoxGeometry(0.03, 0.009, 0.006),
     apron: new THREE.PlaneGeometry(0.3, 0.46), apronTop: new THREE.PlaneGeometry(0.18, 0.16),
   });
   G.ready = true; return G;
@@ -58,7 +72,7 @@ export function makePerson(opts = {}) {
   const o = { shirt: 0x1d4e9e, pants: 0x2f4a6e, skin: 0xe2b48c, hair: 0x3a2618, shoes: 0xf2f2f2, eyes: 0x4a3222, hairStyle: 'short', build: 1, height: 1, ...opts };
   const M = {
     shirt: mat(o.shirt), shirtDark: mat(shade(o.shirt, 0.8)), pants: mat(o.pants), skin: mat(o.skin), lip: mat(shade(o.skin, 0.72)),
-    hair: mat(o.hair), shoes: mat(o.shoes), sole: mat(0x3a3a3a), white: mat(0xfbfbfb), iris: mat(o.eyes), belt: mat(0x3b2a1e), buckle: mat(0xc9b37a),
+    hair: mat(o.hair), shoes: mat(o.shoes), sole: mat(o.sole ?? 0x3a3a3a), white: mat(0xfbfbfb), iris: mat(o.eyes), belt: mat(0x3b2a1e), buckle: mat(0xc9b37a),
   };
   const add = (parent, gg, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
     const mesh = new THREE.Mesh(gg, m); mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); mesh.castShadow = true; parent.add(mesh); return mesh;
@@ -82,6 +96,13 @@ export function makePerson(opts = {}) {
     add(chest, g.apronTop, am, 0, 0.3, 0.13 * b);
   }
   const neck = add(chest, g.neck, M.skin, 0, 0.555, 0);
+  if (o.jacket) {
+    const J = mat(o.jacket, THREE.DoubleSide), JR = mat(shade(o.jacket, 0.7)), Z = mat(0x55575a);
+    add(chest, g.jacket, J, 0, 0, 0, 1.08 * b, 1, 0.74 * b);
+    const jh = add(chest, g.jacketHem, JR, 0, -0.07, 0, 1.08 * b, 1, 0.76 * b); jh.rotation.set(PI / 2, 0, PI / 2 + 0.25 - PI);
+    const jc = add(chest, g.jacketCollar, JR, 0, 0.53, -0.01, 1.05, 1, 0.92); jc.rotation.set(PI / 2, 0, PI / 2 + 0.45 - PI);
+    for (const sx of [-1, 1]) add(chest, g.zip, Z, sx * 0.043 * b, 0.23, 0.128 * b);
+  }
 
   // cabeça (levemente grande: estilo cartoon)
   const head = new THREE.Group(); head.position.y = 0.695; chest.add(head);
@@ -94,9 +115,21 @@ export function makePerson(opts = {}) {
   }
   add(head, g.nose, M.skin, 0, -0.012, 0.113, 0.8, 1, 0.9);
   const mouth = add(head, g.mouth, M.lip, 0, -0.052, 0.1); mouth.rotation.z = PI;
-  if (o.mustache) { const mu = add(head, g.mustache, mat(o.hair), 0, -0.036, 0.105); mu.rotation.z = PI / 2; }
+  const teeth = o.smile ? add(head, g.teeth, M.white, 0, -0.056, 0.104) : null;
+  if (o.beard) {
+    const B = mat(o.beard);
+    add(head, g.beard, mat(o.beard, THREE.DoubleSide), 0, 0.0, 0.0, 0.99, 1.05, 1.03);
+    const mu = add(head, g.mustache, B, 0, -0.035, 0.117, 0.6, 0.62, 0.45); mu.rotation.z = PI / 2;
+    mouth.position.set(0, -0.052, 0.124); mouth.scale.set(0.8, 0.55, 0.8); mouth.material = mat(0x7a3b34); if (teeth) teeth.position.set(0, -0.057, 0.124);
+  } else if (o.mustache) { const mu = add(head, g.mustache, mat(o.hair), 0, -0.036, 0.105); mu.rotation.z = PI / 2; }
   // cabelo: calota inclinada para trás (testa livre na frente, nuca coberta atrás) + franja
-  if (o.hairStyle !== 'bald') {
+  if (o.hairStyle === 'fade') {
+    // corte social: topo um pouco mais alto, laterais e nuca rentes (mesmo tom, um pouco mais claro = pele aparecendo)
+    add(head, g.hairCap, M.hair, 0, 0.05, -0.006, 1.0, 1.1, 1.05);
+    add(head, g.nape, mat(shade(o.hair, 1.12)), 0, 0.045, -0.004, 0.995, 1.12, 1.02);
+    add(head, g.hairSides, mat(shade(o.hair, 1.12)), 0, 0.045, -0.004, 0.995, 1.12, 1.02);
+    add(head, g.fringe, M.hair, 0.0, 0.135, 0.06, 1.7, 0.5, 0.9);
+  } else if (o.hairStyle !== 'bald') {
     add(head, g.hairCap, M.hair, 0, 0.04, -0.004, 1.05, 1.0, 1.08);
     add(head, g.nape, M.hair, 0, 0.04, -0.004, 1.05, 1.15, 1.08);
     for (const [x, y, z, s] of [[-0.055, 0.1, 0.078, 1], [0.0, 0.112, 0.085, 1.15], [0.055, 0.1, 0.076, 0.95], [-0.09, 0.07, 0.04, 0.8], [0.09, 0.07, 0.04, 0.8]]) add(head, g.fringe, M.hair, x, y, z, s * 1.15, s * 0.62, s * 0.8);
@@ -110,11 +143,13 @@ export function makePerson(opts = {}) {
   const arms = [];
   for (const s of [-1, 1]) {
     const sh = new THREE.Group(); sh.position.set(s * 0.2 * b, 0.43, 0); chest.add(sh);
-    add(sh, g.shoulder, M.shirt, 0, -0.01, 0, 1, 1, 0.95);
-    add(sh, g.upperArm, M.skin, 0, -0.14, 0);
-    add(sh, g.sleeve, M.shirt, 0, 0.0, 0);
+    const top = o.jacket ? mat(o.jacket) : M.shirt;
+    add(sh, g.shoulder, top, 0, -0.01, 0, 1.05, 1, 1);
+    if (o.jacket) add(sh, g.jSleeveUp, top); else { add(sh, g.upperArm, M.skin, 0, -0.14, 0); add(sh, g.sleeve, M.shirt, 0, 0.0, 0); }
     const el = new THREE.Group(); el.position.y = -0.28; sh.add(el);
-    add(el, g.foreArm, M.skin);
+    if (o.jacket) { add(el, g.jSleeveLow, top); add(el, g.jCuff, mat(shade(o.jacket, 0.7)), 0, -0.205, 0); add(el, g.foreArm, M.skin, 0, -0.03, 0, 0.9, 1, 0.9); }
+    else add(el, g.foreArm, M.skin);
+    if (o.watch && s < 0) { add(el, g.watchBand, mat(0x1c1c1c), 0, -0.235, 0); const wf = add(el, g.watchFace, mat(0x9aa3ad), 0, -0.235, 0.04); wf.rotation.x = PI / 2; }
     const hand = new THREE.Group(); hand.position.y = -0.25; el.add(hand);
     add(hand, g.palm, M.skin, 0, -0.035, 0, 1, 1, 1).rotation.y = s * 0.2;
     add(hand, g.fingers, M.skin, 0, -0.095, 0.006, 1.9, 1, 1.05);
@@ -127,6 +162,7 @@ export function makePerson(opts = {}) {
   for (const s of [-1, 1]) {
     const hip = new THREE.Group(); hip.position.set(s * 0.085 * b, -0.04, 0); hips.add(hip);
     add(hip, g.thigh, M.pants, 0, 0, 0, b, 1, b);
+    if (o.cargo) { add(hip, g.pocket, mat(shade(o.pants, 0.85)), s * 0.072 * b, -0.25, 0.0); add(hip, g.flap, mat(shade(o.pants, 0.75)), s * 0.075 * b, -0.18, 0.0); }
     const knee = new THREE.Group(); knee.position.y = -0.44; hip.add(knee);
     add(knee, g.knee, M.pants, 0, 0.005, 0, 1, 1, 1);
     add(knee, g.shin, M.pants);
@@ -142,7 +178,7 @@ export function makePerson(opts = {}) {
   root.userData = {
     head, chest, hips, legs, arms,
     /** speed em m/s; run = correndo */
-    animate(dt, speed = 0, run = false) {
+    animate(dt, speed = 0, run = false, air = 0) {
       t += dt;
       const moving = speed > 0.15;
       const target = moving ? Math.min(1, speed / (run ? 8 : 4)) * (run ? 0.95 : 0.55) : 0;
@@ -162,9 +198,13 @@ export function makePerson(opts = {}) {
         A.el.rotation.x = -(run ? 1.4 : 0.2 + amp * 0.3) - Math.max(0, -p) * amp * 0.4;
         A.hand.rotation.x = -0.1;
       }
+      if (air > 0) {                                       // no ar: pernas encolhidas, braços para cima
+        for (const L of legs) { L.hip.rotation.x = -0.5 * air + (L.s > 0 ? 0.25 : -0.1) * air; L.knee.rotation.x = 0.9 * air; L.foot.rotation.x = -0.2; }
+        for (const A of arms) { A.sh.rotation.x = -0.6 * air; A.sh.rotation.z = A.s * 0.45 * air; A.el.rotation.x = -0.5; }
+      }
       // sobe e desce duas vezes por ciclo; inclina ao correr; balanço do quadril e ombros
       body.position.y = (Math.abs(Math.cos(ph)) - 0.5) * 0.05 * amp;
-      body.rotation.x = run ? amp * 0.2 : 0;
+      body.rotation.x = run ? amp * (speed > 8 ? 0.32 : 0.2) : 0;
       hips.rotation.y = Math.sin(ph) * 0.14 * amp;
       hips.rotation.z = Math.cos(ph) * 0.04 * amp;
       chest.rotation.y = -Math.sin(ph) * 0.22 * amp;

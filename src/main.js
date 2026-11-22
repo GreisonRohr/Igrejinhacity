@@ -38,7 +38,7 @@ addEventListener('resize', () => {
 
 if (isTouch) {
   document.body.classList.add('touch');
-  $('keysDesk').innerHTML = '<kbd>Joystick</kbd><span>andar (empurre tudo para correr)</span><kbd>Arrastar a tela</kbd><span>girar a câmera</span>';
+  $('keysDesk').innerHTML = '<kbd>Joystick</kbd><span>andar (empurre tudo para correr; segure para sprint)</span><kbd>Pular</kbd><span>pular</span><kbd>Arrastar a tela</kbd><span>girar a câmera</span>';
 }
 
 /* ---------- toast e HUD ---------- */
@@ -119,6 +119,7 @@ if (landmarks.waldir) {
   scene.add(waldir);
   const tag = makeLabel('Waldir', 3); tag.position.set(w.x, w.y + 2.9, w.z); tag.userData.maxDist = 40; scene.add(tag); labels.push(tag);
 }
+input.on('jump', () => { if (running) player.jump(); });
 input.on('act', () => {
   if (!running || !waldir) return;
   if (Math.hypot(player.x - waldir.position.x, player.z - waldir.position.z) < 4) {
@@ -156,7 +157,7 @@ function frame(now) {
   if (running) {
     const h = Math.floor(sky.hours), m = Math.floor((sky.hours - h) * 60);
     if (m !== lastMin) { lastMin = m; $('clockT').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; }
-    $('spd').textContent = `A pé · ${Math.round(player.y)} m`;
+    $('spd').textContent = `${{ idle: 'Parado', walk: 'Andando', run: 'Correndo', sprint: 'Sprint!' }[player.mode] || 'A pé'} · ${Math.round(player.y)} m`;
     const pertoWaldir = waldir && Math.hypot(player.x - waldir.position.x, player.z - waldir.position.z) < 4;
     $('prompt').style.display = pertoWaldir ? 'block' : 'none';
     if (pertoWaldir) $('prompt').textContent = isTouch ? 'Toque em FALAR para conversar com o Waldir' : 'E · conversar com o Waldir';
