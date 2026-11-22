@@ -1,3 +1,5 @@
+> **Substituído** pelo ROADMAP.md (auditoria completa com prioridades P0–P3). Mantido como histórico das etapas 1–3.
+
 # Auditoria de realismo — Igrejinha City
 
 Data: 22/11/2026. Base: código do branch `ccr-4e60f86c-o43ab6` e medições em Chromium headless (renderização por

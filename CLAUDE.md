@@ -19,6 +19,12 @@ Jogo 3D de mundo aberto de Igrejinha-RS no navegador (computador e celular).
 Uma skill que pressupõe outra engine ou cria estrutura paralela (ex.: pastas de docs, novos sistemas) só é seguida
 naquilo que se aplica a Three.js e com aprovação do usuário para criar arquivos novos de processo.
 
+## Gestão do projeto (ler no início de cada sessão)
+GAME_BIBLE.md (visão, pilares) · ROADMAP.md (prioridades P0–P3 e ciclos) · TASKS.md · BUGS.md · CHANGELOG.md ·
+TECHNICAL_ARCHITECTURE.md (estrutura-alvo e orçamentos) · WORLD_DESIGN.md (zonas, marcos, vida por hora).
+Ciclo: identificar → planejar → implementar → testar → revisar → documentar → atualizar roadmap → próxima prioridade.
+Mudança estrutural (núcleo, arquitetura, sistemas existentes) só com aprovação do diretor e commit antes.
+
 ## Como trabalhar (equipe de jogo)
 - Antes de implementar: ler o código envolvido, entender o que já funciona, avaliar impacto, planejar.
 - Preservar sistemas que funcionam; não criar sistemas isolados que dupliquem os existentes
