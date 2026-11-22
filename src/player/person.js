@@ -29,7 +29,7 @@ function geo() {
     upperArm: cap(0.05, 0.19), sleeve: lathe([[0.066, 0], [0.068, -0.12], [0.062, -0.14], [0.001, -0.14]], 12),
     shoulder: new THREE.SphereGeometry(0.068, 12, 8),
     foreArm: lathe([[0.042, 0.02], [0.046, -0.04], [0.036, -0.2], [0.03, -0.24], [0.001, -0.245]], 10),
-    palm: new THREE.BoxGeometry(0.07, 0.085, 0.032, 2, 2, 1), fingers: cap(0.016, 0.045, 6), thumb: cap(0.014, 0.03, 6),
+    palm: new THREE.BoxGeometry(0.07, 0.085, 0.032, 2, 2, 1), fingers: cap(0.016, 0.045, 6), finger: cap(0.0092, 0.034, 5), thumb: cap(0.014, 0.03, 6),
     thigh: lathe([[0.001, 0.02], [0.08, 0.0], [0.082, -0.08], [0.068, -0.36], [0.06, -0.44], [0.001, -0.45]], 14),
     knee: new THREE.SphereGeometry(0.05, 10, 8),
     shin: lathe([[0.058, 0.0], [0.062, -0.08], [0.05, -0.3], [0.046, -0.4], [0.001, -0.41]], 14),
@@ -48,7 +48,7 @@ function geo() {
     pocket: new THREE.BoxGeometry(0.04, 0.14, 0.12), flap: new THREE.BoxGeometry(0.045, 0.02, 0.125),
     watchBand: new THREE.CylinderGeometry(0.041, 0.041, 0.022, 14), watchFace: new THREE.CylinderGeometry(0.022, 0.022, 0.012, 16),
     // barba: faixa de esfera cobrindo mandíbula, queixo e bochechas (frente-baixo)
-    beard: new THREE.LatheGeometry([[0.001, -0.139], [0.066, -0.134], [0.102, -0.096], [0.118, -0.045], [0.12, -0.026]].map(([r, y]) => V(r, y)), 22, -1.5, 3.0),
+    beard: new THREE.LatheGeometry([[0.001, -0.139], [0.066, -0.134], [0.102, -0.096], [0.116, -0.055], [0.117, -0.042]].map(([r, y]) => V(r, y)), 22, -1.5, 3.0),
     hairSides: new THREE.SphereGeometry(0.123, 22, 6, PI / 2 + 0.95, PI * 2 - 1.9, PI * 0.26, PI * 0.3),
     teeth: new THREE.BoxGeometry(0.03, 0.009, 0.006),
     apron: new THREE.PlaneGeometry(0.3, 0.46), apronTop: new THREE.PlaneGeometry(0.18, 0.16),
@@ -102,7 +102,7 @@ export function makePerson(opts = {}) {
   }
   const neck = add(chest, g.neck, M.skin, 0, 0.555, 0, 1.05, 1, 1.05);
   if (o.jacket) {
-    const J = mat(o.jacket, THREE.DoubleSide), JR = mat(shade(o.jacket, 0.7)), Z = mat(0x55575a);
+    const J = mat(o.jacket, THREE.DoubleSide, o.jacketRough ?? 0.85), JR = mat(shade(o.jacket, 0.62), undefined, 0.95), Z = mat(0x8a8c90, undefined, 0.35);
     add(chest, g.jacket, J, 0, 0, 0, 1.08 * b, 1, 0.74 * b);
     const jc = add(chest, g.jacketCollar, JR, 0, 0.53, -0.01, 1.05, 0.92, 1); jc.rotation.set(PI / 2, 0, PI / 2 + 0.45 - PI);
     for (const sx of [-1, 1]) add(chest, g.zip, Z, sx * 0.043 * b, 0.23, 0.128 * b);
@@ -148,7 +148,7 @@ export function makePerson(opts = {}) {
   const arms = [];
   for (const s of [-1, 1]) {
     const sh = new THREE.Group(); sh.position.set(s * 0.2 * b, 0.43, 0); chest.add(sh);
-    const top = o.jacket ? mat(o.jacket) : M.shirt;
+    const top = o.jacket ? mat(o.jacket, THREE.DoubleSide, o.jacketRough ?? 0.85) : M.shirt;   // manga dos dois lados (sem ver o braço por dentro)
     add(sh, g.shoulder, top, 0, -0.01, 0, 1.05, 1, 1);
     if (o.jacket) add(sh, g.jSleeveUp, top); else { add(sh, g.upperArm, M.skin, 0, -0.14, 0); add(sh, g.sleeve, M.shirt, 0, 0.0, 0); }
     const el = new THREE.Group(); el.position.y = -0.28; sh.add(el);
@@ -157,7 +157,10 @@ export function makePerson(opts = {}) {
     if (o.watch && s < 0) { add(el, g.watchBand, mat(0x1c1c1c), 0, -0.235, 0); const wf = add(el, g.watchFace, mat(0x9aa3ad), 0, -0.235, 0.04); wf.rotation.x = PI / 2; }
     const hand = new THREE.Group(); hand.position.y = -0.25; el.add(hand);
     add(hand, g.palm, M.skin, 0, -0.035, 0, 1, 1, 1).rotation.y = s * 0.2;
-    add(hand, g.fingers, M.skin, 0, -0.095, 0.006, 1.9, 1, 1.05);
+    if (o.fingers) {
+      // quatro dedos levemente curvados (mão relaxada) em vez da luva
+      for (let f = 0; f < 4; f++) { const fg = add(hand, g.finger, M.skin, (f - 1.5) * 0.0165, -0.098 + Math.abs(f - 1.5) * 0.006, 0.008); fg.rotation.x = 0.28 + f * 0.04; }
+    } else add(hand, g.fingers, M.skin, 0, -0.095, 0.006, 1.9, 1, 1.05);
     const th = add(hand, g.thumb, M.skin, -s * 0.038, -0.03, 0.022); th.rotation.z = s * 0.6;
     sh.rotation.z = s * 0.07;
     arms.push({ sh, el, hand, s });
@@ -169,7 +172,7 @@ export function makePerson(opts = {}) {
     add(hip, g.thigh, M.pants, 0, 0, 0, b, 1, b);
     if (o.cargo) { add(hip, g.pocket, mat(shade(o.pants, 0.85)), s * 0.072 * b, -0.25, 0.0); add(hip, g.flap, mat(shade(o.pants, 0.75)), s * 0.075 * b, -0.18, 0.0); }
     const knee = new THREE.Group(); knee.position.y = -0.44; hip.add(knee);
-    add(knee, g.knee, M.pants, 0, 0.005, 0, 1, 1, 1);
+    add(knee, g.knee, M.pants, 0, 0.005, 0, o.fingers ? 0.86 : 1, o.fingers ? 0.9 : 1, o.fingers ? 0.86 : 1);   // joelho embutido na calça
     add(knee, g.shin, M.pants);
     add(knee, g.cuff, mat(shade(o.pants, 0.85)), 0, -0.4, 0);
     const foot = new THREE.Group(); foot.position.y = -0.43; knee.add(foot);
@@ -178,13 +181,14 @@ export function makePerson(opts = {}) {
     legs.push({ hip, knee, foot, s });
   }
 
-  let ph = 0, t = Math.random() * 10, amp = 0, blink = 2 + Math.random() * 3;
+  let ph = 0, t = Math.random() * 10, amp = 0, blink = 2 + Math.random() * 3, idleT = 0, headCur = 0, watchCur = 0;
   const eyes = head.children.filter(m => m.geometry === g.eyeW || m.geometry === g.iris);
   for (const e of eyes) e.userData.sy = e.scale.y;
   root.userData = {
     head, chest, hips, legs, arms,
     /** speed em m/s; run = correndo */
-    animate(dt, speed = 0, run = false, air = 0) {
+    /** ex (opcional, protagonista): { lean (inclinação por aceleração/ladeira, rad), lookYaw (rad, relativo ao corpo, ou null), land (0..1 impacto) } */
+    animate(dt, speed = 0, run = false, air = 0, ex = null) {
       t += dt;
       // passada real: a fase avança conforme a distância percorrida (o pé não escorrega no chão)
       const cycle = speed > 7.5 ? 3.1 : run ? 2.5 : 1.5;          // metros por ciclo (2 passos)
@@ -209,7 +213,7 @@ export function makePerson(opts = {}) {
       for (const A of arms) {
         const a = ph + (A.s > 0 ? 0 : PI), sa = Math.sin(a);      // braço oposto à perna do mesmo lado
         A.sh.rotation.x = -sa * amp * (0.75 + runK * 0.4);
-        A.sh.rotation.z = A.s * (0.06 + amp * 0.05 + runK * 0.06);
+        A.sh.rotation.z = A.s * ((o.fingers ? 0.035 : 0.06) + amp * 0.05 + runK * 0.06);
         A.el.rotation.x = -(0.15 + runK * 1.25) - Math.max(0, sa) * amp * (0.35 + runK * 0.2);
         A.hand.rotation.x = -0.15;
       }
@@ -229,8 +233,35 @@ export function makePerson(opts = {}) {
       const idle = 1 - Math.min(1, amp / 0.15);
       chest.scale.set(1, 1 + Math.sin(t * 1.7) * 0.012 * idle, 1);
       body.position.x = Math.sin(t * 0.35) * 0.015 * idle;
-      head.rotation.y = -chest.rotation.y * 0.8 + idle * Math.sin(t * 0.4) * 0.35;
-      head.rotation.x = idle * Math.sin(t * 0.27) * 0.06 - runK * 0.06;
+      let headY = -chest.rotation.y * 0.8 + idle * Math.sin(t * 0.4) * 0.35, headX = idle * Math.sin(t * 0.27) * 0.06 - runK * 0.06;
+      if (ex) {
+        // peso: inclina com a aceleração e a ladeira; amortece a aterrissagem (joelhos dobram, corpo desce)
+        body.rotation.x += ex.lean || 0;
+        if (ex.land > 0) {
+          body.position.y -= ex.land * 0.13;
+          for (const L of legs) { L.hip.rotation.x -= ex.land * 0.35; L.knee.rotation.x += ex.land * 0.7; L.foot.rotation.x -= ex.land * 0.35; }
+          for (const A of arms) A.sh.rotation.z += A.s * ex.land * 0.25;
+        }
+        // parado há um tempo: olha o relógio (pulso esquerdo) de vez em quando
+        idleT = idle > 0.9 && air < 0.05 ? idleT + dt : 0;
+        const c = (idleT - 7) % 16, want = idleT > 7 && c < 2.8 ? 1 : 0;
+        watchCur += (want - watchCur) * Math.min(1, dt * 5);
+        if (watchCur > 0.01) {
+          const A = arms[0], w = watchCur;
+          // braço esquerdo dobrado a 90°, antebraço na horizontal cruzando o peito, pulso virado para os olhos
+          A.sh.rotation.x += (-0.32 - A.sh.rotation.x) * w; A.sh.rotation.z += (0.12 - A.sh.rotation.z) * w; A.sh.rotation.y = 0.85 * w;
+          A.el.rotation.x += (-1.55 - A.el.rotation.x) * w; A.el.rotation.y = -0.5 * w; A.hand.rotation.x = -0.15 + 0.3 * w;
+          headY += (0.25 - headY) * w; headX += (0.5 - headX) * w;
+        } else { arms[0].sh.rotation.y = 0; arms[0].el.rotation.y = 0;
+        }
+        // olhar: vira a cabeça (e um pouco o peito) para quem está perto
+        const target = ex.lookYaw == null || watchCur > 0.3 ? headY : Math.max(-1.15, Math.min(1.15, ex.lookYaw));
+        headCur += (target - headCur) * Math.min(1, dt * 5);
+        headY = headCur;
+        if (ex.lookYaw != null) chest.rotation.y += headCur * 0.15 * idle;
+      }
+      head.rotation.y = headY;
+      head.rotation.x = headX;
       // piscar
       blink -= dt; const closed = blink < 0.12;
       for (const e of eyes) e.scale.y = closed ? 0.12 : e.userData.sy;

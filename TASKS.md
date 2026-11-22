@@ -24,12 +24,25 @@ Formato: `[ ]` a fazer · `[~]` em andamento · `[x]` feito. ID do roadmap entre
 - Fica para o Ciclo 3: deslocar as rotas a pé para a calçada (meio-fio + largura) e usar as faixas de pedestre
   de `city.findCrossings` como pontos de travessia.
 
-## Ciclo 3 — Pedestres (próximo, aguarda autorização)
-- [ ] [P1-4] Spec (gd-feature-spec): rotinas, população por zona/hora, comportamentos, orçamento
-- [ ] [P1-4] Personagem de multidão de partes rígidas instanciadas + variação de roupa/pele/cabelo
-- [ ] [P1-4] Navegação no grafo de calçadas, desvio (steering), espera em faixa de pedestre
-- [ ] [P1-4] Utility AI: ir ao destino, sentar em banco, conversar em grupo, olhar o jogador, fugir de carro
-- [ ] [P1-7] Interação: falar com qualquer pedestre (falas por perfil e hora)
+## Ciclo 3 — Pedestres (v0.3 feita 22/11)
+- [x] [P1-4] Spec `docs/spec-pedestres.md`
+- [x] [P1-4] Multidão de partes rígidas instanciadas (13 draw calls para todos) com pele, cabelo (curto, comprido,
+      careca), roupa, saia, altura e porte variados; idosos com cuia de chimarrão; só quem está na vista é desenhado
+- [x] [P1-4] Calçadas a partir do grafo (cortadas no meio-fio da esquina), espera no meio-fio olhando para os dois
+      lados, travessia, meio-fio como parede fora da travessia, desvio de pessoas/jogador/árvores/postes
+- [x] [P1-4] Destinos por perfil e hora (comércio, praça, escola, igreja, casa, Bar do Waldir), bancos da praça,
+      entrar em prédios, conversa em dupla, olhar o jogador, desviar e reclamar de sprint
+- [x] [P1-4] População por densidade de comércio/casas × curva da hora (WORLD_DESIGN), nasce fora da vista
+- [x] [P1-7] Falar com qualquer pedestre (falas por perfil e hora); `src/interact` com Waldir e pedestres
+- [x] Teste `pedestres` (ninguém em prédio, < 1% no meio da pista, centro cheio às 10 h e vazio às 3 h, conversa)
+- [ ] v0.6: grupos andando juntos, crianças acompanhadas, guarda-chuva com o clima (Ciclo 8), esperar carros (Ciclo 5)
+- [ ] v1.0: Oktoberfest lotada, rotinas completas por zona
+
+## Protagonista (pedido do diretor, 22/11)
+- [x] Tons de preto separados (jaqueta acetinada, camiseta fosca, cargo grafite), barba aparada, dedos, joelho embutido,
+      manga sem ver o braço por dentro, braços rentes ao corpo
+- [x] Olha para quem está perto (pessoa, Waldir); inclina ao arrancar/frear e em ladeira; amortece o pouso
+- [x] Parado: olha o relógio de vez em quando, olha em volta, troca o peso
 
 ## Pendências que dependem do diretor
 - [ ] Confirmar: sem crime/violência (GAME_BIBLE)

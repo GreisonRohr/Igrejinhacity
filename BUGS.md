@@ -4,7 +4,7 @@ Severidade: **S1** quebra o jogo · **S2** quebra uma função · **S3** visual/
 
 | ID | Sev | Descrição | Onde | Status |
 |---|---|---|---|---|
-| B-001 | S2 | Botão "Carro"/tecla E longe do Waldir não faz nada (carro ainda não implementado) | `main.js` input `act` | aberto → Ciclo 4 |
+| B-001 | S2 | Botão "Carro"/tecla E longe do Waldir e de pessoas não faz nada (carro ainda não implementado) | `main.js` input `act` | aberto → Ciclo 4 |
 | B-003 | S3 | Placas de nome se sobrepõem no centro ("Rua Coberta" × "Piccadilly (fábrica)") | `labels.js` | aberto |
 | B-004 | S3 | Câmera volta sozinha para trás do jogador após 2 s andando | `camera.js` | aberto → P2-6 |
 | B-005 | S3 | Chão de perto borrado (textura ≈1,9 m/px) | `ground.js` | aberto → P2-4 |
@@ -12,6 +12,8 @@ Severidade: **S1** quebra o jogo · **S2** quebra uma função · **S3** visual/
 | B-007 | S3 | Mesas e bancos da Oktoberfest/praça sem colisão (atravessáveis) | `oktoberfest.js`, `landmarks3d.js` | aberto |
 | B-008 | S4 | HUD de hora pode mostrar a hora anterior por 1 quadro após mudar a hora via teste | `main.js` | aberto |
 | B-009 | S3 | Carros estacionados são caixas (sem para-choques, faróis, rodas embutidas) | `streetlife.js` | aberto → P2 |
+| B-012 | S4 | Pedestres ainda não esperam carros (não há trânsito); atravessam após olhar | `pedestrians.js` | aberto → Ciclo 5 |
+| B-013 | S4 | Algumas avenidas largas (GEO: 22 m por sentido) sobrepõem as calçadas da outra pista; pedestres às vezes andam pela borda | dados / `city.js` | aberto |
 | B-011 | S3 | Carregamento ainda leva ~13 s em emulação (sem congelar); alvo 5 s | carga | aberto → Worker (P2) |
 
 ## Resolvidos

@@ -90,7 +90,7 @@ Ver TECHNICAL_ARCHITECTURE.md (A1–A9): sem passo fixo, sem consulta espacial �
 | — | Etapas de realismo anteriores (desempenho, céu e luz, árvores e carros) | — | — | feito (22/11) |
 | 1 | Testes no repo + carregamento sem congelar + memória | P1-1, P0-2, P0-3 | sim (loading) | **feito** (22/11) |
 | 2 | Núcleo de simulação + consulta espacial + grafos viário/calçada | P1-2, P1-3 | **sim** | **feito** (22/11) |
-| 3 | Pedestres inteligentes (centro e praça primeiro) | P1-4, P1-7 | sim | **próximo** (aguarda autorização) |
+| 3 | Pedestres inteligentes (centro e praça primeiro) | P1-4, P1-7 | sim | **v0.3 feita** (22/11); v0.6 depois do trânsito |
 | 4 | Carro do jogador | P1-5 | sim | aguarda |
 | 5 | Trânsito IA | P1-6 | sim | aguarda |
 | 6 | Áudio | P1-8 | não (novo módulo) | depende de rede (Pixabay) |
@@ -108,8 +108,13 @@ Ver TECHNICAL_ARCHITECTURE.md (A1–A9): sem passo fixo, sem consulta espacial �
 consulta espacial única (heap 140 → 129 MB), RNG com semente, eventos, grafo de navegação (2.530 nós, 353 km de ruas
 para carro, 614 trechos de mão única) com A* em até 6 ms. `npm test` com 8 suítes.
 
-**Próxima prioridade:** Ciclo 3 (pedestres inteligentes no centro e na praça), que começa com a spec (gd-feature-spec)
-para aprovação do diretor.
+**Ciclo 3 (v0.3) concluído.** Pedestres com rotinas, calçadas, travessias, bancos e conversa; protagonista melhorado.
+`npm test` com 9 suítes.
+
+**Próxima prioridade:** Ciclo 4 (carro do jogador), depois Ciclo 5 (trânsito IA), quando os pedestres passam a esperar
+os carros na faixa.
+
+~~Próxima prioridade:~~ Ciclo 3 (pedestres inteligentes no centro e na praça).
 
 ~~Próxima prioridade:~~ Ciclo 2 (núcleo de simulação + grafos), fundação de pedestres e trânsito.
 

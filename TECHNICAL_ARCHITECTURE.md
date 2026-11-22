@@ -12,6 +12,8 @@ scripts/            pipeline de dados (Node): fetch-osm, fetch-terrain, fetch-ge
 public/data/        terrain.json + terrain.data.json (grade 5 m), world.data.json (ruas, prédios, áreas, lugares)
 src/core/           loop (passo fixo 60 Hz + interpolação), spatial (consulta única de colisão + agentes),
                     rng (mulberry32 com semente), events (barramento)
+src/sim/            crowd (multidão instanciada), pedestrians (população, rotinas, calçadas, reações)
+src/interact/       interagíveis (E / Falar): Waldir, pedestres
 src/nav/graph.js    grafo de ruas/calçadas (public/data/nav.data.json, gerado por scripts/build-nav.mjs), A*
 src/main.js         (≈270) inicialização, qualidade por dispositivo, laço do jogo, HUD, Waldir, interação
 src/geo.js          projeção lat/lon → metros (origem Praça Dona Luísa; x leste, z sul)
@@ -38,7 +40,7 @@ src/ui/minimap      minimapa girando
 | A2 | ✅ resolvido no Ciclo 2 (`core/spatial.js`) — **Sem consulta espacial comum**: colisão de prédios (city.colGrid), pontos marcantes (lista linear), árvores/carros (city), pontes (decks) em estruturas separadas | NPCs e carros precisariam consultar 4 lugares; `landmarkBlocked` é O(n) | P1 |
 | A3 | ✅ resolvido no Ciclo 2 (`nav/graph.js`) — **Sem grafo de navegação**: ruas existem só como polilinhas de desenho | impossível trânsito e pedestres seguindo ruas/calçadas | P1 |
 | A4 | **`main.js` concentra tudo** (HUD, Waldir, interações, laço) | cada sistema novo aumenta o acoplamento | P1 |
-| A5 | **Sem sistema de interação**: o "E" é tratado caso a caso | não escala para dezenas de interações | P1 |
+| A5 | ✅ resolvido no Ciclo 3 (`interact/interact.js`) — **Sem sistema de interação**: o "E" é tratado caso a caso | não escala para dezenas de interações | P1 |
 | A6 | ✅ mitigado no Ciclo 1 (etapas + envio em lotes) — **Construção síncrona na thread principal** (≈4–8 s) | tela congela no carregamento, risco de "página não responde" no celular | P0 (risco) |
 | A7 | ✅ resolvido no Ciclo 1 (`tests/`, `npm test`) — **Testes fora do repositório** (scripts em pasta temporária) | regressões não são verificáveis por outra sessão | P1 |
 | A8 | **Sem sistema de save** | recordes e progresso não persistem | P2 |

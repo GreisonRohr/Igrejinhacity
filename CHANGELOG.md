@@ -2,6 +2,17 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-22 — Ciclo 3 (pedestres) e protagonista
+- Pessoas na cidade: moradores, trabalhadores, estudantes e idosos (muitos com cuia de chimarrão) andando nas calçadas
+  até destinos reais (lojas, praças, escolas, igrejas, casas, Bar do Waldir) conforme a hora; centro cheio de dia,
+  vazio de madrugada.
+- Esperam no meio-fio olhando para os dois lados antes de atravessar; sentam nos bancos da praça; entram nos prédios;
+  param para conversar; olham para o jogador; desviam dele e reclamam se ele vem correndo ("Ô, cuidado aí, tchê!").
+- E / Falar perto de qualquer pessoa: fala por perfil e hora do dia.
+- Custo: ~0,5 ms por passo de simulação, +12 draw calls; `?debug` mostra quantas pessoas existem e quantas estão na tela.
+- Protagonista: roupa com tons de preto distintos, barba aparada, mãos com dedos; olha para quem está perto, inclina o
+  corpo ao arrancar, frear e subir ladeira, amortece o pouso do pulo e, parado, olha o relógio de vez em quando.
+
 ## 2026-11-22 — Ciclo 2 (núcleo de simulação)
 - Simulação em passo fixo de 60 Hz com interpolação: andar, pular e subir ladeira dão o mesmo resultado em qualquer
   taxa de quadros (testado a 20, 30, 60 e 144 fps).

@@ -207,6 +207,11 @@ function frame(now) {
   const ax = running ? input.axes() : { f: 0, t: 0, run: false };
   frameAx = ax;
   const alpha = sim.advance(rawDt);                 // simulação em passos fixos de 1/60 s
+  // olhar do protagonista: pessoa ou Waldir mais perto (até 6 m)
+  let la = null, ld = 6;
+  for (const a of peds.agents) { const d = Math.hypot(a.x - player.x, a.z - player.z); if (d < ld) { ld = d; la = a; } }
+  if (waldir) { const d = Math.hypot(waldir.position.x - player.x, waldir.position.z - player.z); if (d < ld) { ld = d; la = waldir.position; } }
+  player.lookAt = la;
   const pv = player.present(alpha, dt);             // desenho interpolado
   peds.present(alpha, dt, camera);
   const moving = Math.hypot(ax.f, ax.t) > 0.1;
@@ -257,7 +262,7 @@ function frame(now) {
     if (fpsT > 2) {
       const a = frame.ts.slice().sort((x, y) => x - y), med = a[a.length >> 1], worst = a[a.length - 1], i = renderer.info.render;
       const mem = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB' : 'n/d';
-      $('fps').textContent = `${Math.round(1000 / med)} fps · quadro ${med.toFixed(1)} ms (pior ${worst.toFixed(0)} ms) · ${i.calls} draws · ${(i.triangles / 1000).toFixed(0)}k tris · mem ${mem} · ${renderer.domElement.width}×${renderer.domElement.height} @${renderer.getPixelRatio()}x`;
+      $('fps').textContent = `${Math.round(1000 / med)} fps · quadro ${med.toFixed(1)} ms (pior ${worst.toFixed(0)} ms) · ${i.calls} draws · ${(i.triangles / 1000).toFixed(0)}k tris · mem ${mem} · ${peds.agents.length} pessoas (${peds.drawn || 0} na tela) · ${renderer.domElement.width}×${renderer.domElement.height} @${renderer.getPixelRatio()}x`;
       frame.ts = []; fpsN = fpsT = 0;
     }
   }
