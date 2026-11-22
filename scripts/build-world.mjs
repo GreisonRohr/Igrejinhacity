@@ -129,6 +129,20 @@ if (hasGeo()) {
   const keepW = water.filter(w => w.k === 'river' || !near(w.p[w.p.length >> 1]));
   water.length = 0; water.push(...keepW, ...ex.streams);
 }
+// tira "prédios" que são na verdade pontes ou que caem dentro do leito do rio (erro comum do Open Buildings)
+{
+  const inside = (x, z, q) => { let c = false; for (let i = 0, j = q.length - 1; i < q.length; j = i++) if ((q[i][1] > z) !== (q[j][1] > z) && x < (q[j][0] - q[i][0]) * (z - q[i][1]) / (q[j][1] - q[i][1]) + q[i][0]) c = !c; return c; };
+  const sd = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l)); return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t); };
+  const rivers = areas.filter(a => a.k === 'river' || a.k === 'water'), bridges = roads.filter(r => r.br);
+  const before = finalBuildings.length;
+  finalBuildings = finalBuildings.filter(b => {
+    const cx = b.p.reduce((s2, q) => s2 + q[0], 0) / b.p.length, cz = b.p.reduce((s2, q) => s2 + q[1], 0) / b.p.length;
+    if (rivers.some(a => inside(cx, cz, a.p))) return false;
+    for (const r of bridges) for (let i = 0; i < r.p.length - 1; i++) if (sd(cx, cz, r.p[i], r.p[i + 1]) < r.w / 2 + 3) return false;
+    return true;
+  });
+  console.log('prédios removidos (ponte/rio):', before - finalBuildings.length);
+}
 const world = { fonte: raw.fonte, baixado: raw.baixado, roads, water, areas, buildings: finalBuildings, pools, ciclovias, pois, places,
   creditos: ['© OpenStreetMap contributors (ODbL)', 'GEO Igrejinha – Prefeitura Municipal de Igrejinha', 'Google Open Buildings (CC BY 4.0 / ODbL)'] };
 // casas geradas: [x, z, y, largura, profundidade, rotação, altura, tipo(h casa | c comércio | i indústria)]

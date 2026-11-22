@@ -28,6 +28,19 @@ export class GeoBuilder {
     this.idx.push(i, i + 1, i + 2);
   }
 
+  /** Caixa orientada: centro (cx, cy = base, cz), largura w (ao longo de ux,uz), altura h, profundidade d. */
+  box(cx, cy, cz, w, h, d, ux, uz, col, uvScale = 1) {
+    const vx = -uz, vz = ux, hw = w / 2, hd = d / 2;
+    const P = (a, b, y) => [cx + ux * a + vx * b, cy + y, cz + uz * a + vz * b];
+    const u = (a, b) => [[0, 0], [a * uvScale, 0], [a * uvScale, b * uvScale], [0, b * uvScale]];
+    this.quad(P(-hw, -hd, h), P(hw, -hd, h), P(hw, hd, h), P(-hw, hd, h), u(w, d), col, 0, [0, 1, 0]);
+    this.quad(P(-hw, -hd, 0), P(hw, -hd, 0), P(hw, hd, 0), P(-hw, hd, 0), u(w, d), col, 0, [0, -1, 0]);
+    this.quad(P(-hw, hd, 0), P(hw, hd, 0), P(hw, hd, h), P(-hw, hd, h), u(w, h), col, 0, [vx, 0, vz]);
+    this.quad(P(-hw, -hd, 0), P(hw, -hd, 0), P(hw, -hd, h), P(-hw, -hd, h), u(w, h), col, 0, [-vx, 0, -vz]);
+    this.quad(P(hw, -hd, 0), P(hw, hd, 0), P(hw, hd, h), P(hw, -hd, h), u(d, h), col, 0, [ux, 0, uz]);
+    this.quad(P(-hw, -hd, 0), P(-hw, hd, 0), P(-hw, hd, h), P(-hw, -hd, h), u(d, h), col, 0, [-ux, 0, -uz]);
+  }
+
   build() {
     if (!this.count) return null;
     const g = new THREE.BufferGeometry();

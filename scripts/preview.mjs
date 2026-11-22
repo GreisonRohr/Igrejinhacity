@@ -30,8 +30,9 @@ const poly=(pts,close)=>{g.beginPath();pts.forEach((p,i)=>{const[a,b]=T(p[0],p[1
 if(world){
  for(const a of world.areas){poly(a.p,true);g.fillStyle={park:'#5fa84a',water:'#3f86bd',residential:'rgba(230,220,200,.35)',industrial:'rgba(190,170,200,.45)',commercial:'rgba(240,180,160,.45)',forest:'rgba(40,90,40,.5)',grass:'#7cb35a',farmland:'rgba(210,200,120,.35)',pitch:'#4f9a3a',cemetery:'rgba(170,170,160,.6)',parking:'rgba(120,120,120,.5)',pool:'#4fb6e0',retail:'rgba(240,180,160,.45)',quarry:'rgba(200,190,170,.7)'}[a.k]||'rgba(0,0,0,0)';g.fill()}
  g.lineCap=g.lineJoin='round';
+ for(const a of world.areas.filter(a=>a.k==='river')){poly(a.p,true);g.fillStyle='rgba(63,134,189,.7)';g.fill()}
  for(const w of world.water){poly(w.p,false);g.strokeStyle='#3f86bd';g.lineWidth=Math.max(1.5,(w.w||4)*S);g.stroke()}
- for(const r of world.roads){poly(r.p,false);g.strokeStyle=r.main?'#f4b41a':/Independ/.test(r.n||'')?'#ff8a3d':/Sturmer/.test(r.n||'')?'#ff5a5a':r.k==='track'||r.k==='path'?'#c9a06b':'#eeeae0';g.lineWidth=Math.max(zoom?1:0.7,(r.main||/Independ|Sturmer/.test(r.n||'')?Math.max(r.w,zoom?10:22):r.w)*S);g.stroke()}
+ for(const r of world.roads){poly(r.p,false);g.strokeStyle=r.br?'#ff00ff':r.main?'#f4b41a':/Independ/.test(r.n||'')?'#ff8a3d':/Sturmer/.test(r.n||'')?'#ff5a5a':r.k==='track'||r.k==='path'?'#c9a06b':'#eeeae0';g.lineWidth=Math.max(zoom?1:0.7,(r.main||/Independ|Sturmer/.test(r.n||'')?Math.max(r.w,zoom?10:22):r.w)*S);g.stroke()}
  for(const [x,z,y,w,d,r,h,k] of world.gen||[]){const c=Math.cos(r),sn=Math.sin(r);const P=[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]].map(([u,v])=>[x+u*c+v*sn,z-u*sn+v*c]);poly(P,true);g.fillStyle=k==='c'?'#e0a030':k==='i'?'#7a6a9a':'#d77a5a';g.fill()}
  for(const b of world.buildings){poly(b.p,true);g.fillStyle=/industrial|warehouse|shed/.test(b.kind)?'#7a6a9a':'#b5553a';g.fill();if(zoom&&zoom!=='centro'){g.strokeStyle='#fff';g.lineWidth=1;g.stroke()}}
  if(zoom&&zoom!=='centro'){g.fillStyle='#fff';g.font='10px sans-serif';for(const r of world.roads){if(!r.n)continue;const m=r.p[r.p.length>>1];const[a,b]=T(m[0],m[1]);g.fillText(r.n,a,b)}}

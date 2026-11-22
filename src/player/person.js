@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 
 const PI = Math.PI;
+const runK0 = v => Math.min(1, Math.max(0, (v - 4) / 3));
 const V = (x, y) => new THREE.Vector2(x, y);
 const lathe = (pts, seg = 16) => new THREE.LatheGeometry(pts.map(([r, y]) => V(r, y)), seg);
 
@@ -22,7 +23,7 @@ function geo() {
     nape: new THREE.SphereGeometry(0.123, 16, 8, PI, PI, PI * 0.45, PI * 0.33),   // meia faixa de trás, do meio para baixo
         fringe: new THREE.SphereGeometry(0.05, 8, 6),
     ponytail: cap(0.045, 0.12, 8), hairLong: cap(0.1, 0.2, 12),
-    ear: new THREE.SphereGeometry(0.026, 8, 6), eyeW: new THREE.SphereGeometry(0.02, 10, 8), iris: new THREE.SphereGeometry(0.011, 8, 6),
+    ear: new THREE.SphereGeometry(0.026, 8, 6), eyeW: new THREE.SphereGeometry(0.016, 12, 8), iris: new THREE.SphereGeometry(0.0095, 10, 8), lid: new THREE.SphereGeometry(0.018, 10, 6, 0, PI * 2, 0, PI * 0.42),
     nose: new THREE.SphereGeometry(0.022, 8, 6), mouth: new THREE.TorusGeometry(0.022, 0.005, 4, 10, PI),
     brow: new THREE.CapsuleGeometry(0.006, 0.03, 2, 4), mustache: new THREE.CapsuleGeometry(0.014, 0.06, 3, 6),
     upperArm: cap(0.05, 0.19), sleeve: lathe([[0.066, 0], [0.068, -0.12], [0.062, -0.14], [0.001, -0.14]], 12),
@@ -38,7 +39,7 @@ function geo() {
     belt: new THREE.CylinderGeometry(0.162, 0.162, 0.04, 20), buckle: new THREE.BoxGeometry(0.04, 0.03, 0.01),
     // jaqueta bomber aberta na frente (vão de ~0,5 rad em +z)
     jacket: new THREE.LatheGeometry([[0.172, -0.07], [0.176, -0.02], [0.168, 0.06], [0.163, 0.16], [0.17, 0.27], [0.196, 0.38], [0.205, 0.44], [0.172, 0.5], [0.09, 0.535]].map(([r, y]) => V(r, y)), 20, 0.24, PI * 2 - 0.48),
-    jacketHem: new THREE.TorusGeometry(0.176, 0.022, 6, 20, PI * 2 - 0.5),
+    jacketHem: new THREE.TorusGeometry(0.17, 0.013, 6, 20, PI * 2 - 0.5),
     jacketCollar: new THREE.TorusGeometry(0.085, 0.024, 6, 16, PI * 2 - 0.9),
     zip: new THREE.BoxGeometry(0.005, 0.56, 0.005),
     jSleeveUp: lathe([[0.07, 0.02], [0.072, -0.1], [0.064, -0.28], [0.001, -0.29]], 12),
@@ -55,7 +56,11 @@ function geo() {
   G.ready = true; return G;
 }
 const mats = new Map();
-const mat = (c, side = THREE.FrontSide) => { const k = c + ':' + side; if (!mats.has(k)) mats.set(k, new THREE.MeshLambertMaterial({ color: c, side })); return mats.get(k); };
+const mat = (c, side = THREE.FrontSide, rough = 0.85) => {
+  const k = c + ':' + side + ':' + rough;
+  if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: c, side, roughness: rough, metalness: 0 }));
+  return mats.get(k);
+};
 const shade = (c, f) => new THREE.Color(c).multiplyScalar(f).getHex();
 
 export const SKINS = [0xf1c6a0, 0xe2b48c, 0xc68e64, 0x9a6b47, 0x6f4a32];
@@ -71,8 +76,8 @@ export function makePerson(opts = {}) {
   const g = geo();
   const o = { shirt: 0x1d4e9e, pants: 0x2f4a6e, skin: 0xe2b48c, hair: 0x3a2618, shoes: 0xf2f2f2, eyes: 0x4a3222, hairStyle: 'short', build: 1, height: 1, ...opts };
   const M = {
-    shirt: mat(o.shirt), shirtDark: mat(shade(o.shirt, 0.8)), pants: mat(o.pants), skin: mat(o.skin), lip: mat(shade(o.skin, 0.72)),
-    hair: mat(o.hair), shoes: mat(o.shoes), sole: mat(o.sole ?? 0x3a3a3a), white: mat(0xfbfbfb), iris: mat(o.eyes), belt: mat(0x3b2a1e), buckle: mat(0xc9b37a),
+    shirt: mat(o.shirt, undefined, 0.95), shirtDark: mat(shade(o.shirt, 0.8), undefined, 0.95), pants: mat(o.pants, undefined, 0.9), skin: mat(o.skin, undefined, 0.55), lip: mat(shade(o.skin, 0.72), undefined, 0.5),
+    hair: mat(o.hair), shoes: mat(o.shoes), sole: mat(o.sole ?? 0x3a3a3a), white: mat(0xf4f1ec, undefined, 0.25), iris: mat(o.eyes, undefined, 0.2), belt: mat(0x3b2a1e), buckle: mat(0xc9b37a),
   };
   const add = (parent, gg, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
     const mesh = new THREE.Mesh(gg, m); mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); mesh.castShadow = true; parent.add(mesh); return mesh;
@@ -88,29 +93,29 @@ export function makePerson(opts = {}) {
   // tronco (camiseta)
   const chest = new THREE.Group(); chest.position.y = 0.07; hips.add(chest);
   add(chest, g.torso, M.shirt, 0, 0, 0, 1.08 * b, 1, 0.7 * (0.85 + 0.15 * b));
-  const hem = add(chest, g.hem, M.shirtDark, 0, 0.012, 0, 1.0 * b, 1, 0.72 * b); hem.rotation.x = PI / 2;
-  const col = add(chest, g.collar, M.shirtDark, 0, 0.525, 0.004, 1, 1, 0.8); col.rotation.x = PI / 2;
+  const hem = add(chest, g.hem, M.shirtDark, 0, 0.012, 0, 1.0 * b, 0.72 * b, 1); hem.rotation.x = PI / 2;
+  const col = add(chest, g.collar, M.shirtDark, 0, 0.525, 0.004, 1, 0.8, 1); col.rotation.x = PI / 2;
   if (o.apron) {
     const am = mat(o.apron, THREE.DoubleSide);
     add(chest, g.apron, am, 0, 0.0, 0.126 * b + 0.004).rotation.x = -0.06;
     add(chest, g.apronTop, am, 0, 0.3, 0.13 * b);
   }
-  const neck = add(chest, g.neck, M.skin, 0, 0.555, 0);
+  const neck = add(chest, g.neck, M.skin, 0, 0.555, 0, 1.05, 1, 1.05);
   if (o.jacket) {
     const J = mat(o.jacket, THREE.DoubleSide), JR = mat(shade(o.jacket, 0.7)), Z = mat(0x55575a);
     add(chest, g.jacket, J, 0, 0, 0, 1.08 * b, 1, 0.74 * b);
-    const jh = add(chest, g.jacketHem, JR, 0, -0.07, 0, 1.08 * b, 1, 0.76 * b); jh.rotation.set(PI / 2, 0, PI / 2 + 0.25 - PI);
-    const jc = add(chest, g.jacketCollar, JR, 0, 0.53, -0.01, 1.05, 1, 0.92); jc.rotation.set(PI / 2, 0, PI / 2 + 0.45 - PI);
+    const jc = add(chest, g.jacketCollar, JR, 0, 0.53, -0.01, 1.05, 0.92, 1); jc.rotation.set(PI / 2, 0, PI / 2 + 0.45 - PI);
     for (const sx of [-1, 1]) add(chest, g.zip, Z, sx * 0.043 * b, 0.23, 0.128 * b);
   }
 
   // cabeça (levemente grande: estilo cartoon)
-  const head = new THREE.Group(); head.position.y = 0.695; chest.add(head);
+  const head = new THREE.Group(); head.position.y = 0.675; head.scale.setScalar(o.headScale ?? 0.9); chest.add(head);
   add(head, g.head, M.skin, 0, 0, 0, 0.98, 1.04, 1.02);
   for (const s of [-1, 1]) {
     add(head, g.ear, M.skin, s * 0.112, 0.0, -0.005, 0.55, 1, 0.9);
-    add(head, g.eyeW, M.white, s * 0.042, 0.022, 0.098, 1, 1.15, 0.6);
-    add(head, g.iris, M.iris, s * 0.042, 0.022, 0.109);
+    add(head, g.eyeW, M.white, s * 0.04, 0.02, 0.1, 1.15, 0.85, 0.55);
+    add(head, g.iris, M.iris, s * 0.04, 0.02, 0.1085, 1, 1, 0.6);
+    add(head, g.lid, M.skin, s * 0.04, 0.02, 0.099, 1.2, 1.0, 0.65);   // pálpebra superior
     const br = add(head, g.brow, o.hairStyle === 'bald' ? M.lip : M.hair, s * 0.045, 0.06, 0.103); br.rotation.z = PI / 2 + s * 0.12;
   }
   add(head, g.nose, M.skin, 0, -0.012, 0.113, 0.8, 1, 0.9);
@@ -175,47 +180,60 @@ export function makePerson(opts = {}) {
 
   let ph = 0, t = Math.random() * 10, amp = 0, blink = 2 + Math.random() * 3;
   const eyes = head.children.filter(m => m.geometry === g.eyeW || m.geometry === g.iris);
+  for (const e of eyes) e.userData.sy = e.scale.y;
   root.userData = {
     head, chest, hips, legs, arms,
     /** speed em m/s; run = correndo */
     animate(dt, speed = 0, run = false, air = 0) {
       t += dt;
+      // passada real: a fase avança conforme a distância percorrida (o pé não escorrega no chão)
+      const cycle = speed > 7.5 ? 3.1 : run ? 2.5 : 1.5;          // metros por ciclo (2 passos)
+      ph += dt * speed / cycle * PI * 2;
       const moving = speed > 0.15;
-      const target = moving ? Math.min(1, speed / (run ? 8 : 4)) * (run ? 0.95 : 0.55) : 0;
-      amp += (target - amp) * Math.min(1, dt * 8);        // transição suave parado ↔ andando
-      ph += dt * (moving ? 1.6 + speed * (run ? 0.95 : 1.35) : 0);
+      const stepLen = cycle / 2 * Math.min(1, speed / (run ? 5 : 2.5));
+      const target = moving ? Math.min(0.42 + runK0(speed) * 0.2, Math.asin(Math.min(0.95, stepLen / 1.75))) : 0;
+      amp += (target - amp) * Math.min(1, dt * 7);
+      const runK = Math.min(1, Math.max(0, (speed - 4) / 3));       // 0 = andando, 1 = correndo
       for (const L of legs) {
-        const a = ph + (L.s > 0 ? PI : 0), p = Math.sin(a);
-        L.hip.rotation.x = -p * amp;
-        // joelho dobra na fase de balanço (perna indo para frente)
-        L.knee.rotation.x = Math.max(0, Math.cos(a)) * amp * (run ? 1.9 : 1.2) + 0.04;
-        L.foot.rotation.x = -L.hip.rotation.x * 0.35 - L.knee.rotation.x * 0.25;
+        const a = ph + (L.s > 0 ? PI : 0), sa = Math.sin(a), ca = Math.cos(a);
+        const hip = -sa * amp;                                       // negativo = perna para frente
+        const swing = Math.max(0, ca);                               // fase de balanço (perna indo à frente)
+        const knee = 0.06 + amp * (0.2 * (1 - swing) * Math.max(0, -sa) + Math.pow(swing, 1.4) * (1.6 + runK * 1.2));
+        L.hip.rotation.x = hip;
+        L.knee.rotation.x = knee;
+        // pé paralelo ao chão no apoio; calcanhar toca primeiro (ponta para cima) e ponta empurra no fim
+        const toeUp = -0.25 * amp * Math.max(0, sa) * (1 - swing);
+        const push = 0.6 * amp * Math.max(0, -sa) * Math.max(0, ca);
+        L.foot.rotation.x = -(hip + knee) + toeUp + push;
       }
       for (const A of arms) {
-        const p = Math.sin(ph + (A.s > 0 ? 0 : PI));
-        A.sh.rotation.x = -p * amp * (run ? 1.0 : 0.7);
-        A.sh.rotation.z = A.s * (0.07 + amp * 0.06);
-        A.el.rotation.x = -(run ? 1.4 : 0.2 + amp * 0.3) - Math.max(0, -p) * amp * 0.4;
-        A.hand.rotation.x = -0.1;
+        const a = ph + (A.s > 0 ? 0 : PI), sa = Math.sin(a);      // braço oposto à perna do mesmo lado
+        A.sh.rotation.x = -sa * amp * (0.75 + runK * 0.4);
+        A.sh.rotation.z = A.s * (0.06 + amp * 0.05 + runK * 0.06);
+        A.el.rotation.x = -(0.15 + runK * 1.25) - Math.max(0, sa) * amp * (0.35 + runK * 0.2);
+        A.hand.rotation.x = -0.15;
       }
-      if (air > 0) {                                       // no ar: pernas encolhidas, braços para cima
-        for (const L of legs) { L.hip.rotation.x = -0.5 * air + (L.s > 0 ? 0.25 : -0.1) * air; L.knee.rotation.x = 0.9 * air; L.foot.rotation.x = -0.2; }
-        for (const A of arms) { A.sh.rotation.x = -0.6 * air; A.sh.rotation.z = A.s * 0.45 * air; A.el.rotation.x = -0.5; }
+      if (air > 0) {                                                // no ar: pernas encolhidas, braços para cima
+        for (const L of legs) { L.hip.rotation.x += (-0.5 + (L.s > 0 ? 0.3 : -0.1) - L.hip.rotation.x) * air; L.knee.rotation.x += (0.9 - L.knee.rotation.x) * air; L.foot.rotation.x = -0.2; }
+        for (const A of arms) { A.sh.rotation.x += (-0.6 - A.sh.rotation.x) * air; A.sh.rotation.z = A.s * 0.45 * air + A.sh.rotation.z * (1 - air); A.el.rotation.x = -0.5; }
       }
-      // sobe e desce duas vezes por ciclo; inclina ao correr; balanço do quadril e ombros
-      body.position.y = (Math.abs(Math.cos(ph)) - 0.5) * 0.05 * amp;
-      body.rotation.x = run ? amp * (speed > 8 ? 0.32 : 0.2) : 0;
-      hips.rotation.y = Math.sin(ph) * 0.14 * amp;
-      hips.rotation.z = Math.cos(ph) * 0.04 * amp;
-      chest.rotation.y = -Math.sin(ph) * 0.22 * amp;
-      chest.rotation.z = -hips.rotation.z * 0.8;
-      // parado: respira e olha em volta
-      chest.scale.set(1, 1 + Math.sin(t * 1.8) * 0.01 * (1 - amp), 1);
-      head.rotation.y = -chest.rotation.y * 0.7 + (1 - amp) * Math.sin(t * 0.4) * 0.35;
-      head.rotation.x = (1 - amp) * Math.sin(t * 0.27) * 0.06;
+      // centro de massa: mais baixo no duplo apoio, mais alto no meio do passo
+      const bob = (0.035 + runK * 0.04) * amp / 0.5;
+      body.position.y = (Math.abs(Math.cos(ph)) - 0.65) * bob - runK * 0.04 * amp;
+      body.rotation.x = runK * 0.1 + (speed > 7.5 ? 0.05 : 0);
+      hips.rotation.y = Math.sin(ph) * 0.16 * amp;                    // quadril gira com a perna
+      hips.rotation.z = Math.cos(ph * 2) * 0.035 * amp * (1 - runK);  // quadril cai do lado da perna no ar
+      chest.rotation.y = -hips.rotation.y * 1.4;                      // ombros contra o quadril
+      chest.rotation.z = -hips.rotation.z * 0.7;
+      // parado: respira, troca o peso e olha em volta
+      const idle = 1 - Math.min(1, amp / 0.15);
+      chest.scale.set(1, 1 + Math.sin(t * 1.7) * 0.012 * idle, 1);
+      body.position.x = Math.sin(t * 0.35) * 0.015 * idle;
+      head.rotation.y = -chest.rotation.y * 0.8 + idle * Math.sin(t * 0.4) * 0.35;
+      head.rotation.x = idle * Math.sin(t * 0.27) * 0.06 - runK * 0.06;
       // piscar
       blink -= dt; const closed = blink < 0.12;
-      for (const e of eyes) e.scale.y = closed ? 0.12 : (e.geometry === g.eyeW ? 1.15 : 1);
+      for (const e of eyes) e.scale.y = closed ? 0.12 : e.userData.sy;
       if (blink < 0) blink = 2.5 + Math.random() * 3;
     },
   };

@@ -18,9 +18,14 @@ export class Walker {
     this.runTime = 0; this.y0 = 0; this.vy = 0; this.air = 0; this.onGround = true;
     scene.add(this.mesh);
     this.blocked = () => false;          // substituído quando houver colisão com prédios
+    this.groundAt = (x, z) => terrain.heightAt(x, z);   // substituído para incluir pontes
+    this.surf = terrain.heightAt(x, z);
+    this.lean = 0;
   }
 
-  get y() { return this.terrain.heightAt(this.x, this.z); }
+  get y() { return this.surf; }
+  /** Chão em (x, z) visto de onde o jogador está agora (sobe em ponte só pela cabeceira). */
+  floor(x, z) { return this.groundAt(x, z, this.surf); }
 
   /** Pulo: só no chão. */
   jump() { if (this.onGround) { this.vy = 5.2; this.onGround = false; } }
@@ -37,19 +42,23 @@ export class Walker {
       // direção desejada no mundo, relativa à câmera
       const want = camYaw + Math.atan2(-t, f);
       let d = want - this.ang; d = Math.atan2(Math.sin(d), Math.cos(d));
-      this.ang += d * Math.min(1, dt * 10);
-    }
+      const turn = d * Math.min(1, dt * 10);
+      this.ang += turn;
+      this.lean += (Math.max(-0.25, Math.min(0.25, -turn / Math.max(dt, 1e-3) * 0.02 * this.speed / 4)) - this.lean) * Math.min(1, dt * 6);
+    } else this.lean *= 1 - Math.min(1, dt * 6);
     if (this.speed > 0.01) {
       // ladeira: sobe mais devagar
       const sx = Math.sin(this.ang), sz = Math.cos(this.ang);
-      const slope = (this.terrain.heightAt(this.x + sx, this.z + sz) - this.y);
+      const slope = (this.floor(this.x + sx, this.z + sz) - this.y);
       const v = this.speed * (slope > 0 ? Math.max(0.45, 1 - slope * 0.9) : 1);
       const nx = this.x + sx * v * dt, nz = this.z + sz * v * dt;
-      if (this.terrain.inside(nx, this.z, 5) && !this.blocked(nx, this.z, 0.45)) this.x = nx;
-      if (this.terrain.inside(this.x, nz, 5) && !this.blocked(this.x, nz, 0.45)) this.z = nz;
+      // não cai de desnível > 1,2 m (guarda-corpo de ponte, barrancos) nem sobe degrau > 0,6 m
+      const ok = (x, z) => { const h = this.floor(x, z) - this.surf; return this.terrain.inside(x, z, 5) && !this.blocked(x, z, 0.45) && h > -1.2 && h < 0.6 + this.y0; };
+      if (ok(nx, this.z)) this.x = nx;
+      if (ok(this.x, nz)) this.z = nz;
     }
     // pulo / gravidade
-    const ground = this.y;
+    const ground = this.surf = this.floor(this.x, this.z);
     if (!this.onGround) {
       this.vy -= 15 * dt; this.y0 += this.vy * dt;
       if (this.y0 <= 0) { this.y0 = 0; this.vy = 0; this.onGround = true; }
@@ -57,7 +66,8 @@ export class Walker {
     this.air += ((this.onGround ? 0 : 1) - this.air) * Math.min(1, dt * 12);
     const m = this.mesh;
     m.position.set(this.x, ground + this.y0, this.z);
-    m.rotation.y = this.ang;
-    m.userData.animate(dt, this.onGround ? this.speed : this.speed * 0.3, this.speed > 5, this.air);
+    m.rotation.set(0, this.ang, 0);
+    m.rotation.z = this.lean;
+    m.userData.animate(dt, this.onGround ? this.speed : 0, this.speed > 5, this.air);
   }
 }

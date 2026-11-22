@@ -5,6 +5,7 @@ import { Sky } from './world/sky.js';
 import { makeLabel } from './world/labels.js';
 import { Input, isTouch } from './input.js';
 import { Walker, makePerson } from './player/walker.js';
+import { tryLoadGLB } from './player/glbmodel.js';
 import { FollowCam } from './camera.js';
 import { Minimap } from './ui/minimap.js';
 import { LANDMARKS, byId, PLACE_STYLE } from './landmarks.js';
@@ -92,9 +93,19 @@ let spawn = byId.praca;
 if (params.get('spawn') && byId[params.get('spawn')]) spawn = byId[params.get('spawn')];
 const player = new Walker(scene, terrain, spawn.x + 6, spawn.z + 6);
 player.blocked = (x, z, r) => city.blocked(x, z, r) || landmarkBlocked(landmarks.colliders, x, z, r);
+player.groundAt = (x, z, cur) => { const g = terrain.heightAt(x, z), d = city.deckAt(x, z); return d !== null && d > g && d - cur < 1.0 ? d : g; };
+player.surf = player.groundAt(player.x, player.z, terrain.heightAt(player.x, player.z));
 // se nasceu dentro de um prédio, procura um lugar livre em espiral
 for (let k = 0; k < 400 && player.blocked(player.x, player.z, 0.6); k++) { const a = k * 0.7, r = 1 + k * 0.25; player.x = spawn.x + Math.cos(a) * r; player.z = spawn.z + Math.sin(a) * r; }
 if (params.has('x')) { player.x = +params.get('x'); player.z = +params.get('z'); }
+// modelo realista opcional (public/models/protagonista.glb): substitui o procedural se existir
+tryLoadGLB(BASE + 'models/protagonista.glb', 1.8).then(glb => {
+  if (!glb) return;
+  const m = player.mesh;
+  for (const c of [...m.children]) c.visible = false;
+  m.add(glb.model);
+  m.userData.animate = (dt, speed, run, air) => glb.animate(dt, speed, player.mode, air);
+});
 const input = new Input(renderer.domElement);
 const cam = new FollowCam(camera, terrain);
 cam.blocked = (x, z, r) => city.blocked(x, z, r);
