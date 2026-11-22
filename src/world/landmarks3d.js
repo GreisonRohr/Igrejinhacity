@@ -118,6 +118,7 @@ export function buildLandmarks(P, world, terrain, scene) {
   const root = new THREE.Group(); scene.add(root);
   const colliders = [];          // {p: polígono} para colisão
   const updaters = [];
+  const seats = [];              // assentos de bancos para pedestres: {x, y, z, face}
   const H = (x, z) => terrain.heightAt(x, z);
   const frame = (o, y) => { const g = new THREE.Group(); g.position.set(o.x, y, o.z); g.rotation.y = Math.atan2(-o.uz, o.ux); root.add(g); return g; };
   const toWorld = (o, lx, lz) => [o.x + lx * o.ux - lz * o.uz, o.z + lx * o.uz + lz * o.ux];
@@ -418,7 +419,8 @@ export function buildLandmarks(P, world, terrain, scene) {
     const benches = [], lamps = [];
     for (let i = -2; i <= 2; i++) if (i) { benches.push([cx + i * 6.5, cz + 2.4, 0]); benches.push([cx + 2.4, cz + i * 6.5, PI / 2]); }
     for (const [x, z] of [[cx - 10, cz - 2], [cx + 10, cz - 2], [cx - 2, cz - 12], [cx - 2, cz + 12], [cx + 16, cz + 2], [cx - 16, cz + 2]]) if (inside(x, z)) lamps.push([x, z]);
-    benches.forEach(([x, z, r]) => { if (!inside(x, z)) return; const y = Y(x, z); k.add(new THREE.BoxGeometry(1.9, 0.1, 0.55), wood, x, y + 0.46, z, r); k.add(new THREE.BoxGeometry(1.9, 0.5, 0.08), wood, x, y + 0.8, z + 0.0, r); for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(0.1, 0.45, 0.5), lambert(0x333333), x + Math.cos(r) * s * 0.8, y + 0.22, z - Math.sin(r) * s * 0.8, r); });
+    benches.forEach(([x, z, r]) => { if (!inside(x, z)) return; const y = Y(x, z);
+      for (const s of [-0.5, 0.5]) { const sx = x + Math.cos(r) * s, sz = z - Math.sin(r) * s, f = r + (Math.hypot(sx - Math.sin(r) - cx, sz - Math.cos(r) - cz) < Math.hypot(sx + Math.sin(r) - cx, sz + Math.cos(r) - cz) ? PI : 0); seats.push({ x: sx, y: y + 0.46, z: sz, face: f }); } k.add(new THREE.BoxGeometry(1.9, 0.1, 0.55), wood, x, y + 0.46, z, r); k.add(new THREE.BoxGeometry(1.9, 0.5, 0.08), wood, x, y + 0.8, z + 0.0, r); for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(0.1, 0.45, 0.5), lambert(0x333333), x + Math.cos(r) * s * 0.8, y + 0.22, z - Math.sin(r) * s * 0.8, r); });
     const lampMat = new THREE.MeshLambertMaterial({ color: 0xfff3c4, emissive: 0xffd27a, emissiveIntensity: 0 });
     lamps.forEach(([x, z]) => { const y = Y(x, z); k.add(new THREE.CylinderGeometry(0.08, 0.11, 3.6, 6), lambert(0x2f3440), x, y + 1.8, z); k.add(new THREE.SphereGeometry(0.3, 10, 8), lampMat, x, y + 3.75, z); });
     updaters.push((dt, s) => { lampMat.emissiveIntensity = s.night * 1.4; });
@@ -522,7 +524,7 @@ export function buildLandmarks(P, world, terrain, scene) {
   const cells = mergeStatic(root, 500);
 
   return {
-    colliders, root, waldir: waldirNpc, cells,
+    colliders, root, waldir: waldirNpc, cells, seats,
     cull(px, pz, dist) { for (const c of cells) { const v = Math.hypot(px - c.cx, pz - c.cz) < dist; for (const m of c.meshes) m.visible = v; } },
     update(dt, state) { for (const u of updaters) u(dt, state); },
   };

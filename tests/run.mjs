@@ -197,6 +197,56 @@ await suite('navegacao', async () => {
   return `${r.nodes} nós; carro ${c.ok}/${c.n} rotas (pior ${c.ms.toFixed(0)} ms), a pé ${w.ok}/${w.n} (pior ${w.ms.toFixed(0)} ms), 0 contramão`;
 });
 
+await suite('pedestres', async () => {
+  const p = await page();
+  const r = await p.evaluate(async () => {
+    const g = __game, P = g.peds, nav = g.nav;
+    g.sky.tod = 10 / 24;
+    let worst = 0, tot = 0, viol = { predio: 0, pista: 0, chao: 0 }, samples = 0;
+    // está no meio da pista de carro (fora de travessia)?
+    const inLane = (x, z) => {
+      for (const e of nav.edges) {
+        if (!(e.f & nav.CAR) || e.br) continue;
+        const pts = [nav.nodePos(e.a)]; for (let j = 0; j < e.m.length; j += 2) pts.push([e.m[j], e.m[j + 1]]); pts.push(nav.nodePos(e.b));
+        const half = (e.med > 0 ? Math.max(3.5, (e.w - e.med) / 2) : e.w) / 2;
+        for (let i = 1; i < pts.length; i++) {
+          const a = pts[i - 1], b = pts[i], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
+          const t = ((x - a[0]) * dx + (z - a[1]) * dz) / l2; if (t < 0.15 || t > 0.85) continue;   // longe dos cruzamentos
+          if (Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t) < half - 0.6) return true;
+        }
+      }
+      return false;
+    };
+    for (let i = 0; i < 1800; i++) {
+      const t0 = performance.now(); P.step(1 / 60); const dt = performance.now() - t0; worst = Math.max(worst, dt); tot += dt;
+      if (i % 120 === 119) for (const a of P.agents) {
+        samples++;
+        if (g.spatial.blocked(a.x, a.z, 0)) viol.predio++;
+        if (a.state === 'andar' && !a.cross && inLane(a.x, a.z)) viol.pista++;
+        if (Math.abs(a.y - a.lift - g.player.groundAt(a.x, a.z, g.terrain.heightAt(a.x, a.z))) > 0.05) viol.chao++;
+      }
+    }
+    const dia = P.agents.length, st = {}; for (const a of P.agents) st[a.state] = (st[a.state] || 0) + 1;
+    g.sky.tod = 3 / 24; const madrugada = P.targetCount(g.player.x, g.player.z); g.sky.tod = 10 / 24;
+    // conversa: chega perto de alguém e aperta E
+    const a = P.agents.find(a => a.state === 'andar' || a.state === 'sentado');
+    g.player.x = a.x + 1.2; g.player.z = a.z; g.player.prev.x = g.player.x; g.player.prev.z = g.player.z;
+    await new Promise(r => setTimeout(r, 300));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }));
+    await new Promise(r => setTimeout(r, 100));
+    return { dia, madrugada, st, viol, samples, ms: tot / 1800, worst, fala: document.getElementById('toast').textContent, falando: P.agents.some(o => o.state === 'falar') ? 'falar' : a.state };
+  });
+  assert(!p.errors.length, 'erros: ' + p.errors[0]);
+  assert(r.dia >= 40, `só ${r.dia} pessoas no centro às 10 h`);
+  assert(r.madrugada <= 10, `${r.madrugada} pessoas às 3 h`);
+  assert(r.viol.predio === 0, `${r.viol.predio} dentro de prédio`);
+  assert(r.viol.pista <= r.samples * 0.01, `${r.viol.pista} de ${r.samples} amostras no meio da pista`);
+  assert(r.viol.chao === 0, `${r.viol.chao} fora do chão`);
+  assert(r.ms < 2, `passo ${r.ms.toFixed(2)} ms`);
+  assert(r.fala.length > 3 && r.falando === 'falar', 'conversa não respondeu');
+  return `${r.dia} pessoas às 10 h (alvo às 3 h: ${r.madrugada}); ${JSON.stringify(r.st)}; pista ${r.viol.pista}/${r.samples}; passo ${r.ms.toFixed(2)} ms (pior ${r.worst.toFixed(1)}); “${r.fala.slice(1, 40)}”`;
+});
+
 await suite('waldir', async () => {
   const p = await page();
   const ok = await p.evaluate(async () => {

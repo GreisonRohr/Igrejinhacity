@@ -19,6 +19,8 @@ import { FixedLoop } from './core/loop.js';
 import { buildSpatial } from './core/spatial.js';
 import { events } from './core/events.js';
 import { NavGraph } from './nav/graph.js';
+import { Pedestrians } from './sim/pedestrians.js';
+import { Interactions } from './interact/interact.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -121,7 +123,9 @@ const spatial = buildSpatial(city, landmarks.colliders);
 city.colGrid.clear();                                  // os dados agora vivem só no spatial
 city.blocked = (x, z, r) => spatial.blocked(x, z, r);
 city.roofAt = (x, z) => spatial.roofAt(x, z, true);
-player.blocked = (x, z, r) => spatial.blocked(x, z, r);
+const _near = [];
+// pessoas também são sólidas para o jogador
+player.blocked = (x, z, r) => spatial.blocked(x, z, r) || spatial.agentsNear(x, z, r + 0.05, _near).length > 0;
 player.groundAt = (x, z, cur) => { const g = terrain.heightAt(x, z), d = city.deckAt(x, z); return d !== null && d > g - 0.3 && d - cur < 1.2 ? Math.max(d, g) : g; };
 player.surf = player.groundAt(player.x, player.z, terrain.heightAt(player.x, player.z));
 // se nasceu dentro de um prédio, procura um lugar livre em espiral
@@ -162,13 +166,25 @@ if (landmarks.waldir) {
   const tag = makeLabel('Waldir', 3); tag.position.set(w.x, w.y + 2.9, w.z); tag.userData.maxDist = 40; scene.add(tag); labels.push(tag);
 }
 input.on('jump', () => { if (running) player.jump(); });
-input.on('act', () => {
-  if (!running || !waldir) return;
-  if (Math.hypot(player.x - waldir.position.x, player.z - waldir.position.z) < 4) {
+const interact = new Interactions();
+if (waldir) interact.add((px, pz) => {
+  const d = Math.hypot(px - waldir.position.x, pz - waldir.position.z);
+  return d < 4 ? { dist: d - 1.5, label: 'E · conversar com o Waldir', touchLabel: 'Toque em FALAR para conversar com o Waldir', button: 'Falar', run() {
     toast('Waldir', ': “' + FALAS_WALDIR[falaI++ % FALAS_WALDIR.length] + '”', 5);
     waldir.rotation.y = Math.atan2(player.x - waldir.position.x, player.z - waldir.position.z);
-  }
+  } } : null;
 });
+/* ---------- pedestres (src/sim/pedestrians.js, spec em docs/spec-pedestres.md) ---------- */
+const peds = new Pedestrians({ scene, nav, spatial, terrain, city, world, landmarks, places: world.places, quality: isTouch ? 'medium' : 'high',
+  groundAt: (x, z) => player.groundAt(x, z, terrain.heightAt(x, z)), hours: () => sky.hours });
+peds.prefill(player.x, player.z);
+peds.toast = line => { if (toastT <= 0) toast('', '“' + line + '”', 2.5); };
+interact.add((px, pz) => {
+  const a = peds.nearestTalker(px, pz); if (!a) return null;
+  return { dist: Math.hypot(a.x - px, a.z - pz), label: 'E · conversar', touchLabel: 'Toque em FALAR para conversar', button: 'Falar',
+    run() { toast('', '“' + peds.talk(a) + '”', 5); } };
+});
+input.on('act', () => { if (!running) return; const c = interact.best(player.x, player.z); if (c) c.run(); });
 
 /* ---------- laço ---------- */
 let running = false, last = performance.now(), lodT = 0, lastMin = -1;
@@ -177,7 +193,14 @@ if (DEBUG) $('fps').hidden = false;
 
 let frameNo = 0, frameAx = { f: 0, t: 0, run: false };
 // núcleo: passo fixo (lógica igual a 30, 60 ou 144 fps) — ver src/core/loop.js
-const sim = new FixedLoop(h => { player.step(h, frameAx, cam.yaw); events.emit('step', h); });
+const sim = new FixedLoop(h => {
+  const x0 = player.x, z0 = player.z;
+  player.step(h, frameAx, cam.yaw);
+  Object.assign(peds.player, { x: player.x, z: player.z, vx: (player.x - x0) / h, vz: (player.z - z0) / h, sprint: player.mode === 'sprint' || player.mode === 'run' });
+  peds.camDir.x = Math.sin(cam.yaw); peds.camDir.z = Math.cos(cam.yaw);
+  peds.step(h);
+  events.emit('step', h);
+});
 function frame(now) {
   const rawDt = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, rawDt); last = now;
   const look = input.takeLook();
@@ -185,6 +208,7 @@ function frame(now) {
   frameAx = ax;
   const alpha = sim.advance(rawDt);                 // simulação em passos fixos de 1/60 s
   const pv = player.present(alpha, dt);             // desenho interpolado
+  peds.present(alpha, dt, camera);
   const moving = Math.hypot(ax.f, ax.t) > 0.1;
   cam.update(dt, pv, running ? look : { dx: dt * 6, dy: 0, zoom: 0 },
     { followYaw: moving && ax.f > 0.5 ? player.ang : null, height: 1.6 });
@@ -209,10 +233,10 @@ function frame(now) {
     const h = Math.floor(sky.hours), m = Math.floor((sky.hours - h) * 60);
     if (m !== lastMin) { lastMin = m; $('clockT').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; }
     $('spd').textContent = `${{ idle: 'Parado', walk: 'Andando', run: 'Correndo', sprint: 'Sprint!' }[player.mode] || 'A pé'} · ${Math.round(player.y)} m`;
-    const pertoWaldir = waldir && Math.hypot(player.x - waldir.position.x, player.z - waldir.position.z) < 4;
-    $('prompt').style.display = pertoWaldir ? 'block' : 'none';
-    if (pertoWaldir) $('prompt').textContent = isTouch ? 'Toque em FALAR para conversar com o Waldir' : 'E · conversar com o Waldir';
-    $('bAct').textContent = pertoWaldir ? 'Falar' : 'Carro';
+    const it = interact.best(player.x, player.z);
+    $('prompt').style.display = it ? 'block' : 'none';
+    if (it) $('prompt').textContent = isTouch ? it.touchLabel : it.label;
+    $('bAct').textContent = it ? it.button : 'Carro';
     minimap.draw(player.x, player.z, cam.yaw, player.ang, places);
     // ponto mais próximo
     let near = null, nd = 1e9;
@@ -273,4 +297,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { nav, spatial, sim, events, waldir, street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { peds, interact, nav, spatial, sim, events, waldir, street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

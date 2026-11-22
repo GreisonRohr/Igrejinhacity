@@ -45,7 +45,7 @@ export class Spatial {
   }
 
   /* ---------- agentes dinâmicos (reconstruídos a cada passo pelo sistema dono) ---------- */
-  clearAgents() { this.agents.clear(); }
+  clearAgents() { for (const a of this.agents.values()) a.length = 0; }   // reaproveita as listas (sem lixo por passo)
   addAgent(id, x, z, r, data) { const k = key(Math.floor(x / CELL), Math.floor(z / CELL)); (this.agents.get(k) || this.agents.set(k, []).get(k)).push({ id, x, z, r, data }); }
   /** Agentes num raio (lista reutilizada: copiar se precisar guardar). */
   agentsNear(x, z, radius, out = []) {

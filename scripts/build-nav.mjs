@@ -13,6 +13,10 @@ const KINDS = ['motorway', 'trunk', 'primary', 'primary_link', 'secondary', 'sec
 const SPEED = { motorway: 80, trunk: 80, primary: 60, primary_link: 40, secondary: 50, secondary_link: 40, tertiary: 40, tertiary_link: 30,
   residential: 30, unclassified: 30, living_street: 10, service: 20, track: 20 };
 const CAR = 1, PED = 2;
+// mesmas regras de calçada do desenho das ruas (src/world/city.js buildRoads)
+const URBAN = new Set(['primary', 'secondary', 'tertiary', 'residential', 'living_street', 'primary_link', 'secondary_link', 'tertiary_link']);
+const unpaved = r => r.pav === 'terra' || (!r.pav && (r.k === 'track' || ['unpaved', 'gravel', 'dirt', 'ground', 'compacted'].includes(r.sf)));
+const sidewalk = r => { const urban = URBAN.has(r.k) && !unpaved(r); const sw = r.sw ? (r.sw[0] + r.sw[1]) / 2 : (urban ? 2.2 : 0); return r.br ? (urban ? 1.5 : 0.4) : sw; };
 const flags = k => (SPEED[k] ? CAR : 0) | (k === 'motorway' || k === 'trunk' || k === 'construction' ? 0 : PED);
 
 const key = q => q[0] + ',' + q[1];
@@ -32,7 +36,7 @@ for (const r of world.roads) {
     if (len > 0.05) {
       const lanesTotal = Math.max(1, Math.round(r.w / 3.3));
       edges.push({ a: node(seg[0]), b: node(seg[seg.length - 1]), k: KINDS.indexOf(r.k), f, len: Math.round(len * 10) / 10,
-        ow: r.ow ? 1 : 0, sp: SPEED[r.k] || 5, ln: r.ow ? lanesTotal : Math.max(1, lanesTotal >> 1), w: r.w, br: r.br ? 1 : 0,
+        ow: r.ow ? 1 : 0, sp: SPEED[r.k] || 5, ln: r.ow ? lanesTotal : Math.max(1, lanesTotal >> 1), w: r.w, br: r.br ? 1 : 0, sw: Math.round(sidewalk(r) * 10) / 10, med: r.ow && r.med ? r.med : 0,
         n: r.n || undefined, m: seg.slice(1, -1).flat() });
     }
     start = i;
