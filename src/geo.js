@@ -1,5 +1,5 @@
 // Configuração geográfica compartilhada pelos scripts e pelo jogo.
-export const BBOX = { south: -29.605, west: -50.850, north: -29.520, east: -50.780 };
+export const BBOX = { south: -29.605, west: -50.850, north: -29.520, east: -50.770 };
 // Origem: Praça Dona Luísa
 export const ORIGIN = { lat: -29.5730284, lon: -50.7919383 };
 const R = 6378137, D2R = Math.PI / 180;

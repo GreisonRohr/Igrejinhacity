@@ -30,6 +30,7 @@ if(world){
  g.lineCap=g.lineJoin='round';
  for(const w of world.water){poly(w.p,false);g.strokeStyle='#3f86bd';g.lineWidth=Math.max(1.5,(w.w||4)*S);g.stroke()}
  for(const r of world.roads){poly(r.p,false);g.strokeStyle=r.main?'#f4b41a':/Independ/.test(r.n||'')?'#ff8a3d':/Sturmer/.test(r.n||'')?'#ff5a5a':r.k==='track'||r.k==='path'?'#c9a06b':'#eeeae0';g.lineWidth=Math.max(zoom?1:0.7,(r.main||/Independ|Sturmer/.test(r.n||'')?Math.max(r.w,zoom?10:22):r.w)*S);g.stroke()}
+ for(const [x,z,y,w,d,r,h,k] of world.gen||[]){const c=Math.cos(r),sn=Math.sin(r);const P=[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]].map(([u,v])=>[x+u*c+v*sn,z-u*sn+v*c]);poly(P,true);g.fillStyle=k==='c'?'#e0a030':k==='i'?'#7a6a9a':'#d77a5a';g.fill()}
  for(const b of world.buildings){poly(b.p,true);g.fillStyle=/industrial|warehouse/.test(b.kind)?'#7a6a9a':'#b5553a';g.fill()}
 }
 g.font='bold '+(zoom?13:11)+'px sans-serif';

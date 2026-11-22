@@ -1,6 +1,8 @@
 // Converte data/raw/osm.json em public/data/world.json (metros locais, x = leste, z = sul).
 import fs from 'node:fs';
 import { toXZ } from '../src/geo.js';
+import { LANDMARKS } from '../src/landmarks.js';
+import { generateBuildings, loadTerrain } from './gen-buildings.mjs';
 
 const raw = JSON.parse(fs.readFileSync('data/raw/osm.json'));
 const r1 = v => Math.round(v * 10) / 10;
@@ -94,7 +96,11 @@ for (const e of raw.elements) {
 // estatísticas para conferência
 const named = n => roads.filter(r => r.n && r.n.includes(n)).reduce((s, r) => s + r.p.slice(1).reduce((a, q, i) => a + Math.hypot(q[0] - r.p[i][0], q[1] - r.p[i][1]), 0), 0);
 const world = { fonte: raw.fonte, baixado: raw.baixado, roads, water, areas, buildings, pois };
+// casas geradas: [x, z, y, largura, profundidade, rotação, altura, tipo(h casa | c comércio | i indústria)]
+const t0 = Date.now();
+world.gen = generateBuildings(world, LANDMARKS, loadTerrain());
+console.log('geradas', world.gen.length, 'construções em', Date.now() - t0, 'ms');
 fs.writeFileSync('public/data/world.json', JSON.stringify(world));
-console.log({ roads: roads.length, water: water.length, areas: areas.length, buildings: buildings.length, pois: pois.length,
+console.log({ roads: roads.length, water: water.length, areas: areas.length, buildings: buildings.length, pois: pois.length, geradas: world.gen.length,
   kmCasteloBranco: (named('Castelo Branco') / 1000).toFixed(2), kmRios: (water.filter(w => w.k === 'river').reduce((s, w) => s + w.p.length, 0)),
   tamanhoKB: Math.round(fs.statSync('public/data/world.json').size / 1024) });
