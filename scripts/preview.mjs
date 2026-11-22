@@ -16,8 +16,7 @@ const html = `<canvas id=c></canvas><script>
 const meta=${JSON.stringify(meta)},h=new Int16Array(Uint8Array.from(atob("${hb.toString('base64')}"),c=>c.charCodeAt(0)).buffer);
 const world=${JSON.stringify(world)},lm=${JSON.stringify(lm)},zoom=${JSON.stringify(zoom || null)};
 const {nx,nz,cell,x0,z0}=meta;
-let vx0=x0,vz0=z0,vw=(nx-1)*cell,vh=(nz-1)*cell; if(zoom){vx0=-1500;vz0=-1300;vw=2700;vh=3100;}
-const S=zoom?0.6:0.2/1.4*2.0; const W=Math.round(vw*S),H=Math.round(vh*S);
+let vx0=x0,vz0=z0,vw=(nx-1)*cell,vh=(nz-1)*cell,S=0.2/1.4*2.0; if(zoom==='centro'){vx0=-1500;vz0=-1300;vw=2700;vh=3100;S=0.6} else if(zoom){const[a,b,c]=zoom.split(',').map(Number);vx0=a-c/2;vz0=b-c/2;vw=vh=c;S=900/c} const W=Math.round(vw*S),H=Math.round(vh*S);
 const c=document.getElementById('c');c.width=W;c.height=H;const g=c.getContext('2d');
 const im=g.createImageData(W,H);const hh=(i,j)=>h[Math.max(0,Math.min(nz-1,j))*nx+Math.max(0,Math.min(nx-1,i))]/10;
 for(let py=0;py<H;py++)for(let px=0;px<W;px++){const x=vx0+px/S,z=vz0+py/S;const i=Math.round((x-x0)/cell),j=Math.round((z-z0)/cell);
@@ -34,7 +33,8 @@ if(world){
  for(const w of world.water){poly(w.p,false);g.strokeStyle='#3f86bd';g.lineWidth=Math.max(1.5,(w.w||4)*S);g.stroke()}
  for(const r of world.roads){poly(r.p,false);g.strokeStyle=r.main?'#f4b41a':/Independ/.test(r.n||'')?'#ff8a3d':/Sturmer/.test(r.n||'')?'#ff5a5a':r.k==='track'||r.k==='path'?'#c9a06b':'#eeeae0';g.lineWidth=Math.max(zoom?1:0.7,(r.main||/Independ|Sturmer/.test(r.n||'')?Math.max(r.w,zoom?10:22):r.w)*S);g.stroke()}
  for(const [x,z,y,w,d,r,h,k] of world.gen||[]){const c=Math.cos(r),sn=Math.sin(r);const P=[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]].map(([u,v])=>[x+u*c+v*sn,z-u*sn+v*c]);poly(P,true);g.fillStyle=k==='c'?'#e0a030':k==='i'?'#7a6a9a':'#d77a5a';g.fill()}
- for(const b of world.buildings){poly(b.p,true);g.fillStyle=/industrial|warehouse/.test(b.kind)?'#7a6a9a':'#b5553a';g.fill()}
+ for(const b of world.buildings){poly(b.p,true);g.fillStyle=/industrial|warehouse|shed/.test(b.kind)?'#7a6a9a':'#b5553a';g.fill();if(zoom&&zoom!=='centro'){g.strokeStyle='#fff';g.lineWidth=1;g.stroke()}}
+ if(zoom&&zoom!=='centro'){g.fillStyle='#fff';g.font='10px sans-serif';for(const r of world.roads){if(!r.n)continue;const m=r.p[r.p.length>>1];const[a,b]=T(m[0],m[1]);g.fillText(r.n,a,b)}}
 }
 g.font='bold '+(zoom?13:11)+'px sans-serif';
 for(const l of lm){const[a,b]=T(l.x,l.z);if(a<0||b<0||a>W||b>H)continue;g.fillStyle='#1d4e9e';g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.arc(a,b,zoom?6:5,0,7);g.fill();g.stroke();

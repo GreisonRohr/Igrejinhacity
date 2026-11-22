@@ -11,7 +11,7 @@ const LAYERS = {
   10224: 'ruas_estradas', 10978: 'vias_tipo_pavimento', 4480: 'pontes', 10172: 'escolas', 9393: 'saude',
   6413: 'pracas_lazer', 5329: 'pontos_referencia', 8355: 'patrimonio_historico', 5844: 'paradas_onibus',
   7684: 'ciclovias', 7857: 'localidades_toponimos', 7264: 'bairros', 7042: 'rio_paranhana', 7044: 'lagos',
-  6594: 'cemiterios', 6598: 'cemiterios_poligonal', 4482: 'linhas_onibus', 5960: 'limite_municipal',
+  6594: 'cemiterios', 10019: 'hidro_urbana', 6598: 'cemiterios_poligonal', 4482: 'linhas_onibus', 5960: 'limite_municipal',
 };
 const OUT = 'data/raw/geoigrejinha'; fs.mkdirSync(OUT, { recursive: true });
 const get = async (url, tries = 3) => {

@@ -124,6 +124,10 @@ if (hasGeo()) {
   // lugares: Prefeitura + OSM (sem repetir o mesmo tipo a menos de 80 m)
   for (const p of ex.places) if (!places.some(q => q.k === p.k && Math.hypot(q.x - p.x, q.z - p.z) < 80)) places.push(p);
   ciclovias = ex.ciclovias;
+  // córregos do OSM que a Prefeitura já tem (a menos de 15 m) saem; os da Prefeitura entram
+  const near = (q) => ex.streams.some(st => st.p.some(([x, z]) => Math.hypot(x - q[0], z - q[1]) < 15));
+  const keepW = water.filter(w => w.k === 'river' || !near(w.p[w.p.length >> 1]));
+  water.length = 0; water.push(...keepW, ...ex.streams);
 }
 const world = { fonte: raw.fonte, baixado: raw.baixado, roads, water, areas, buildings: finalBuildings, pools, ciclovias, pois, places,
   creditos: ['© OpenStreetMap contributors (ODbL)', 'GEO Igrejinha – Prefeitura Municipal de Igrejinha', 'Google Open Buildings (CC BY 4.0 / ODbL)'] };

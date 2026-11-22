@@ -4,13 +4,14 @@ import { Terrain } from './world/terrain.js';
 import { Sky } from './world/sky.js';
 import { makeLabel } from './world/labels.js';
 import { Input, isTouch } from './input.js';
-import { Walker } from './player/walker.js';
+import { Walker, makePerson } from './player/walker.js';
 import { FollowCam } from './camera.js';
 import { Minimap } from './ui/minimap.js';
 import { LANDMARKS, byId, PLACE_STYLE } from './landmarks.js';
 import { City } from './world/city.js';
 import { buildGroundCanvas, groundTexture } from './world/ground.js';
 import { fetchJSON } from './util/load.js';
+import { placeLandmarks, buildLandmarks, landmarkBlocked } from './world/landmarks3d.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -52,18 +53,20 @@ function toast(title, txt = '', sec = 4) {
 const BASE = import.meta.env.BASE_URL;
 const [terrain, world] = await Promise.all([Terrain.load(BASE), fetchJSON(BASE + 'data/world.json.gz')]);
 const T = (name, fn) => { const t0 = performance.now(); const r = fn(); if (DEBUG) console.log(name, Math.round(performance.now() - t0) + ' ms'); return r; };
-const city = new City(world, terrain, Q);
+const LM = placeLandmarks(world, terrain);
+const city = new City(world, terrain, Q, LM.exclusions);
 T('rio', () => city.carveWater());                   // escava o leito do rio antes de montar a malha
 const groundCanvas = T('textura do chão', () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize)));
 terrain.material.map = groundTexture(groundCanvas, renderer);
 T('terreno', () => scene.add(terrain.build()));
 T('cidade', () => scene.add(city.build()));
+const landmarks = T('pontos marcantes', () => buildLandmarks(LM, world, terrain, scene));
 const sky = new Sky(scene, Q);
 
 // placas dos pontos marcantes
 const labels = [];
 for (const l of LANDMARKS) {
-  if (l.id === 'ruacoberta') continue;              // muito perto da praça; ganha placa própria no modelo
+  if (['ruacoberta', 'igreja', 'waldir'].includes(l.id)) continue;   // têm placa no próprio modelo
   const far = l.id === 'cruz' || l.id === 'asadelta';
   const s = makeLabel(l.nome, far ? 120 : 22);
   s.position.set(l.x, terrain.heightAt(l.x, l.z) + (far ? 90 : 22), l.z);
@@ -88,9 +91,9 @@ for (const p of places) {
 let spawn = byId.praca;
 if (params.get('spawn') && byId[params.get('spawn')]) spawn = byId[params.get('spawn')];
 const player = new Walker(scene, terrain, spawn.x + 6, spawn.z + 6);
-player.blocked = (x, z, r) => city.blocked(x, z, r);
+player.blocked = (x, z, r) => city.blocked(x, z, r) || landmarkBlocked(landmarks.colliders, x, z, r);
 // se nasceu dentro de um prédio, procura um lugar livre em espiral
-for (let k = 0; k < 400 && city.blocked(player.x, player.z, 0.6); k++) { const a = k * 0.7, r = 1 + k * 0.25; player.x = spawn.x + Math.cos(a) * r; player.z = spawn.z + Math.sin(a) * r; }
+for (let k = 0; k < 400 && player.blocked(player.x, player.z, 0.6); k++) { const a = k * 0.7, r = 1 + k * 0.25; player.x = spawn.x + Math.cos(a) * r; player.z = spawn.z + Math.sin(a) * r; }
 if (params.has('x')) { player.x = +params.get('x'); player.z = +params.get('z'); }
 const input = new Input(renderer.domElement);
 const cam = new FollowCam(camera, terrain);
@@ -98,6 +101,34 @@ cam.blocked = (x, z, r) => city.blocked(x, z, r);
 cam.roofAt = (x, z) => { const h = city.roofAt(x, z); return h === -Infinity ? -Infinity : h; };
 cam.yaw = Math.PI;                                   // começa olhando para o norte (morros)
 const minimap = new Minimap($('map'), terrain, groundCanvas);
+
+/* ---------- o Waldir ---------- */
+const FALAS_WALDIR = [
+  'Bah, tchê! Chega mais, a Brahma tá trincando de gelada!',
+  'Tri legal te ver por aqui! Senta aí na calçada que eu já levo.',
+  'Bah, na Oktoberfest isso aqui lota, guri. Não tem nem onde estacionar!',
+  'Tu já subiu no Morro da Cruz? De noite a cruz acende, é tri bonito.',
+  'Aqui é o ponto de encontro do centro, desde sempre. Bah!',
+  'Capaz que tu vai embora sem tomar um chope? Nem pensar, tchê!',
+];
+let waldir = null, falaI = 0;
+if (landmarks.waldir) {
+  const w = landmarks.waldir;
+  waldir = makePerson(0xffffff);
+  waldir.position.set(w.x, w.y, w.z); waldir.rotation.y = w.face + Math.PI / 2;
+  waldir.children[2].scale.set(1.15, 1.05, 1.25);                  // um pouco mais robusto
+  const apron = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.7, 0.05), new THREE.MeshLambertMaterial({ color: 0xd9161e }));
+  apron.position.set(0, 1.15, 0.27); waldir.add(apron);
+  scene.add(waldir);
+  const tag = makeLabel('Waldir', 3); tag.position.set(w.x, w.y + 2.9, w.z); tag.userData.maxDist = 40; scene.add(tag); labels.push(tag);
+}
+input.on('act', () => {
+  if (!running || !waldir) return;
+  if (Math.hypot(player.x - waldir.position.x, player.z - waldir.position.z) < 4) {
+    toast('Waldir', ': “' + FALAS_WALDIR[falaI++ % FALAS_WALDIR.length] + '”', 5);
+    waldir.rotation.y = Math.atan2(player.x - waldir.position.x, player.z - waldir.position.z);
+  }
+});
 
 /* ---------- laço ---------- */
 let running = false, last = performance.now(), lodT = 0, lastMin = -1;
@@ -113,6 +144,7 @@ function frame(now) {
   cam.update(dt, { x: player.x, y: player.y, z: player.z }, running ? look : { dx: dt * 6, dy: 0, zoom: 0 },
     { followYaw: moving && ax.f > 0.5 ? player.ang : null, height: 1.6 });
   sky.update(running ? dt : 0, { x: player.x, y: player.y, z: player.z });
+  landmarks.update(dt, sky);
 
   lodT -= dt;
   if (lodT <= 0) {
@@ -127,6 +159,10 @@ function frame(now) {
     const h = Math.floor(sky.hours), m = Math.floor((sky.hours - h) * 60);
     if (m !== lastMin) { lastMin = m; $('clockT').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; }
     $('spd').textContent = `A pé · ${Math.round(player.y)} m`;
+    const pertoWaldir = waldir && Math.hypot(player.x - waldir.position.x, player.z - waldir.position.z) < 4;
+    $('prompt').style.display = pertoWaldir ? 'block' : 'none';
+    if (pertoWaldir) $('prompt').textContent = isTouch ? 'Toque em FALAR para conversar com o Waldir' : 'E · conversar com o Waldir';
+    $('bAct').textContent = pertoWaldir ? 'Falar' : 'Carro';
     minimap.draw(player.x, player.z, cam.yaw, player.ang, places);
     // ponto mais próximo
     let near = null, nd = 1e9;
@@ -153,4 +189,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { scene, camera, renderer, terrain, player, cam, sky, city, world };
+window.__game = { scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

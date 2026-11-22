@@ -70,8 +70,9 @@ function roofTexture() {
 }
 
 export class City {
-  constructor(world, terrain, { buildDist = 3500, roadDist = 950 } = {}) {
+  constructor(world, terrain, { buildDist = 3500, roadDist = 950 } = {}, exclusions = []) {
     this.world = world; this.t = terrain;
+    this.exclusions = exclusions;     // pontos marcantes com modelo próprio: o prédio genérico sai
     this.buildDist = buildDist; this.roadDist = roadDist;
     this.group = new THREE.Group();
     this.chunks = new Map();
@@ -278,6 +279,10 @@ export class City {
     const t = this.t;
     let i = 0;
     for (const b of this.world.buildings) {
+      if (this.exclusions.length) {
+        const cx = b.p.reduce((s2, q) => s2 + q[0], 0) / b.p.length, cz = b.p.reduce((s2, q) => s2 + q[1], 0) / b.p.length;
+        if (this.exclusions.some(f => f(cx, cz))) continue;
+      }
       const p = b.p.slice();
       if (signedArea(p) > 0) p.reverse();
       let rect = null;

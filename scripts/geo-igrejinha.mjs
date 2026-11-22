@@ -178,5 +178,8 @@ export function extras() {
   for (const f of load('localidades_toponimos')) { const c = point(f.geometry); if (c) places.push({ x: c[0], z: c[1], k: 'localidade', n: f.properties.Nome }); }
   for (const f of load('paradas_onibus')) { const c = point(f.geometry); if (c) places.push({ x: c[0], z: c[1], k: 'onibus', n: 'Parada de ônibus' }); }
   const ciclo = []; for (const f of load('ciclovias')) for (const l of lines(f.geometry)) ciclo.push(l);
-  return { areas, places, ciclovias: ciclo };
+  // arroios urbanos (Arroio Koetz passa pela Praça Dona Luiza)
+  const streams = [];
+  for (const f of load('hidro_urbana')) for (const l of lines(f.geometry)) if (l.length > 1) streams.push({ p: l, k: 'stream', w: f.properties.Nome ? 4 : 2.5, n: f.properties.Nome || undefined });
+  return { areas, places, ciclovias: ciclo, streams };
 }
