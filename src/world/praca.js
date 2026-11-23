@@ -108,20 +108,32 @@ export function buildPraca(ctx) {
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, ry = Math.atan2(-uz, ux);
     for (const s of [-1, 1]) { const mx = (a[0] + b[0]) / 2 - uz * s * 2.6, mz = (a[1] + b[1]) / 2 + ux * s * 2.6; k.add(new THREE.BoxGeometry(L + 0.4, 2.4, 0.5), M.stone, mx, Y(mx, mz) - 1.1, mz, ry); }
   }
-  if (stream.length) {
-    let best = null;
-    for (const [a, b] of stream) { const q = segClosest(cx, cz, a, b), d = Math.hypot(q[0] - cx, q[1] - cz); if (!best || d < best.d) best = { d, q, a, b }; }
-    const L = Math.hypot(best.b[0] - best.a[0], best.b[1] - best.a[1]), ux = (best.b[0] - best.a[0]) / L, uz = (best.b[1] - best.a[1]) / L;
-    const bg = new THREE.Group(); bg.position.set(best.q[0], Y(best.q[0], best.q[1]) + 0.35, best.q[1]); bg.rotation.y = Math.atan2(-uz, ux); g.add(bg);
-    const bk = new Kit(), log = lambert(0xb08a5a), plank = lambert(0x8a6a48), BL = 9;
-    bk.box(1.6, 0.12, BL, plank, 0, 0, 0);
-    for (const s of [-1, 1]) {
-      const rail = new THREE.CylinderGeometry(0.09, 0.09, BL, 8); rail.rotateX(PI / 2);
-      bk.add(rail, log, s * 0.8, 1.0, 0); bk.add(rail, log, s * 0.8, 0.5, 0);
-      for (let i = 0; i <= 4; i++) bk.add(new THREE.CylinderGeometry(0.11, 0.11, 1.25, 8), log, s * 0.8, 0.55, -BL / 2 + i * BL / 4);
+  // passarelas de madeira sobre o arroio (fotos: três travessias na praça), arqueadas, com guarda-corpo em X
+  const footbridges = [];
+  {
+    const inner = stream.filter(([a, b]) => inside((a[0] + b[0]) / 2, (a[1] + b[1]) / 2));
+    const lens = inner.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1])), tot = lens.reduce((x, y) => x + y, 0);
+    const log = lambert(0xb08a5a), plank = lambert(0x8a6a48), BL = 7.5;
+    for (const f of tot > 12 ? [0.18, 0.5, 0.82] : [0.5]) {
+      let d = f * tot, i = 0; while (i < lens.length - 1 && d > lens[i]) { d -= lens[i]; i++; }
+      if (!inner[i]) continue;
+      const [a, b] = inner[i], ux = (b[0] - a[0]) / lens[i], uz = (b[1] - a[1]) / lens[i], qx = a[0] + ux * d, qz = a[1] + uz * d;
+      const bg = new THREE.Group(); bg.position.set(qx, Y(qx, qz) + 0.25, qz); bg.rotation.y = Math.atan2(-uz, ux); g.add(bg);
+      const bk = new Kit(), N = 6;
+      for (let s2 = 0; s2 < N; s2++) {   // tabuleiro em arco
+        const z0 = -BL / 2 + s2 * BL / N, z1 = z0 + BL / N, y0 = Math.sin((s2 / N) * PI) * 0.45, y1 = Math.sin(((s2 + 1) / N) * PI) * 0.45;
+        bk.add(new THREE.BoxGeometry(1.8, 0.1, Math.hypot(BL / N, y1 - y0) + 0.02), plank, 0, (y0 + y1) / 2, (z0 + z1) / 2, 0, -Math.atan2(y1 - y0, BL / N));
+        for (const sd of [-1, 1]) {
+          bk.add(new THREE.CylinderGeometry(0.06, 0.06, 1.0, 6), log, sd * 0.85, y0 + 0.5, z0);
+          bk.add(new THREE.BoxGeometry(0.08, 0.08, Math.hypot(BL / N, y1 - y0)), log, sd * 0.85, (y0 + y1) / 2 + 0.95, (z0 + z1) / 2, 0, -Math.atan2(y1 - y0, BL / N));
+          const xg = new THREE.BoxGeometry(0.04, 0.04, Math.hypot(BL / N, 0.8)); bk.add(xg, log, sd * 0.85, (y0 + y1) / 2 + 0.5, (z0 + z1) / 2, 0, 0.6);
+          bk.add(xg, log, sd * 0.85, (y0 + y1) / 2 + 0.5, (z0 + z1) / 2, 0, -0.6);
+        }
+      }
+      for (const sd of [-1, 1]) bk.add(new THREE.CylinderGeometry(0.06, 0.06, 1.0, 6), log, sd * 0.85, 0.5, BL / 2);
+      bk.build(bg);
+      footbridges.push([qx, qz]);
     }
-    bk.build(bg);
-    colliders.push({ bridge: true });
   }
 
   /* ---------- prédio Erni Engelmann (enxaimel, frente para a Rua Coberta) ---------- */
@@ -285,9 +297,10 @@ export function buildPraca(ctx) {
         const x = a[0] + ux * t - uz * side * 3.3, z = a[1] + uz * t + ux * side * 3.3; if (!inside(x, z)) continue;
         sd = (sd * 16807) % 2147483647; const r = sd / 2147483647;
         if (r < 0.45) k.add(new THREE.DodecahedronGeometry(0.45 + r * 0.5, 0), M.rock, x, Y(x, z) + 0.25, z, r * 6, r * 3, 0, 1.3, 0.8, 1.1);
-        if (Math.round(t / 2.2) % 1 === 0) k.add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 4), M.black, x - uz * side * 0.6, Y(x, z) + 0.5, z + ux * side * 0.6);
+        if (!footbridges.some(f => Math.hypot(f[0] - x, f[1] - z) < 4.5)) k.add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 4), M.black, x - uz * side * 0.6, Y(x, z) + 0.5, z + ux * side * 0.6);
       }
-      for (const side of [-1, 1]) { const mx = (a[0] + b[0]) / 2 - uz * side * 3.9, mz = (a[1] + b[1]) / 2 + ux * side * 3.9; if (inside(mx, mz)) for (const hy of [0.45, 0.95]) k.add(new THREE.BoxGeometry(L, 0.04, 0.04), M.black, mx, Y(mx, mz) + hy, mz, Math.atan2(-uz, ux)); }
+      const nearBridge = footbridges.some(f => segClosest(f[0], f[1], a, b) && Math.hypot(segClosest(f[0], f[1], a, b)[0] - f[0], segClosest(f[0], f[1], a, b)[1] - f[1]) < 1 && Math.hypot((a[0] + b[0]) / 2 - f[0], (a[1] + b[1]) / 2 - f[1]) < L / 2 + 2);
+      for (const side of [-1, 1]) { const mx = (a[0] + b[0]) / 2 - uz * side * 3.9, mz = (a[1] + b[1]) / 2 + ux * side * 3.9; if (inside(mx, mz) && !nearBridge) for (const hy of [0.45, 0.95]) k.add(new THREE.BoxGeometry(L, 0.04, 0.04), M.black, mx, Y(mx, mz) + hy, mz, Math.atan2(-uz, ux)); }
     }
   }
   /* ---------- meio-fio pintado de amarelo em volta da praça ---------- */
@@ -392,6 +405,35 @@ export function buildPraca(ctx) {
       k.add(new THREE.ConeGeometry(0.28, 0.25, 6), M.black, x, y + 4.08, z);
       colliders.push({ circle: [x, z, 0.2] });
     }
+  }
+
+  /* ---------- abrigo da esquina SW (Castelo Branco × João Corrêa): esteios verdes, telhado de telha, brasão; placas ---------- */
+  {
+    const sw = [...poly].sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))[0];        // canto sudoeste
+    const ax = sw[0] + 5, az = sw[1] - 5, y = Y(ax, az), face = PI / 4, W = 6, D = 4;
+    const ag = new THREE.Group(); ag.position.set(ax, y, az); ag.rotation.y = face; g.add(ag);
+    const ak = new Kit(), green = lambert(0x2f6a3a);
+    for (const [px, pz] of [[-W / 2, -D / 2], [0, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [0, D / 2], [W / 2, D / 2]]) ak.box(0.18, 2.6, 0.18, green, px, 0, pz);
+    ak.box(W + 0.3, 0.2, 0.2, green, 0, 2.6, -D / 2); ak.box(W + 0.3, 0.2, 0.2, green, 0, 2.6, D / 2);
+    const sl = Math.hypot(D / 2 + 0.6, 1.3), sa = Math.atan2(1.3, D / 2 + 0.6);
+    for (const sd of [-1, 1]) ak.add(new THREE.BoxGeometry(W + 1.2, 0.12, sl), M.roofTile, 0, 2.8 + 0.65, sd * (D / 4 + 0.15), 0, sd * sa);
+    const tri = new THREE.BufferGeometry(); tri.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, -D / 2 - 0.3, 0, 0, D / 2 + 0.3, 0, 1.3, 0], 3)); tri.computeVertexNormals();
+    ak.add(tri, M.white, W / 2 + 0.05, 2.75, 0); ak.add(tri, M.white, -W / 2 - 0.05, 2.75, 0, PI);
+    ak.add(new THREE.CircleGeometry(0.3, 12), M.yellow, W / 2 + 0.08, 3.2, 0, PI / 2);                      // brasão
+    ak.box(W - 0.6, 0.45, 0.4, M.wood, 0, 0, D / 2 - 0.3);                                                 // banco
+    ak.build(ag);
+    for (const [px, pz] of [[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2]]) { const c = Math.cos(face), s2 = Math.sin(face); colliders.push({ circle: [ax + px * c + pz * s2, az - px * s2 + pz * c, 0.15] }); }
+    occupy(ax - 4, az - 4, ax + 4, az + 4);
+    // placa de direção: azul (Hospital, Fórum, Polícia Civil) e marrom turística (Oktoberfest, Monte da Fé, Morro da Cruz…)
+    const signT = tex(128, 160, (c, Wc, Hc) => {
+      c.fillStyle = '#1d4fa3'; c.fillRect(0, 0, Wc, 64); c.fillStyle = '#fff'; c.font = 'bold 15px sans-serif'; c.fillText('↑ Hospital', 8, 20); c.fillText('   Fórum', 8, 38); c.fillText('   Polícia Civil', 8, 56);
+      c.fillStyle = '#7a4a28'; c.fillRect(0, 68, Wc, 92); c.fillStyle = '#fff'; c.font = '11px sans-serif';
+      ['Oktoberfest →', 'Monte da Fé →', 'Morro da Cruz →', 'Alto da Pedra →', 'Terra Grande →'].forEach((t, i) => c.fillText(t, 8, 84 + i * 16));
+    });
+    const sx = ax - 3.5, sz = az + 3.5;
+    k.add(new THREE.CylinderGeometry(0.06, 0.06, 4.2, 6), M.metal, sx, Y(sx, sz) + 2.1, sz);
+    k.add(new THREE.PlaneGeometry(1.5, 1.9), new THREE.MeshLambertMaterial({ map: signT, side: THREE.DoubleSide }), sx, Y(sx, sz) + 3.1, sz + 0.07, PI / 4);
+    colliders.push({ circle: [sx, sz, 0.1] });
   }
 
   /* ---------- carrinho do pipoqueiro (esquina noroeste, junto à faixa da Castelo Branco) ---------- */

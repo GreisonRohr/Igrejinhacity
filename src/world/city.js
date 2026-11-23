@@ -140,7 +140,45 @@ export class City {
     // cabeceiras de ponte: o terreno ali não é escavado (a rua chega no nível do tabuleiro)
     this.bridgeEnds = [];
     for (const r of this.world.roads) if (r.br) this.bridgeEnds.push(r.p[0], r.p[r.p.length - 1]);
-    const keep = (x, z) => { let m = 1; for (const e of this.bridgeEnds) { const d = Math.hypot(x - e[0], z - e[1]); if (d < 16) m = Math.min(m, smooth(5, 16, d)); } return m; };
+    // bueiros: onde um arroio cruza uma rua comum (sem ponte), a rua passa por cima e o terreno não é escavado
+    this.culverts = [];
+    const segX = (a, b, c, d) => { const r = [b[0] - a[0], b[1] - a[1]], s2 = [d[0] - c[0], d[1] - c[1]], den = r[0] * s2[1] - r[1] * s2[0]; if (Math.abs(den) < 1e-9) return null; const t = ((c[0] - a[0]) * s2[1] - (c[1] - a[1]) * s2[0]) / den, u = ((c[0] - a[0]) * r[1] - (c[1] - a[1]) * r[0]) / den; return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? [a[0] + r[0] * t, a[1] + r[1] * t] : null; };
+    const box = p => { let a = Infinity, b2 = Infinity, c = -Infinity, d = -Infinity; for (const q of p) { a = Math.min(a, q[0]); b2 = Math.min(b2, q[1]); c = Math.max(c, q[0]); d = Math.max(d, q[1]); } return [a, b2, c, d]; };
+    const hit = (A, B) => A[0] <= B[2] && B[0] <= A[2] && A[1] <= B[3] && B[1] <= A[3];
+    const cRoads = this.world.roads.filter(r => !r.br && (URBAN.has(r.k) || r.k === 'unclassified' || r.k === 'service')).map(r => ({ r, bb: box(r.p) }));
+    for (const w of this.world.water) {
+      if (w.k !== 'stream' && w.k !== 'ditch' && w.k !== 'drain') continue;
+      const wb = box(w.p);
+      for (const { r, bb } of cRoads) {
+        if (!hit(wb, bb)) continue;
+        for (let i = 0; i < w.p.length - 1; i++) {
+          const sb = box([w.p[i], w.p[i + 1]]); if (!hit(sb, bb)) continue;
+          for (let j = 0; j < r.p.length - 1; j++) {
+          const q = segX(w.p[i], w.p[i + 1], r.p[j], r.p[j + 1]); if (!q) continue;
+          const sw = r.sw ? Math.max(r.sw[0], r.sw[1]) : (URBAN.has(r.k) ? 2.2 : 0.5);
+          const L = Math.hypot(r.p[j + 1][0] - r.p[j][0], r.p[j + 1][1] - r.p[j][1]) || 1;
+          const sL = Math.hypot(w.p[i + 1][0] - w.p[i][0], w.p[i + 1][1] - w.p[i][1]) || 1;
+          this.culverts.push({ x: q[0], z: q[1], r: r.w / 2 + sw + 0.6, half: w.w / 2, rd: [(r.p[j + 1][0] - r.p[j][0]) / L, (r.p[j + 1][1] - r.p[j][1]) / L], sd: [(w.p[i + 1][0] - w.p[i][0]) / sL, (w.p[i + 1][1] - w.p[i][1]) / sL], road: r.n });
+          }
+        }
+      }
+    }
+    const cg = new Map(), CG = 32;   // grade dos bueiros e cabeceiras (consulta por célula, não lista inteira)
+    for (const c of this.culverts) for (let i = Math.floor((c.x - 24) / CG); i <= Math.floor((c.x + 24) / CG); i++) for (let j = Math.floor((c.z - 24) / CG); j <= Math.floor((c.z + 24) / CG); j++) { const k = i + ',' + j; (cg.get(k) || cg.set(k, []).get(k)).push(c); }
+    const bg = new Map();
+    for (const e of this.bridgeEnds) for (let i = Math.floor((e[0] - 16) / CG); i <= Math.floor((e[0] + 16) / CG); i++) for (let j = Math.floor((e[1] - 16) / CG); j <= Math.floor((e[1] + 16) / CG); j++) { const k = i + ',' + j; (bg.get(k) || bg.set(k, []).get(k)).push(e); }
+    const keep = (x, z) => {
+      let m = 1; const key = Math.floor(x / CG) + ',' + Math.floor(z / CG);
+      for (const e of bg.get(key) || []) { const d = Math.hypot(x - e[0], z - e[1]); if (d < 16) m = Math.min(m, smooth(5, 16, d)); }
+      for (const c of cg.get(key) || []) {
+        // distância ao longo do arroio até o eixo da rua: dentro da largura da rua (+calçada) não escava
+        const dx = x - c.x, dz = z - c.z, across = Math.abs(dx * c.sd[1] - dz * c.sd[0]);   // afastamento do eixo do arroio
+        if (across > 12) continue;
+        const proj = Math.abs(dx * -c.rd[1] + dz * c.rd[0]);                                  // distância perpendicular à rua
+        m = Math.min(m, smooth(c.r, c.r + 1.5, proj));
+      }
+      return m;
+    };
     this.keep = keep;
     for (const w of this.world.water) {
       if (w.k !== 'river' && w.k !== 'stream' && w.k !== 'canal') continue;

@@ -32,3 +32,8 @@ GEO Igrejinha — "Imagem Aérea Igrejinha 2016" (Prefeitura de Igrejinha), via 
 Street View abr/2026 + vista aérea: Panvel no canto SE; sobrado Levi/Casa de Carnes/Escola de Música no canto NE;
 residencial nº 592 (Sonia Moden Haus) ao norte dele; fachada da Piccadilly (nº 577) no lado oeste;
 farmácia de telhado de 4 águas ao sul da João Corrêa, lado oeste da Dorneles.
+
+## João Corrêa e o Arroio Koetz (fotos do diretor, 23/11/2026)
+Street View abr/2026: Farmácias São João (SW da João Corrêa × Dorneles, platibanda com ameias), torre com o Mercadão dos
+Óculos (NE), Jair Cabeleireiro e Hashtag Presentes (Dorneles, ao norte), Agafarma (NW da Castelo Branco), rótula com
+canteiro, abrigo de telha com brasão e placas de direção na esquina SW da praça, bueiro do arroio sob a Dorneles (nº 496).

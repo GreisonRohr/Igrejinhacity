@@ -16,6 +16,13 @@ export const ENTORNO = {
   saojoao: { x: 14, z: 70, rot: 0, w: 26, d: 36 },
   // NE da Osvaldo Cruz × Dorneles: sobrado de 3 andares com Levi, Casa de Carnes e Escola de Música (frente oeste)
   levi: { x: 61, z: -60, rot: Math.PI, w: 17, d: 17 },
+  // NE da João Corrêa × Dorneles: torre cinza de 9 andares, térreo vermelho do Mercadão dos Óculos (frente oeste, lateral sul)
+  oculos: { x: 51, z: 37, rot: Math.PI, w: 14, d: 15 },
+  // ao norte, na Dorneles: fileira de sobrados com o Jair Cabeleireiro e a Hashtag Presentes (fachada roxa)
+  jair: { x: 61, z: 20, rot: Math.PI, w: 30, d: 13 },
+  hashtag: { x: 63, z: 8, rot: Math.PI, w: 25, d: 11 },
+  // NW da Castelo Branco × João Corrêa: sobrado branco de telhado de 4 águas com a Agafarma (frente sul, lateral leste)
+  agafarma: { x: -70, z: 33, rot: -Math.PI / 2, w: 16, d: 12 },
   // R. Gen. Ernesto Dorneles 592: residencial de 10 andares, térreo com lojas (Sonia Moden Haus)
   r592: { x: 62, z: -82, rot: Math.PI, w: 16, d: 22 },
 };
@@ -111,6 +118,70 @@ export function buildEntorno(terrain, root, colliders) {
     k.add(new THREE.PlaneGeometry(8, 0.75), new THREE.MeshLambertMaterial({ map: esc }), F + 0.02, 9.1, 0, PI / 2);
     k.build(g);
   }
+  /* ---------- torre do Mercadão dos Óculos ---------- */
+  {
+    const o = ENTORNO.oculos, g = place(o), k = new Kit(), floors = 9, fh = 2.9, F = o.w / 2 + 0.05;
+    k.add(new THREE.BoxGeometry(o.w, 4, o.d), lambert(0xc8272d), 0, 2, 0);                               // térreo vermelho
+    k.add(new THREE.BoxGeometry(o.w + 1.4, 0.6, o.d + 1.4), lambert(0x8d8f93), 0, 4.3, 0);              // laje/marquise
+    k.add(new THREE.BoxGeometry(o.w, floors * fh, o.d), lambert(0xc9cacc), 0, 4.6 + floors * fh / 2, 0);
+    const tw = new THREE.MeshLambertMaterial({ map: windowsTex('#c9cacc', '#4c565e', 3) }); tw.map.repeat.set(1.5, floors);
+    k.add(new THREE.PlaneGeometry(o.d - 1, floors * fh), tw, F, 4.6 + floors * fh / 2, 0, PI / 2);
+    k.add(new THREE.PlaneGeometry(o.w - 1, floors * fh), tw, 0, 4.6 + floors * fh / 2, -o.d / 2 - 0.05, PI);
+    for (let i = 1; i <= floors; i++) k.add(new THREE.BoxGeometry(1.2, 0.9, o.d * 0.55), lambert(0x77797d), F + 0.6, 4.6 + i * fh - 2.2, -o.d * 0.15);   // sacadas
+    const mo = sign(256, 96, '#c8272d', (c, W, Hh) => { c.fillStyle = '#ffe9a8'; c.font = 'italic bold 30px serif'; c.textAlign = 'center'; c.fillText('Mercadão', W / 2, 40); c.fillText('dos Óculos', W / 2, 78); });
+    const mm = new THREE.MeshLambertMaterial({ map: mo });
+    k.add(new THREE.PlaneGeometry(4.5, 1.7), mm, F + 0.03, 2.7, -o.d / 2 + 3, PI / 2);
+    k.add(new THREE.PlaneGeometry(4.5, 1.7), mm, o.w / 2 - 3, 2.7, -o.d / 2 - 0.03, PI);
+    k.add(new THREE.PlaneGeometry(o.d - 6, 2.4), lambert(0xf4e8c8), F + 0.03, 1.4, 2, PI / 2);          // vitrine
+    k.build(g);
+  }
+  /* ---------- sobrados com o Jair Cabeleireiro ---------- */
+  {
+    const o = ENTORNO.jair, g = place(o), k = new Kit(), F = o.w / 2 + 0.05;
+    k.add(new THREE.BoxGeometry(o.w, 6.4, o.d), lambert(0xeee2c6), 0, 3.2, 0);
+    k.add(new THREE.BoxGeometry(o.w, 0.2, o.d + 0.2), lambert(0x6b4a33), 0, 6.5, 0);
+    const tw = new THREE.MeshLambertMaterial({ map: windowsTex('#eee2c6', '#5a3c2a', 3) }); tw.map.repeat.set(1, 1);
+    k.add(new THREE.PlaneGeometry(o.d - 1, 2.8), tw, F, 4.6, 0, PI / 2);
+    k.add(new THREE.BoxGeometry(1.2, 0.1, o.d - 1), lambert(0x8a7a64), F + 0.6, 3.3, 0);                // sacada com grade
+    for (let i = 0; i < 14; i++) k.add(new THREE.BoxGeometry(0.04, 0.9, 0.04), lambert(0x3a3a3a), F + 1.15, 3.8, -o.d / 2 + 0.8 + i * (o.d - 1.6) / 13);
+    const jt = sign(128, 128, '#ffffff', (c, W, Hh) => { c.fillStyle = '#d4202a'; c.beginPath(); c.arc(64, 64, 58, 0, 7); c.fill(); c.fillStyle = '#fff'; c.font = 'bold 40px sans-serif'; c.textAlign = 'center'; c.fillText('JAIR', 64, 78); });
+    k.add(new THREE.CircleGeometry(0.8, 18), new THREE.MeshLambertMaterial({ map: jt }), F + 0.06, 2.4, -o.d / 2 + 2.2, PI / 2);
+    k.add(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 8), new THREE.MeshLambertMaterial({ map: tex(16, 64, (c) => { for (let y = -16; y < 80; y += 12) { c.fillStyle = '#d4202a'; c.fillRect(0, y, 16, 4); c.fillStyle = '#1d4fa3'; c.fillRect(0, y + 6, 16, 4); } }) }), F + 0.3, 2.0, -o.d / 2 + 0.9);
+    k.add(new THREE.BoxGeometry(o.d, 2.8, 0.1), lambert(0x2f4f8a), F - 0.02 - 0.06, 1.4, 0, PI / 2);   // portas azuis
+    k.build(g);
+  }
+  /* ---------- Hashtag Presentes: fachada e toldo roxos ---------- */
+  {
+    const o = ENTORNO.hashtag, g = place(o), k = new Kit(), F = o.w / 2 + 0.05;
+    k.add(new THREE.BoxGeometry(o.w, 6.2, o.d), lambert(0xe6e2dc), 0, 3.1, 0);
+    const ht = sign(512, 128, '#6b3fa0', (c, W, Hh) => { for (let x = 0; x < W; x += 12) { c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(x, 0, 4, Hh); } c.fillStyle = '#fff'; c.font = 'italic 64px serif'; c.textAlign = 'center'; c.fillText('Hashtag', W / 2 - 40, 78); c.font = '20px sans-serif'; c.fillText('PRESENTES  ·  BRINQUEDOS  ·  BOLSAS-BAZAR', W / 2, 116); });
+    k.add(new THREE.PlaneGeometry(o.d, 2.6), new THREE.MeshLambertMaterial({ map: ht }), F + 0.03, 4.9, 0, PI / 2);
+    k.add(new THREE.BoxGeometry(1.6, 0.1, o.d), lambert(0x7b4bb4), F + 0.8, 3.3, 0, 0, 0, 0.35);       // toldo roxo
+    k.add(new THREE.PlaneGeometry(o.d - 1, 2.8), lambert(0xf0ece2), F + 0.03, 1.5, 0, PI / 2);         // vitrine
+    k.build(g);
+  }
+  /* ---------- Agafarma: sobrado branco, telhado de 4 águas, faixa amarela ---------- */
+  {
+    const o = ENTORNO.agafarma, g = place(o), k = new Kit(), F = o.w / 2 + 0.05;
+    k.add(new THREE.BoxGeometry(o.w, 6.6, o.d), lambert(0xf2f2ee), 0, 3.3, 0);
+    { const r = new THREE.ConeGeometry(1, 1, 4, 1).rotateY(PI / 4); r.scale(o.w * 0.78, 2.6, o.d * 0.78); k.add(r, lambert(0x7a4a34), 0, 6.6 + 1.3, 0); }
+    const ag = sign(256, 64, '#f2b705', (c, W, Hh) => { c.fillStyle = '#1d4fa3'; c.font = 'bold 40px sans-serif'; c.textAlign = 'center'; c.fillText('Agafarma', W / 2, 46); });
+    const am = new THREE.MeshLambertMaterial({ map: ag });
+    k.add(new THREE.PlaneGeometry(o.d - 1, 1.2), am, F + 0.04, 3.3, 0, PI / 2);
+    k.add(new THREE.PlaneGeometry(o.w - 4, 1.2), am, 1.5, 3.3, -o.d / 2 - 0.04, PI);
+    for (const [px, pz, ry] of [[F + 0.03, 0, PI / 2], [0, -o.d / 2 - 0.03, PI]]) for (let i = -1; i <= 1; i++) k.add(new THREE.PlaneGeometry(1.1, 1.4), lambert(0x8a2a22), px + (ry === PI ? i * 4 : 0), 5, pz + (ry === PI ? 0 : i * 3.5), ry);   // janelas vermelhas
+    k.add(new THREE.PlaneGeometry(o.d - 3, 2.4), lambert(0x46525a), F + 0.03, 1.3, 0, PI / 2);
+    k.build(g);
+  }
+  /* ---------- rótula da Castelo Branco × João Corrêa: canteiro redondo com meio-fio amarelo e flores ---------- */
+  {
+    const rx = -55, rz = 47, y = H(rx, rz), k = new Kit();
+    k.add(new THREE.CylinderGeometry(2.4, 2.4, 0.25, 20), lambert(0xe8b923), rx, y + 0.12, rz);
+    k.add(new THREE.CylinderGeometry(2.2, 2.2, 0.3, 20), lambert(0x5f8f3e), rx, y + 0.15, rz);
+    for (let i = 0; i < 14; i++) { const a = i / 14 * PI * 2; k.add(new THREE.IcosahedronGeometry(0.35, 0), lambert(i % 2 ? 0xd8283a : 0x3f7330), rx + Math.cos(a) * 1.5, y + 0.5, rz + Math.sin(a) * 1.5); }
+    const gr = new THREE.Group(); root.add(gr); k.build(gr);
+    colliders.push({ circle: [rx, rz, 2.4] });
+  }
   /* ---------- residencial 592: 10 andares, sacadas, térreo com lojas e grade verde ---------- */
   {
     const o = ENTORNO.r592, g = place(o), k = new Kit(), floors = 10, fh = 2.9, F = o.w / 2 + 0.05;
@@ -153,6 +224,7 @@ export function buildEntorno(terrain, root, colliders) {
     k.add(new THREE.BoxGeometry(o.w, 7.4, o.d), lambert(0xd9dadb), 0, 3.7, 0);
     k.add(new THREE.BoxGeometry(o.w + 0.3, 0.5, o.d + 0.3), lambert(0xeeeeee), 0, 7.6, 0);
     { const r = new THREE.ConeGeometry(1, 1, 4, 1).rotateY(PI / 4); r.scale(o.w * 0.75, 4, o.d * 0.75); k.add(r, lambert(0x6c7075), 0, 9.85, 0); }   // telhado de 4 águas
+    for (let i = 0; i < 10; i++) k.add(new THREE.BoxGeometry(0.6, 0.7, 1.2), lambert(0xdcdcdc), o.w / 2 - 0.3, 8.2, -o.d / 2 + 1.5 + i * (o.d - 3) / 9);   // platibanda com ameias
     k.add(new THREE.BoxGeometry(o.w + 0.2, 0.25, o.d + 0.2), lambert(0xffffff), 0, 3.6, 0);           // friso entre andares
     const sj = sign(256, 64, '#ffffff', (c, W, Hh) => { c.fillStyle = '#1f4fa0'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.fillText('Farmácias', W / 2, 30); c.fillStyle = '#2c8f3e'; c.fillText('São João', W / 2, 60); });
     const sm = new THREE.MeshLambertMaterial({ map: sj });
@@ -169,4 +241,29 @@ export function buildEntorno(terrain, root, colliders) {
     for (let i = 0; i <= 6; i++) k.add(new THREE.BoxGeometry(0.03, 1, 0.03), lambert(0x222222), o.w / 2 + 0.85, 5.4, -o.d / 4 - 1.5 + i * 0.5);
     k.build(g);
   }
+}
+
+/**
+ * Bueiros do Arroio Koetz e outros arroios sob as ruas (fotos: R. Gen. Ernesto Dorneles 496): muro de concreto com a
+ * boca do canal escura e guarda-corpo de ferro na beira da calçada, dos dois lados da rua.
+ */
+export function buildCulverts(city, terrain, root, colliders, near = 900) {
+  const H = (x, z) => terrain.heightAt(x, z), k = new Kit();
+  const conc = lambert(0xa9a59c), dark = lambert(0x1c2024), rail = lambert(0x6e7378);
+  for (const c of city.culverts || []) {
+    if (Math.hypot(c.x, c.z) > near) continue;
+    const n = [-c.rd[1], c.rd[0]], cosA = Math.max(0.35, Math.abs(c.sd[0] * n[0] + c.sd[1] * n[1]));
+    const yRoad = H(c.x, c.z) + 0.15, wallLen = (c.half * 2 + 2.4) / cosA, ry = Math.atan2(-c.rd[1], c.rd[0]);
+    for (const side of [-1, 1]) {
+      const t = (c.r + 0.15) / cosA * side, x = c.x + c.sd[0] * t, z = c.z + c.sd[1] * t;
+      k.add(new THREE.BoxGeometry(wallLen, 2.0, 0.3), conc, x, yRoad - 0.95, z, ry);                                   // muro de testa
+      k.add(new THREE.BoxGeometry(c.half * 2 / cosA, 1.0, 0.32), dark, x, yRoad - 1.35, z, ry);                       // boca do canal
+      for (const h of [0.55, 1.05]) k.add(new THREE.BoxGeometry(wallLen, 0.06, 0.06), rail, x, yRoad + h, z, ry);
+      for (let i = 0; i <= 4; i++) { const u = (i / 4 - 0.5) * wallLen; k.add(new THREE.BoxGeometry(0.05, 1.1, 0.05), rail, x + c.rd[0] * u, yRoad + 0.55, z + c.rd[1] * u); }
+      const e = [c.rd[0] * wallLen / 2, c.rd[1] * wallLen / 2], o = [n[0] * 0.25, n[1] * 0.25];
+      colliders.push({ p: [[x - e[0] - o[0], z - e[1] - o[1]], [x + e[0] - o[0], z + e[1] - o[1]], [x + e[0] + o[0], z + e[1] + o[1]], [x - e[0] + o[0], z - e[1] + o[1]]] });
+    }
+  }
+  const g = new THREE.Group(); root.add(g); k.build(g);
+  return (city.culverts || []).length;
 }

@@ -2,6 +2,14 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Centro pelas fotos: Dorneles, João Corrêa e o arroio
+- Arroio Koetz (e todos os arroios urbanos): onde cruza uma rua, passa por bueiro — a rua não afunda mais; muro de
+  concreto com a boca do canal e guarda-corpo dos dois lados. Na praça, três passarelas de madeira em arco.
+- Esquina Osvaldo Cruz × Dorneles: Panvel no canto certo (SE), sobrado Levi/Casa de Carnes/Escola de Música,
+  residencial 592, fachada da Piccadilly 577.
+- João Corrêa: Farmácias São João (SW da Dorneles), torre do Mercadão dos Óculos, Jair Cabeleireiro, Hashtag
+  Presentes, Agafarma, rótula com canteiro na Castelo Branco, abrigo de telha e placas de direção na esquina da praça.
+
 ## 2026-11-23 — Foto aérea real no chão e entorno da praça
 - Chão: imagem aérea da Prefeitura (GEO Igrejinha 2016, 0,2 m/px) reprojetada por bloco de terreno de 640 m
   (54 blocos, raio de 2,6 km, 4,8 MB WebP), carregada sob demanda perto da câmera (`scripts/build-ortho.py`).
