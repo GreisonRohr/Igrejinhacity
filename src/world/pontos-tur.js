@@ -57,6 +57,9 @@ function drawAtlas() {
     g.fillStyle = '#d8dcdf'; for (let i = 0; i <= 16; i++) g.fillRect(i * 64 - 3, 0, 6, h); g.fillRect(0, 0, w, 6); g.fillRect(0, h - 6, w, 6); });
   // 14: biruta/rampa — faixas laranja e branca
   row(14, 1, (w, h) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#fff' : '#ff6a13'; g.fillRect(i * 128, 0, 128, h); } });
+  // 15: placa "Casa do Artesão" (madeira escura, letras creme) e faixa vermelha
+  row(15, 1, (w, h) => { g.fillStyle = '#3a2418'; g.fillRect(0, 0, 640, h); g.strokeStyle = '#d9c9a0'; g.lineWidth = 6; g.strokeRect(10, 10, 620, h - 20);
+    text('Casa do Artesão', 320, h / 2 + 2, 'italic bold 70px Georgia, serif', '#f0e2bd'); g.fillStyle = '#d32f2f'; g.fillRect(660, 0, 364, h); });
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return new THREE.MeshLambertMaterial({ map: t });
 }
@@ -104,7 +107,7 @@ function pick(world, l, r, re) {
 }
 const groundOf = (H, p) => { let lo = Infinity, hi = -Infinity; for (const [x, z] of p) { const y = H(x, z); lo = Math.min(lo, y); hi = Math.max(hi, y); } return { lo, hi }; };
 
-export function placePontosTur(world) {
+export function placePontosTur(world, igreja = null) {
   const T = { signs: [], ex: [] };
   const own = b => { const p = b.p; T.ex.push((x, z) => inPoly(x, z, p)); };
   // fábricas: letreiro na fachada do maior pavilhão
@@ -118,6 +121,16 @@ export function placePontosTur(world) {
   // Centro Administrativo: maior prédio a até 80 m do ponto
   const ca = pick(world, byId.prefeitura, 80, null);
   if (ca) { const R = rectOf(ca); T.centro = { b: ca, R, f: frontOf(world, R, true) }; own(ca); }
+  // Casa do Artesão: ao lado da Igreja Gabriel, do lado da R. Santos Dumont (fotos do diretor e do site de turismo)
+  if (igreja) {
+    const o = igreja, S = [o.x - o.ux * 25, o.z - o.uz * 25];                 // ponto na R. Independência em frente à igreja
+    let side = 1, sd = 1e9;                                                    // lado da R. Santos Dumont
+    for (const r of world.roads) if (/Santos Dumont/.test(r.n || '')) for (const q of r.p) { const d = Math.hypot(q[0] - S[0], q[1] - S[1]); if (d < sd) { sd = d; side = Math.sign((q[0] - S[0]) * -o.uz + (q[1] - S[1]) * o.ux) || 1; } }
+    T.artesao = { S, ux: o.ux, uz: o.uz, side };
+    const W = (a, p) => [S[0] + o.ux * a - o.uz * p * side, S[1] + o.uz * a + o.ux * p * side];
+    T.ex.push((x, z) => { const dx = x - S[0], dz = z - S[1], a = dx * o.ux + dz * o.uz, p = (dx * -o.uz + dz * o.ux) * side; return a > 7 && a < 32 && p > 9.5 && p < 20.5; });
+    T.artesao.W = W;
+  }
   // Casa de Pedra e Kinder Park: tira o que houver no lugar
   for (const id of ['casapedra', 'kinder']) { const l = byId[id]; T.ex.push((x, z) => Math.hypot(x - l.x, z - l.z) < 16); T[id] = { f: frontOf(world, { x: l.x, z: l.z, ux: 1, uz: 0, a: 9, b: 5 }) }; }
   return T;
@@ -195,6 +208,52 @@ export function buildPontosTur(T, terrain, root, colliders, updaters) {
     });
     k.build(g); flush();
     colliders.push({ p: b.p.map(q => [q[0], q[1]]) });
+  }
+
+  // Casa do Artesão: casa branca de rodapé vermelho, varanda em "A" de madeira escura com mãos-francesas, telhado de
+  // fibrocimento cinza e uma ala comprida atrás (fotos do diretor e do site de turismo)
+  if (T.artesao) {
+    const { W, ux, uz, side } = T.artesao, k = new Kit();
+    const [cx, cz] = W(15.5, 14), g2 = new THREE.Group(); g2.position.set(cx, 0, cz); g2.rotation.y = Math.atan2(-ux, -uz) + (side < 0 ? 0 : 0); g.add(g2);
+    const sx = side;                                                     // x local = para o lado da Santos Dumont (sinal)
+    let y = Infinity; for (const [a, p] of [[11, 10.5], [11, 17.5], [30, 10.5], [30, 19.5]]) { const [x, z] = W(a, p); y = Math.min(y, H(x, z)); }
+    g2.position.y = y;
+    const white = lambert(0xf6f5f1), red = lambert(0xd32f2f), brown = lambert(0x3e2a1e), grey = lambert(0x8f9194), under = lambert(0xe3ded4), dark = lambert(0x2c2f33), glass = lambert(0x3a4a55);
+    const Hw = 3.4;
+    // corpo da frente (7 × 9 m) e ala dos fundos (9 × 10 m)
+    k.box(7, Hw, 9, white, 0, 0, 0); k.box(7.1, 0.55, 9.1, red, 0, -0.05, 0);
+    k.box(9, Hw - 0.2, 10, white, sx * 1, 0, -9.5); k.box(9.1, 0.55, 10.1, red, sx * 1, -0.05, -9.5);
+    // telhados de duas águas (cumeeira na direção do fundo)
+    const roof = (w, d, x0, z0, y0, rh) => { const sl = Math.hypot(w / 2 + 0.5, rh), ang = Math.atan2(rh, w / 2 + 0.5);
+      for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(sl, 0.08, d + 0.6), grey, x0 + s * (w / 4 + 0.1), y0 + rh / 2, z0, 0, 0, -s * ang);
+      const tri = new THREE.Shape([new THREE.Vector2(-w / 2, 0), new THREE.Vector2(w / 2, 0), new THREE.Vector2(0, rh)]);
+      k.add(new THREE.ShapeGeometry(tri), white, x0, y0, z0 + d / 2, 0); k.add(new THREE.ShapeGeometry(tri), white, x0, y0, z0 - d / 2, PI); };
+    roof(7, 9, 0, 0, Hw, 2.2); roof(9, 10, sx * 1, -9.5, Hw - 0.2, 1.8);
+    // porta (grade escura), janelas de moldura vermelha, placa
+    k.add(new THREE.BoxGeometry(1.3, 2.3, 0.08), dark, 0, 1.15 + 0.5, 4.52);
+    for (const s of [-1, 1]) { k.add(new THREE.BoxGeometry(1.4, 1.5, 0.06), red, s * 2.3, 1.95, 4.52); k.add(new THREE.BoxGeometry(1.1, 1.2, 0.08), glass, s * 2.3, 1.95, 4.55); }
+    for (let i = 0; i < 3; i++) { const z = 2 - i * 3; k.add(new THREE.BoxGeometry(0.06, 1.4, 1.3), red, sx * 3.52, 1.95, z); k.add(new THREE.BoxGeometry(0.08, 1.1, 1.0), glass, sx * 3.55, 1.95, z); }
+    for (let i = 0; i < 3; i++) { const z = -6 - i * 3; k.add(new THREE.BoxGeometry(0.06, 1.3, 1.3), red, sx * 5.52, 1.85, z); k.add(new THREE.BoxGeometry(0.08, 1.0, 1.0), glass, sx * 5.55, 1.85, z); }
+    k.add(quad(2.2, 0.4, 15, 1, 0, 0.625), A, 0, 3.05, 4.58);   // placa (coordenadas locais da casa)
+    // degraus vermelhos e brancos
+    for (let i = 0; i < 3; i++) k.box(2.6, 0.18, 0.5 * (3 - i), i % 2 ? white : red, 0, i * 0.18 - 0.05, 4.5 + 0.25 * (3 - i));
+    // varanda em "A": telhado claro íngreme, caibros escuros, linha, pendural e mãos-francesas
+    const pz0 = 4.5, pz1 = 8.2, ew = 3.4, ey = 2.5, ay = 6.0, pl = Math.hypot(ew, ay - ey), pa = Math.atan2(ay - ey, ew);
+    for (const s of [-1, 1]) {
+      k.add(new THREE.BoxGeometry(pl + 0.3, 0.08, pz1 - pz0 + 0.3), under, s * ew / 2, (ey + ay) / 2, (pz0 + pz1) / 2, 0, 0, -s * pa);
+      k.add(new THREE.BoxGeometry(pl + 0.3, 0.2, 0.2), brown, s * ew / 2, (ey + ay) / 2 - 0.1, pz1, 0, 0, -s * pa);          // caibro da frente
+      k.add(new THREE.BoxGeometry(0.2, ey, 0.2), brown, s * (ew - 0.2), ey / 2, pz1 - 0.1);                               // pilar
+      k.add(new THREE.BoxGeometry(0.16, 1.6, 0.16), brown, s * (ew - 0.75), ey + 0.1, pz1 - 0.1, 0, 0, s * 0.75);         // mão-francesa
+    }
+    k.add(new THREE.BoxGeometry(ew * 2 - 0.4, 0.18, 0.18), brown, 0, ey + 0.9, pz1 - 0.1);                                // linha
+    k.add(new THREE.BoxGeometry(0.18, ay - ey - 0.9, 0.18), brown, 0, (ey + 0.9 + ay) / 2, pz1 - 0.1);                    // pendural
+    for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(0.14, 1.4, 0.14), brown, s * 0.75, ey + 1.5, pz1 - 0.1, 0, 0, -s * 0.9);
+    k.add(new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-ew + 0.6, 0), new THREE.Vector2(ew - 0.6, 0), new THREE.Vector2(0, ay - ey - 0.7)])), red, 0, ey + 0.4, pz0 + 0.06);   // empena vermelha sob a varanda
+    k.build(g2);
+    const qx = (a, p) => W(a, p);
+    colliders.push({ p: [qx(11, 10.5), qx(11, 17.5), qx(20, 17.5), qx(20, 19.5), qx(30, 19.5), qx(30, 10.5)] });
+    for (const [a, p] of [[7.4, 10.8], [7.4, 17.2]]) { const [x, z] = qx(a, p); colliders.push({ circle: [x, z, 0.25] }); }
+    flush();
   }
 
   // Casa de Pedra (Stein Haus): casarão de pedra de 2 andares, reboco caiado gasto, telhado de telha (fotos do site)

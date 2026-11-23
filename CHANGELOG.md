@@ -2,6 +2,11 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Casa do Artesão
+- Ao lado da Igreja Gabriel, do lado da R. Santos Dumont (fotos do diretor, Street View abr/2026 só como referência, e do
+  site de turismo): casa branca de rodapé e molduras vermelhas, varanda em "A" de madeira escura com mãos-francesas,
+  telhado de fibrocimento, ala comprida nos fundos, degraus vermelho e branco e a placa.
+
 ## 2026-11-23 — Desempenho: −95 chamadas de desenho na praça (744 → 649)
 - Sombras só onde aparecem: árvores e carros estacionados fazem sombra só nas células junto ao jogador; peças pequenas
   dos pontos (placas, plaquinhas) e dos personagens montados por peças (olhos, botões) não fazem mais sombra. O mapa de

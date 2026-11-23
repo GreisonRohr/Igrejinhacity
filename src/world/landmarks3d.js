@@ -122,7 +122,7 @@ export function placeLandmarks(world, terrain) {
   if (P.praca.erni) ex.push((x, z) => inPoly(x, z, P.praca.erni));
   if (P.waldir.poly) { const wp = P.waldir.poly; ex.push((x, z) => inPoly(x, z, wp)); }
   ex.push(...entornoExclusions(), heidelbergExclusion);
-  P.tur = placePontosTur(world); ex.push(...P.tur.ex);
+  P.tur = placePontosTur(world, P.igreja); ex.push(...P.tur.ex);
   P.oktober = planOktober(world);
   if (P.oktober) ex.push(P.oktober.excl);
   P.exclusions = ex;
