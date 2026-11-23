@@ -4,6 +4,7 @@
 //  - lixeiras nas calçadas, junto a parte dos postes (piloto)
 // Tudo instanciado ou numa malha só: 3 chamadas de desenho no total.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Kit, lambert } from './landmarks3d.js';
 import { PILOT_R } from './city.js';
 
@@ -78,5 +79,52 @@ export function buildUrbano({ world, terrain, city, scene }) {
     bins.forEach(([x, y, z, ry], i) => { d.position.set(x, y, z); d.rotation.set(0, ry, 0); d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
     im.receiveShadow = true; im.computeBoundingSphere(); group.add(im);
   }
-  return { group, stops: stops.length, wires: pos.length / 6, bins: bins.length };
+  /* ---------- placas com o nome das ruas nas esquinas (piloto) ---------- */
+  // nós compartilhados por ruas de nomes diferentes (dados do mapa); a placa vai na esquina, sobre a calçada
+  const nodes = new Map(), K = (x, z) => Math.round(x * 2) + ',' + Math.round(z * 2);
+  for (const r of world.roads) {
+    if (!r.n || /^(path|footway|steps|cycleway|track|service)$/.test(r.k)) continue;
+    r.p.forEach((q, i) => {
+      if (Math.hypot(q[0], q[1]) > PILOT_R) return;
+      const nb = [r.p[i - 1], r.p[i + 1]].filter(Boolean);
+      for (const o of nb) { const L = Math.hypot(o[0] - q[0], o[1] - q[1]) || 1; const k = K(q[0], q[1]); if (!nodes.has(k)) nodes.set(k, { x: q[0], z: q[1], arms: [] }); nodes.get(k).arms.push({ n: r.n, dx: (o[0] - q[0]) / L, dz: (o[1] - q[1]) / L, w: r.w || 8 }); }
+    });
+  }
+  const signs = [], names = [];
+  for (const nd of nodes.values()) {
+    const byName = new Map(); for (const a2 of nd.arms) if (!byName.has(a2.n)) byName.set(a2.n, a2);
+    if (byName.size < 2) continue;
+    const [A1, A2] = [...byName.values()];
+    let cx = A1.dx + A2.dx, cz = A1.dz + A2.dz, cl = Math.hypot(cx, cz); if (cl < 0.2) { cx = -A1.dz; cz = A1.dx; cl = 1; }
+    const off = Math.max(A1.w, A2.w) / 2 + 1.6, x = nd.x + cx / cl * off, z = nd.z + cz / cl * off;
+    if (city.blocked(x, z, 0.4) || city.surfOffset(x, z) < 0.2) continue;                     // só sobre a calçada, fora de prédios
+    if (signs.some(s2 => Math.hypot(s2.x - x, s2.z - z) < 12)) continue;
+    for (const a2 of [A1, A2]) if (!names.includes(a2.n)) names.push(a2.n);
+    signs.push({ x, z, y: H(x, z) + city.surfOffset(x, z), A1, A2 });
+  }
+  if (signs.length && names.length) {
+    const RH = 48, rows = Math.min(names.length, 80), cv = document.createElement('canvas'); cv.width = 512; cv.height = RH * (rows + 1);
+    const g = cv.getContext('2d'); g.fillStyle = '#8d9196'; g.fillRect(0, 0, 512, RH);       // linha 0: cinza do poste
+    names.slice(0, rows).forEach((n, i) => { const y = RH * (i + 1); g.fillStyle = '#1d4fa0'; g.fillRect(0, y, 512, RH); g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(4, y + 4, 504, RH - 8);
+      let fs = 26; g.font = `bold ${fs}px sans-serif`; const txt = n.replace(/^Rua /, 'R. ').replace(/^Avenida /, 'Av. ').toUpperCase(); while (g.measureText(txt).width > 480 && fs > 12) g.font = `bold ${--fs}px sans-serif`;
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 256, y + RH / 2 + 1); });
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const parts = [], R = rows + 1;
+    const plane = (w, h, row, x, y, z, ry) => { const pg = new THREE.PlaneGeometry(w, h), uv = pg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i), 1 - (row + 1 - uv.getY(i)) / R); pg.rotateY(ry); pg.translate(x, y, z); return pg; };
+    for (const sg of signs) {
+      const pole = new THREE.CylinderGeometry(0.04, 0.04, 2.9, 6), uv = pole.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.5, 1 - 0.5 / R);
+      pole.translate(sg.x, sg.y + 1.45, sg.z); parts.push(pole);
+      [sg.A1, sg.A2].forEach((a2, j) => {
+        const row = names.indexOf(a2.n) + 1; if (row < 1 || row > rows) return;
+        const ry = Math.atan2(a2.dx, a2.dz) + Math.PI / 2, y = sg.y + 2.65 - j * 0.3;      // placa paralela à rua
+        parts.push(plane(1.1, 0.2, row, sg.x, y, sg.z, ry), plane(1.1, 0.2, row, sg.x, y, sg.z, ry + Math.PI));
+      });
+    }
+    const nonIdx = parts.map(q => q.toNonIndexed());
+    for (const q of nonIdx) for (const k of Object.keys(q.attributes)) if (!['position', 'normal', 'uv'].includes(k)) q.deleteAttribute(k);
+    const geo = mergeGeometries(nonIdx); geo.computeBoundingSphere();
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex })); m.castShadow = false; group.add(m);
+    for (const sg of signs) city.addCollider([[sg.x - 0.08, sg.z - 0.08], [sg.x + 0.08, sg.z - 0.08], [sg.x + 0.08, sg.z + 0.08], [sg.x - 0.08, sg.z + 0.08]], sg.x, sg.z, -1);
+  }
+  return { group, stops: stops.length, wires: pos.length / 6, bins: bins.length, streetSigns: signs.length, streetNames: names.length };
 }

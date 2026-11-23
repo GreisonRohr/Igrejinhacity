@@ -2,6 +2,16 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Piloto do centro, etapa 2: telhados, quintais, janelas e placas de rua
+- Telhados: testeira/beiral com espessura (branca ou madeira), cumeeira, calha com condutor em ~65% das casas, leve
+  variação de cor das telhas; caixa d'água azul em ~2/3 das lajes comerciais.
+- Janelas: atlas de 4 estilos no mesmo material (moldura branca, venezianas, par com arco, de correr) escolhido por
+  prédio no shader (textureGrad: sem emenda); porta da frente com degrau, de cor variada.
+- Quintais: arbustos, cones e flores junto aos muros e à porta (457 plantas, 3 malhas instanciadas, variação de cor,
+  tamanho e rotação), sem tapar portão nem porta.
+- Placas com nomes reais das ruas em 74 esquinas (65 nomes, uma malha). Semáforos: nenhum confirmado nos dados.
+- Desempenho: 664 chamadas de desenho (+1), 2.546 mil triângulos (+124 mil), heap 145 MB.
+
 ## 2026-11-23 — Chão dos terrenos: detalhe de perto (cidade toda)
 - A foto aérea vista da rua era uma mancha escura e azulada (sombras de prédios/árvores pintadas na foto de 2016). No
   shader do terreno, perto da câmera (até ~260 m): onde a foto é sombra, o chão vira grama/terra de quintal; grão

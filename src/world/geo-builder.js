@@ -62,15 +62,25 @@ function normal(a, b, c) {
 }
 
 /** Material Lambert com emissivo multiplicado por um atributo por vértice ("lit": janela acesa ou não). */
-export function litMaterial(opts) {
+export function litMaterial(opts, styles = 1) {
+  // atributo "lit": parte inteira/2 = estilo de janela (coluna do atlas, quando styles > 1); resto = janela acesa à noite
   const m = new THREE.MeshLambertMaterial(opts);
   m.onBeforeCompile = sh => {
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float lit;\nvarying float vLit;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLit = lit;');
+      .replace('#include <common>', '#include <common>\nattribute float lit;\nvarying float vLit;\nvarying float vStyle;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLit = mod(lit, 2.0);\nvStyle = floor(lit / 2.0 + 0.01);');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vLit;')
+      .replace('#include <common>', '#include <common>\nvarying float vLit;\nvarying float vStyle;')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vLit;');
+    if (styles > 1) {
+      const N = styles.toFixed(1);
+      // amostra a coluna do estilo; textureGrad com as derivadas do UV contínuo evita linha na emenda das baias
+      const S = (tex, uv) => `textureGrad(${tex}, vec2((fract(${uv}.x) + vStyle) / ${N}, ${uv}.y), dFdx(${uv}) * vec2(1.0 / ${N}, 1.0), dFdy(${uv}) * vec2(1.0 / ${N}, 1.0))`;
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <map_fragment>', `#ifdef USE_MAP\n diffuseColor *= ${S('map', 'vMapUv')};\n#endif`)
+        .replace('#include <emissivemap_fragment>', `#ifdef USE_EMISSIVEMAP\n totalEmissiveRadiance *= ${S('emissiveMap', 'vEmissiveMapUv')}.rgb;\n#endif`);
+    }
   };
+  if (styles > 1) m.customProgramCacheKey = () => 'lit-styles-' + styles;
   return m;
 }
