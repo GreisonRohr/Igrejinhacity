@@ -71,8 +71,14 @@ for (const f of load('pontos_turisticos')) { const c = pt(f.geometry); if (c) pl
 for (const f of load('patrimonio_inventario')) { const c = pt(f.geometry); if (c) places.push({ x: c[0], z: c[1], k: 'patrimonio', n: f.properties['Identificação'] }); }
 for (const f of load('feiras')) { const c = pt(f.geometry); if (c) places.push({ x: c[0], z: c[1], k: 'feira', n: f.properties.Nome || 'Feira do Produtor' }); }
 
-const out = { floors, ind, names, addr, bairros, places };
+// 5. Censo 2022: densidade de moradores por setor (pessoas/km²) para a população de pedestres
+const censo = [];
+if (fs.existsSync(R + 'censo2022.geojson')) for (const f of load('censo2022')) {
+  const p = f.properties, d = (p['Total de pessoas'] || 0) / Math.max(0.001, p.AREA_KM2 || 1);
+  for (const pg of polys(f.geometry)) censo.push([Math.round(d), pg.filter((q, k) => k % 2 === 0).map(q => q.map(v => Math.round(v)))]);
+}
+const out = { floors, ind, names, addr, bairros, places, censo };
 fs.writeFileSync('public/data/geoextra.data.json', JSON.stringify({ gzip_base64: zlib.gzipSync(JSON.stringify(out), { level: 9 }).toString('base64') }));
 const fc = floors.filter(v => v > 0);
-console.log({ predios_com_pavimentos: fc.length, acima_4: fc.filter(v => v >= 4).length, max: Math.max(...fc), nomes: names.length, enderecos: addr.length, industriais: ind.filter(Boolean).length, bairros: bairros.length, lugares: places.length, KB: Math.round(fs.statSync('public/data/geoextra.data.json').size / 1024) });
+console.log({ predios_com_pavimentos: fc.length, acima_4: fc.filter(v => v >= 4).length, max: Math.max(...fc), nomes: names.length, enderecos: addr.length, industriais: ind.filter(Boolean).length, bairros: bairros.length, setores_censo: censo.length, lugares: places.length, KB: Math.round(fs.statSync('public/data/geoextra.data.json').size / 1024) });
 console.log(names.slice(0, 12).map(n => n[2] + ' ' + floors[n[3]] + 'pav').join(' | '));

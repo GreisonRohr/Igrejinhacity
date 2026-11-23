@@ -9,8 +9,11 @@ const LAYERS = {
   pontos_turisticos: [5330, ['NOME', 'Descric']],
   patrimonio_inventario: [8354, ['Identificação', 'Local', 'Pontuação']],
   feiras: [6591, ['Nome']],
+  censo2022: [10305, ['Total de pessoas', 'AREA_KM2', 'NM_BAIRRO', 'SITUACAO']],
 };
+const only = process.argv[2];
 for (const [name, [id, keep]] of Object.entries(LAYERS)) {
+  if (only && name !== only) continue;
   const r = await fetch(`${H}/api/resource/${id}/export?format=GeoJSON&srs=4326&zipped=false&fid=`, { signal: AbortSignal.timeout(900000) });
   const j = await r.json();
   for (const f of j.features) { const p = {}; for (const k of keep) if (f.properties[k] != null && f.properties[k] !== '') p[k] = f.properties[k]; f.properties = p; }

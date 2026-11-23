@@ -22,6 +22,7 @@ import { NavGraph } from './nav/graph.js';
 import { Pedestrians } from './sim/pedestrians.js';
 import { Interactions } from './interact/interact.js';
 import { TreeLOD } from './world/trees.js';
+import { buildForest } from './world/forest.js';
 import { loadHumans } from './player/humans.js';
 import { MAP_MALE_CASUAL } from './player/retarget.js';
 
@@ -111,6 +112,8 @@ const street = await stage('Plantando árvores…', 0.82, 0.88, () => buildStree
 const treeLOD = new TreeLOD(scene, { cap: isTouch ? { leafy: 70, big: 24, palm: 20 } : { leafy: 110, big: 30, palm: 30 }, radius: isTouch ? 90 : 110 });
 for (const t of street.trees) treeLOD.add(t);
 for (const t of landmarks.trees) treeLOD.add(t, true);
+const forestData = await fetchPackedJSON(BASE + 'data/forest.data.json').catch(() => null);
+const forest = forestData ? buildForest(forestData, terrain, scene, { dist: isTouch ? 800 : 1200 }) : null;
 scene.add(street.group);
 if (DEBUG) console.log('rua:', JSON.stringify(street.counts));
 const sky = new Sky(scene, Q);
@@ -247,6 +250,10 @@ if (landmarks.pipoca) {
 /* ---------- pedestres (src/sim/pedestrians.js, spec em docs/spec-pedestres.md) ---------- */
 const peds = new Pedestrians({ scene, nav, spatial, terrain, city, world, landmarks, places: world.places, quality: isTouch ? 'medium' : 'high',
   groundAt: (x, z) => player.groundAt(x, z, terrain.heightAt(x, z)), hours: () => sky.hours });
+if (geoX && geoX.censo) {
+  const sectors = geoX.censo;
+  peds.censusAt = (x, z) => { for (const [d, p] of sectors) if (inPolyXZ(x, z, p)) return d; return null; };
+}
 peds.prefill(player.x, player.z);
 if (humans) peds.useHumans(humans, scene, isTouch ? { male: 4, female: 4, radius: 24 } : { male: 5, female: 5, radius: 28 });
 peds.toast = line => { if (toastT <= 0) toast('', '“' + line + '”', 2.5); };
@@ -260,7 +267,7 @@ input.on('act', () => { if (!running) return; const c = interact.best(player.x, 
 /* ---------- onde estou: rua, número e bairro (cadastro e bairros do GEO Igrejinha) ---------- */
 const addrGrid = new Map();
 if (geoX) for (const a of geoX.addr) { const k = Math.floor(a[0] / 50) + ',' + Math.floor(a[1] / 50); (addrGrid.get(k) || addrGrid.set(k, []).get(k)).push(a); }
-const inPolyXZ = (x, z, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c; };
+function inPolyXZ(x, z, p) { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c; }   // declarada como função: usada antes desta linha
 let whereT = 0, whereS = '';
 function whereAmI(x, z) {
   if (!geoX) return `${Math.round(player.y)} m`;
@@ -318,6 +325,7 @@ function frame(now) {
     if (DEBUG && frameNo < 6) console.log('@' + Math.round(tu0), 'quadro', frameNo, 'terreno LOD', Math.round(performance.now() - tu0), 'ms');
     city.update(camera.position.x, camera.position.z);
     street.update(camera.position.x, camera.position.z);
+    if (forest) forest.update(camera.position.x, camera.position.z);
     landmarks.cull(camera.position.x, camera.position.z, Q.buildDist * 0.45);
     city.setNight(sky.night);
     for (const s of labels) s.visible = s.position.distanceTo(camera.position) < s.userData.maxDist;
@@ -357,6 +365,12 @@ function frame(now) {
   }
   requestAnimationFrame(frame);
 }
+
+// libera os dados brutos do mapa já transformados em malhas (mantém pontes e o centro, usados pelos testes)
+world.buildings = world.buildings.filter(b => Math.hypot(b.p[0][0], b.p[0][1]) < 800);
+world.roads = world.roads.filter(r => r.br);
+world.areas = []; world.water = []; world.gen = [];
+if (geoX) { geoX.floors = null; geoX.ind = null; geoX.names = null; }
 
 await stage('Preparando a placa de vídeo…', 0.88, 1, async tick => {
   // envia a geometria à GPU em lotes (libera a cópia em memória sem um travamento único longo)

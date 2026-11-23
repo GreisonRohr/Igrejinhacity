@@ -138,7 +138,10 @@ export class Pedestrians {
   /* ------------------------------ população ------------------------------ */
   targetCount(px, pz) {
     const hr = this.hours(), d = this.densityAt(px, pz);
-    const center = Math.min(1, d.comm / 60), bairro = Math.min(1, d.house / 250);
+    const center = Math.min(1, d.comm / 60);
+    // moradores: densidade do Censo 2022 no setor (pessoas/km²); sem dado, conta as casas em volta
+    const cd = this.censusAt ? this.censusAt(px, pz) : null;
+    const bairro = cd != null ? Math.min(1, cd / 5000) : Math.min(1, d.house / 250);
     const want = center * curve(CENTER, hr) + bairro * curve(BAIRRO, hr) * 0.35;
     return Math.round(this.cap * Math.min(1, want));
   }

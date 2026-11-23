@@ -56,7 +56,13 @@ for q in trees:
     kept.append(q); grid.setdefault(k, []).append(q)
 # prioridade: árvores urbanas perto do centro; mata só depois
 kept.sort(key=lambda q: (q[3], math.hypot(q[0], q[1])))
-kept = kept[:MAX]
+urban = [q for q in kept if not q[3]][:MAX]
+# mata (blocos grandes de vegetação): arquivo separado, desenhado como copas simples sem sombra
+rest = [q for q in kept if q[3]] + [q for q in kept if not q[3]][MAX:]   # mata + copas que não couberam
+forest = sorted(rest, key=lambda q: math.hypot(q[0], q[1]))[:int(sys.argv[3]) if len(sys.argv) > 3 else 7000]
+json.dump({'gzip_base64': base64.b64encode(gzip.compress(json.dumps([q[:3] for q in forest]).encode(), 9)).decode()}, open('public/data/forest.data.json', 'w'))
+print('mata', len(forest))
+kept = urban
 blob = base64.b64encode(gzip.compress(json.dumps(kept).encode(), 9)).decode()
 json.dump({'gzip_base64': blob}, open('public/data/trees.data.json', 'w'))
 print('copas', len(trees), 'árvores', len(kept), 'urbanas', sum(1 for q in kept if not q[3]))

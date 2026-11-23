@@ -9,6 +9,9 @@ Formato por data; o mais recente em cima. Detalhes técnicos nos commits do bran
 - HUD mostra onde você está: rua, número e bairro (cadastro + bairros do PDDURA 2020).
 - Zona industrial do PDDURA vira galpão; pontos turísticos, 122 imóveis do inventário do patrimônio histórico e as feiras
   do produtor no minimapa.
+- Pedestres por bairro conforme a densidade de moradores do Censo 2022 (88 setores censitários).
+- Mata: 7 mil copas reais da imagem aérea fora das árvores urbanas, leves (sem sombra, até 1,2 km).
+- Memória: dados brutos do mapa liberados depois da montagem (154 → 147 MB).
 - Só campos úteis ao jogo são baixados do cadastro (sem inscrição, matrícula, ficha ou dados pessoais).
 
 ## 2026-11-23 — Dados reais da imagem aérea
