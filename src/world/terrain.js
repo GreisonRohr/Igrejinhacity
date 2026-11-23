@@ -76,6 +76,37 @@ export class Terrain {
       let lod = 0; while (d > LODS[lod][0]) lod++;
       if (LODS[lod][1] > this.CH / 2) lod = LODS.findIndex(l => l[1] >= this.CH / 2);
       if (lod !== c.lod) this.setLod(c, lod);
+      if (c.ortho) this.updateOrtho(c, d);
+    }
+  }
+
+  /**
+   * Foto aérea real (GEO Igrejinha 2016, public/ortho) nos blocos perto da câmera: cada bloco ganha um material
+   * próprio com a textura do seu recorte (sem draw call a mais: o bloco já é uma malha). Longe, volta o material comum.
+   */
+  setOrtho(index, base, { near = 900, far = 1300 } = {}) {
+    this.orthoNear = near; this.orthoFar = far;
+    const byKey = new Map(index.tiles.filter(t => t.cover >= 0.98).map(t => [Math.round((t.x0 - this.x0) / this.cell) + ',' + Math.round((t.z0 - this.z0) / this.cell), t]));
+    for (const c of this.chunks) { const t = byKey.get(c.i0 + ',' + c.j0); if (t) c.ortho = { ...t, url: base + 'ortho/' + t.file, state: 0 }; }
+  }
+  updateOrtho(c, d) {
+    const o = c.ortho;
+    if (d < this.orthoNear && o.state === 0) {
+      o.state = 1;
+      new THREE.TextureLoader().load(o.url, tex => {
+        tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+        // UV do terreno é global (mapa inteiro): reescala para o recorte deste bloco
+        const Dx = o.x1 - o.x0, Dz = o.z1 - o.z0;
+        tex.repeat.set(this.W / Dx, this.H / Dz);
+        tex.offset.set((this.x0 - o.x0) / Dx, 1 - (this.z0 + this.H - o.z0) / Dz);
+        const m = this.material.clone(); m.map = tex; o.mat = m; o.state = 2;
+        if (c.inNear) c.mesh.material = m;
+      }, undefined, () => { o.state = 3; });
+    }
+    c.inNear = d < this.orthoNear;
+    if (o.state === 2) {
+      if (c.inNear) c.mesh.material = o.mat;
+      else if (d > this.orthoFar) { c.mesh.material = this.material; o.mat.map.dispose(); o.mat.dispose(); o.mat = null; o.state = 0; }
     }
   }
 

@@ -85,6 +85,8 @@ const city = new City(world, terrain, Q, LM.exclusions);
 await stage('Escavando o Paranhana…', 0.05, 0.1, () => city.carveWater());
 const groundCanvas = await stage('Pintando o chão…', 0.1, 0.18, () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize)));
 terrain.material.map = groundTexture(groundCanvas, renderer);
+// foto aérea da Prefeitura (GEO Igrejinha 2016) no chão perto da câmera
+fetch(BASE + 'ortho/index.json').then(r => r.ok ? r.json() : null).then(ix => { if (ix) terrain.setOrtho(ix, BASE, isTouch ? { near: 650, far: 1000 } : { near: 1000, far: 1400 }); }).catch(() => {});
 await stage('Erguendo a Serra…', 0.18, 0.22, () => scene.add(terrain.build()));
 await stage('Construindo a cidade…', 0.22, 0.7, async tick => scene.add(await city.build(tick)));
 const landmarks = await stage('Montando a Igreja, a praça e a Oktoberfest…', 0.7, 0.82, () => buildLandmarks(LM, world, terrain, scene, city));

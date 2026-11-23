@@ -8,6 +8,7 @@ import { makeLabel } from './labels.js';
 import { planOktober, buildOktober } from './oktoberfest.js';
 import { buildAvenida } from './avenida.js';
 import { buildPraca } from './praca.js';
+import { buildEntorno, entornoExclusions } from './entorno.js';
 import { mergeStatic } from './merge.js';
 
 const PI = Math.PI;
@@ -118,6 +119,7 @@ export function placeLandmarks(world, terrain) {
   if (P.praca.poly) ex.push((x, z) => inPoly(x, z, P.praca.poly));
   if (P.praca.erni) ex.push((x, z) => inPoly(x, z, P.praca.erni));
   if (P.waldir.poly) { const wp = P.waldir.poly; ex.push((x, z) => inPoly(x, z, wp)); }
+  ex.push(...entornoExclusions());
   P.oktober = planOktober(world);
   if (P.oktober) ex.push(P.oktober.excl);
   P.exclusions = ex;
@@ -374,6 +376,7 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
 
   buildOktober(P.oktober, world, terrain, root, colliders, updaters);
   if (city) colliders.push(...buildAvenida(world, terrain, city, root).colliders);
+  buildEntorno(terrain, root, colliders);
   // junta as peças estáticas por material e região de 250 m; regiões distantes somem
   const cells = mergeStatic(root, 500);
 

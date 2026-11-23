@@ -20,3 +20,10 @@ Capturas do Google Street View (abr/2026) e do TripAdvisor enviadas na conversa;
 autores). Usadas para: Praça Dona Luísa (monumento com mastros, totem do relógio, pérgola, piso, bancos, lampiões, pedra),
 prédio Erni Engelmann e feira (R. Osvaldo Cruz 561/647), Rua Coberta (cobertura bege, colunas brancas, vagas em ângulo),
 Av. Castelo Branco 269/311 (canteiro, casinhas enxaimel nas faixas, palmeiras em vaso, pipoqueiro "PIPOCA E BATATA").
+
+## Entorno da praça (fotos do diretor, 23/11/2026)
+Street View abr/2026: R. Osvaldo Cruz 561/647 (feira, Erni Engelmann Platz, pipoqueiro, torre Athos, Caixa),
+R. Gen. Ernesto Dorneles 450–546 (Panvel, banheiro da praça, arroio com pedras e cerca, Farmácias São João).
+
+## Imagem aérea
+GEO Igrejinha — "Imagem Aérea Igrejinha 2016" (Prefeitura de Igrejinha), via sites.google.com/view/geoigrejinha.

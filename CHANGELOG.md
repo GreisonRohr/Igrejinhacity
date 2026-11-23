@@ -2,6 +2,15 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Foto aérea real no chão e entorno da praça
+- Chão: imagem aérea da Prefeitura (GEO Igrejinha 2016, 0,2 m/px) reprojetada por bloco de terreno de 640 m
+  (54 blocos, raio de 2,6 km, 4,8 MB WebP), carregada sob demanda perto da câmera (`scripts/build-ortho.py`).
+- Entorno da praça a partir das fotos do diretor: torre Athos (24 andares, base de losangos laranja e pretos),
+  Caixa, Panvel e Farmácias São João.
+- Praça: feira do produtor com telhado de uma água de madeira, banheiro público, pedras e cerca no arroio,
+  meio-fio amarelo.
+- Dados do GEO Igrejinha: uso autorizado pelo diretor (pendência encerrada).
+
 ## 2026-11-23 — Personagens realistas
 - Protagonista: modelo "homem casual" enviado pelo diretor (camiseta, jeans, barba), animado com a biblioteca
   Quaternius (parado, andar, correr, sprint, pular, sentar) transferida para o esqueleto dele (`src/player/retarget.js`).

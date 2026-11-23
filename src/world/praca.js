@@ -80,6 +80,7 @@ export function buildPraca(ctx) {
     red: lambert(0xc8282d), yellow: lambert(0xf2c12e), blue: lambert(0x2f6fd0), black: lambert(0x1d1f22), metal: lambert(0x55595e),
     pedestal: lambert(0xb9b6ae), plaque: lambert(0x9c9890), glassDark: lambert(0x2d3a44), roofSlate: lambert(0x4b4f55), roofTile: lambert(0x7a3a28),
     rock: lambert(0x8c6f55), sand: lambert(0xe3d3a8), fruitR: lambert(0xd23a2a), fruitG: lambert(0x7ab83a), fruitO: lambert(0xf09a20), fruitY: lambert(0xf2d03a),
+    lightWood: lambert(0xc08a52), yellowCurb: lambert(0xe8b923), restroom: lambert(0xf2f2ee),
     clad: new THREE.MeshLambertMaterial({ map: woodCladTex() }), brick: new THREE.MeshLambertMaterial({ map: brickTex() }),
     totem: new THREE.MeshLambertMaterial({ map: totemTex() }), clock: new THREE.MeshLambertMaterial({ map: clockTex() }),
     rail: new THREE.MeshLambertMaterial({ map: railTex(), transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
@@ -170,13 +171,13 @@ export function buildPraca(ctx) {
     const x0 = 1, x1 = 11, z0 = eN + 3.5, z1 = z0 + 6.5, y = Y((x0 + x1) / 2, (z0 + z1) / 2), W = x1 - x0, D = z1 - z0, mx = (x0 + x1) / 2;
     k.box(W, 3.2, 0.25, M.white, mx, y, z1); k.box(0.25, 3.2, D, M.white, x0, y, (z0 + z1) / 2); k.box(0.25, 3.2, D, M.white, x1, y, (z0 + z1) / 2);
     k.box(W, 1.0, 0.5, M.brick, mx, y, z0 + 0.4);                                             // balcão de tijolo
-    for (const s of [-1, 1]) k.box(0.3, 3.2, 0.3, M.wood, mx + s * (W / 2 - 0.2), y, z0 + 0.1);
-    k.box(W + 0.6, 0.4, 0.3, M.wood, mx, y + 3.2, z0 + 0.05);
-    const sl = Math.hypot(W / 2 + 0.6, 2.2), sa = Math.atan2(2.2, W / 2 + 0.6);
-    for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(sl, 0.16, D + 1.4), M.roofTile, mx + s * (W / 4 + 0.15), y + 4.3, (z0 + z1) / 2, 0, 0, -s * sa);
-    const tri = new THREE.BufferGeometry();
-    tri.setAttribute('position', new THREE.Float32BufferAttribute([-W / 2, 0, 0, W / 2, 0, 0, 0, 2.2, 0], 3)); tri.computeVertexNormals();
-    k.add(tri, M.wood, mx, y + 3.3, z0 - 0.1, PI); k.add(tri, M.white, mx, y + 3.3, z1);
+    // pilares de madeira clara na frente (fotos: R. Osvaldo Cruz 561) e telhado de uma água revestido de madeira
+    for (let i = 0; i <= 4; i++) k.box(0.3, 3.4, 0.3, M.lightWood, x0 + 0.2 + i * (W - 0.4) / 4, y, z0 + 0.1);
+    k.box(W + 0.6, 0.35, 0.3, M.lightWood, mx, y + 3.3, z0 + 0.05);
+    const rise = 1.6, sl = Math.hypot(D + 1.6, rise), sa = Math.atan2(rise, D + 1.6);
+    k.add(new THREE.BoxGeometry(W + 1.2, 0.18, sl), M.lightWood, mx, y + 3.6 + rise / 2, (z0 + z1) / 2 - 0.3, 0, -sa);
+    k.add(new THREE.BoxGeometry(W + 1.3, 0.55, 0.12), M.lightWood, mx, y + 3.75 + rise, z0 - 1.05);   // testeira alta na frente
+    k.box(W, rise, 0.25, M.white, mx, y + 3.2, z1);
     // frutas e verduras em caixotes sobre o balcão
     const fr = [M.fruitR, M.fruitG, M.fruitO, M.fruitY];
     for (let i = 0; i < 8; i++) { const fx = x0 + 0.8 + i * (W - 1.6) / 7; k.box(0.9, 0.22, 0.45, M.wood, fx, y + 1.0, z0 + 0.4); for (let j = 0; j < 5; j++) k.add(new THREE.SphereGeometry(0.09, 5, 4), fr[(i + j) % 4], fx - 0.32 + j * 0.16, y + 1.3, z0 + 0.4 + ((j % 2) - 0.5) * 0.15); }
@@ -260,6 +261,43 @@ export function buildPraca(ctx) {
       for (let i = 0; i < 9; i++) { const a = i / 9 * PI * 2; k.add(new THREE.IcosahedronGeometry(0.45, 0), i % 2 ? M.shrub2 : M.pinkFlower, fx + Math.cos(a) * 0.9, fy + 0.7, fz + Math.sin(a) * 0.9); }
       k.add(new THREE.IcosahedronGeometry(0.7, 0), M.shrub, fx, fy + 0.9, fz);
       colliders.push({ circle: [fx, fz, 1.6] }); occupy(fx - 1.7, fz - 1.7, fx + 1.7, fz + 1.7);
+    }
+  }
+
+  /* ---------- banheiro público (lado da Gen. Ernesto Dorneles): branco, beiral de madeira, janelinhas altas ---------- */
+  {
+    const bx = X1 - 7, bz = cz + 4;
+    if (inside(bx, bz) && !occupied(bx, bz, 3) && !nearStream(bx, bz, 5)) {
+      const y = Y(bx, bz), W = 7, D = 5;
+      k.box(W, 3, D, M.restroom, bx, y, bz);
+      for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(W + 1.4, 0.15, D / 2 + 1), M.lightWood, bx, y + 3.35, bz + s * (D / 4 + 0.3), 0, s * 0.22);
+      for (let i = 0; i < 3; i++) k.add(new THREE.BoxGeometry(1, 0.45, 0.05), M.lightWood, bx - 2 + i * 1.6, y + 2.3, bz - D / 2 - 0.03);
+      k.add(new THREE.BoxGeometry(0.9, 2.1, 0.05), M.lightWood, bx + 2.6, y + 1.05, bz - D / 2 - 0.03);
+      rectCol(bx - W / 2, bz - D / 2, bx + W / 2, bz + D / 2); occupy(bx - W / 2 - 1, bz - D / 2 - 1, bx + W / 2 + 1, bz + D / 2 + 1);
+    }
+  }
+  /* ---------- arroio: pedras grandes na margem e cerca de ferro baixa (fotos: Gen. Ernesto Dorneles 480) ---------- */
+  {
+    let sd = 5;
+    for (const [a, b] of stream) {
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L;
+      for (const side of [-1, 1]) for (let t = 1; t < L; t += 2.2) {
+        const x = a[0] + ux * t - uz * side * 3.3, z = a[1] + uz * t + ux * side * 3.3; if (!inside(x, z)) continue;
+        sd = (sd * 16807) % 2147483647; const r = sd / 2147483647;
+        if (r < 0.45) k.add(new THREE.DodecahedronGeometry(0.45 + r * 0.5, 0), M.rock, x, Y(x, z) + 0.25, z, r * 6, r * 3, 0, 1.3, 0.8, 1.1);
+        if (Math.round(t / 2.2) % 1 === 0) k.add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 4), M.black, x - uz * side * 0.6, Y(x, z) + 0.5, z + ux * side * 0.6);
+      }
+      for (const side of [-1, 1]) { const mx = (a[0] + b[0]) / 2 - uz * side * 3.9, mz = (a[1] + b[1]) / 2 + ux * side * 3.9; if (inside(mx, mz)) for (const hy of [0.45, 0.95]) k.add(new THREE.BoxGeometry(L, 0.04, 0.04), M.black, mx, Y(mx, mz) + hy, mz, Math.atan2(-uz, ux)); }
+    }
+  }
+  /* ---------- meio-fio pintado de amarelo em volta da praça ---------- */
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 1) continue;
+    const n = Math.ceil(L / 4);
+    for (let j = 0; j < n; j++) {
+      const t = (j + 0.5) / n, x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t;
+      if (nearStream(x, z, 3)) continue;
+      k.add(new THREE.BoxGeometry(L / n + 0.05, 0.2, 0.16), M.yellowCurb, x, Y(x, z) + 0.06, z, Math.atan2(-(b[1] - a[1]), b[0] - a[0]));
     }
   }
 

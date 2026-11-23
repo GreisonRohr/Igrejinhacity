@@ -54,7 +54,7 @@ Formato: `[ ]` a fazer · `[~]` em andamento · `[x]` feito. ID do roadmap entre
 ## Pendências que dependem do diretor
 - [ ] Confirmar: sem crime/violência (GAME_BIBLE)
 - [ ] Fotos: Igreja atual, Prefeitura, fábricas, Morro da Cruz, Alto da Pedra, Ponte do Centro
-- [ ] Localização: arcos de guirlanda, Farmácias São João, Praça do XV
+- [ ] Localização: arcos de guirlanda, Praça do XV (Farmácias São João: esquina Gen. Ernesto Dorneles × João Corrêa ✓)
 - [ ] Confirmar papéis dos pavilhões da Oktoberfest e posição de Biergarten/Spielplatz
 - [ ] Liberar `pixabay.com` na rede (áudio, Ciclo 6)
-- [ ] Autorização da Prefeitura para uso dos dados do GEO Igrejinha (publicação)
+- [x] Uso dos dados do GEO Igrejinha autorizado pelo diretor (23/11; página de downloads da Prefeitura)
