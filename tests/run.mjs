@@ -18,7 +18,7 @@ const PORT = 5179, BASE_URL = `http://localhost:${PORT}/`;
 const filter = process.argv[2] || '';
 
 // testa o build de produção (o que o jogador recebe), não o servidor de desenvolvimento
-if (!process.env.SKIP_BUILD) require('child_process').execSync('npx vite build --logLevel error', { cwd: ROOT, stdio: 'inherit' });
+if (!process.env.SKIP_BUILD) require('child_process').execSync('npx vite build --logLevel error && node scripts/pack-models.mjs', { cwd: ROOT, stdio: 'inherit' });   // mesmo build publicado
 const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { cwd: ROOT, stdio: 'ignore' });
 const stop = () => { try { server.kill(); } catch { /* já encerrado */ } };
 process.on('exit', stop);
