@@ -394,8 +394,8 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
   buildPontos(terrain, root, colliders, updaters, world);
   buildPontosTur(P.tur, terrain, root, colliders, updaters);
   if (city) buildCulverts(city, terrain, root, colliders);
-  // junta as peças estáticas por material e região de 250 m; regiões distantes somem
-  const cells = mergeStatic(root, 500);
+  // junta as peças estáticas por material e região de 1 km (menos malhas); regiões distantes somem
+  const cells = mergeStatic(root, 1000);
 
   return {
     colliders, root, waldir: waldirNpc, cells, seats, footbridges: praca.footbridges || [], inPraca: (x, z) => (P.praca.poly && inPoly(x, z, P.praca.poly)) || (P.praca.erni && inPoly(x, z, P.praca.erni)), pipoca: praca.pipoca, parking: praca.parking || [], trees: praca.trees || [],

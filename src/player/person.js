@@ -80,7 +80,9 @@ export function makePerson(opts = {}) {
     hair: mat(o.hair), shoes: mat(o.shoes), sole: mat(o.sole ?? 0x3a3a3a), white: mat(0xf4f1ec, undefined, 0.25), iris: mat(o.eyes, undefined, 0.2), belt: mat(0x3b2a1e), buckle: mat(0xc9b37a),
   };
   const add = (parent, gg, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
-    const mesh = new THREE.Mesh(gg, m); mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); mesh.castShadow = true; parent.add(mesh); return mesh;
+    const mesh = new THREE.Mesh(gg, m); mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz);
+    mesh.castShadow = gg.attributes.position.count >= 100;   // só as peças grandes fazem sombra (olhos, botões… não: cada uma é um desenho a mais)
+    parent.add(mesh); return mesh;
   };
   const b = o.build;
   const root = new THREE.Group();

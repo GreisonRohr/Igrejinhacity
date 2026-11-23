@@ -5,7 +5,7 @@ import { GeoBuilder, litMaterial } from './geo-builder.js';
 import { editHeights } from './terrain.js';
 import { freeAfterUpload } from './merge.js';
 
-const CHUNK = 600;
+const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const segDist = (px, pz, ax, az, bx, bz) => {
   const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz;
@@ -117,10 +117,13 @@ export class City {
     this.waterMat = new THREE.MeshPhongMaterial({ vertexColors: true, color: 0x3f7fb0, specular: 0x9fc6e8, shininess: 60, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
   }
 
-  chunk(x, z) {
-    const k = Math.floor(x / CHUNK) + ',' + Math.floor(z / CHUNK);
+  /** Região de 600 m. Prédios longe do centro (far) vão para regiões de 1,5 km: menos malhas (chamadas de desenho)
+   *  onde não há sombra nem detalhe de perto. */
+  chunk(x, z, far = false) {
+    const S = far && Math.hypot(x, z) > FAR_R ? FAR_CHUNK : CHUNK;
+    const k = (S === CHUNK ? '' : 'F') + Math.floor(x / S) + ',' + Math.floor(z / S);
     let c = this.chunks.get(k);
-    if (!c) this.chunks.set(k, c = { walls: new GeoBuilder(), roofs: new GeoBuilder(), roads: new GeoBuilder(), cobble: new GeoBuilder(), walk: new GeoBuilder(), marks: new GeoBuilder(), bridge: new GeoBuilder(), cx: (Math.floor(x / CHUNK) + 0.5) * CHUNK, cz: (Math.floor(z / CHUNK) + 0.5) * CHUNK, meshes: [] });
+    if (!c) this.chunks.set(k, c = { walls: new GeoBuilder(), roofs: new GeoBuilder(), roads: new GeoBuilder(), cobble: new GeoBuilder(), walk: new GeoBuilder(), marks: new GeoBuilder(), bridge: new GeoBuilder(), cx: (Math.floor(x / S) + 0.5) * S, cz: (Math.floor(z / S) + 0.5) * S, size: S, meshes: [] });
     return c;
   }
 
@@ -596,7 +599,7 @@ export class City {
     cx /= p.length; cz /= p.length;
     const floor = ymax + 0.15, top = floor + h, base = ymin - 0.6;
     this._top = top + (roof === 'gable' && rect ? rect.b * 0.75 : roof === 'hip' && rect ? rect.b * 0.55 : 0.6);
-    const ch = this.chunk(cx, cz);
+    const ch = this.chunk(cx, cz, true);
     const wall = kind === 'i' ? pick(IND_WALLS) : kind === 'c' ? pick(COM_WALLS) : pick(WALLS);
     const lit = kind === 'a' ? 0 : rand() < (kind === 'i' ? 0.15 : 0.6) ? 1 : 0;
     const floors = Math.max(1, Math.round(h / 3.1));
@@ -681,7 +684,7 @@ export class City {
   /** Mostra/esconde regiões pela distância da câmera. */
   update(px, pz) {
     for (const c of this.chunks.values()) {
-      const d = Math.max(0, Math.hypot(px - c.cx, pz - c.cz) - CHUNK * 0.7);
+      const d = Math.max(0, Math.hypot(px - c.cx, pz - c.cz) - c.size * 0.7);
       for (const m of c.meshes) {
         const k = m.userData.kind;
         m.visible = d < (k === 'marks' || k === 'walk' ? this.detailDist : k === 'roads' || k === 'cobble' ? this.roadDist : this.buildDist);

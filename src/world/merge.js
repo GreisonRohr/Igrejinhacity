@@ -45,7 +45,9 @@ export function mergeStatic(root, cell = 250) {
     g.computeBoundingSphere();
     freeAfterUpload(g);
     const m = new THREE.Mesh(g, b.mat);
-    m.castShadow = b.shadow && !b.mat.transparent; m.receiveShadow = true; m.matrixAutoUpdate = false;
+    // sombra só quando a peça tem volume: placas e plaquinhas (≤ 36 vértices, até uma caixa) não fazem sombra visível
+    // e cada malha com sombra é desenhada de novo no mapa de sombras
+    m.castShadow = b.shadow && !b.mat.transparent && g.attributes.position.count > 36; m.receiveShadow = true; m.matrixAutoUpdate = false;
     if (b.mat.transparent) m.renderOrder = 2;
     root.add(m);
     const ck = b.cx + ',' + b.cz; let c = cells.get(ck); if (!c) cells.set(ck, c = { cx: b.cx, cz: b.cz, meshes: [] });

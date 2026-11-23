@@ -2,6 +2,13 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Desempenho: −95 chamadas de desenho na praça (744 → 649)
+- Sombras só onde aparecem: árvores e carros estacionados fazem sombra só nas células junto ao jogador; peças pequenas
+  dos pontos (placas, plaquinhas) e dos personagens montados por peças (olhos, botões) não fazem mais sombra. O mapa de
+  sombras caiu de 161 para ~90 desenhos. Sombras perto do jogador iguais.
+- Prédios a mais de 1,5 km do centro em regiões de 1,5 km (eram 600 m); pontos marcantes juntados por região de 1 km.
+- Medido com `?debug`/teste de orçamento: heap 148 → 141 MB, triângulos 2.370k → 2.341k.
+
 ## 2026-11-23 — Site de turismo da Prefeitura (igrejinha.tur.br)
 - Mapa interativo do site: 34 pontos (atrativos, gastronomia, hospedagem, compras, eventos) com nome e posição oficiais
   no minimapa e em placas (`scripts/fetch-turismo.mjs` → `public/data/turismo.json`).

@@ -104,7 +104,7 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
     if (!list.length) return;
     const im = new THREE.InstancedMesh(geo, mat, list.length);
     list.forEach((o, i) => { place(d, o); d.updateMatrix(); im.setMatrixAt(i, d.matrix); if (color) im.setColorAt(i, col.set(color(o))); if (o.far) o.far.push([im, i]); });
-    im.computeBoundingSphere(); im.castShadow = shadow; im.receiveShadow = true;
+    im.computeBoundingSphere(); im.castShadow = shadow; im.receiveShadow = true; im.userData.shadow = shadow;
     im.userData.kind = geo === body || geo === glass || geo === wheels ? 'car' : 'tree';
     group.add(im); cell.meshes.push(im);
   };
@@ -129,6 +129,6 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
   return {
     group, trees, counts: { arvores: trees.length, carros: cars.length, celulas: cells.size },
     // árvores até ~600 m e carros até ~450 m da câmera (as árvores reais são muitas e concentradas no centro)
-    update(px, pz) { for (const c of cells.values()) { const d = Math.hypot(px - c.cx, pz - c.cz) - CELL * 0.7; for (const m of c.meshes) m.visible = d < (m.userData.kind === 'car' ? Math.min(dist, 450) : Math.min(dist, 600)); } },
+    update(px, pz) { for (const c of cells.values()) { const d = Math.hypot(px - c.cx, pz - c.cz) - CELL * 0.7; for (const m of c.meshes) { m.visible = d < (m.userData.kind === 'car' ? Math.min(dist, 450) : Math.min(dist, 600)); m.castShadow = m.userData.shadow !== false && d < 90; } } },   // sombra só nas células junto ao jogador (a sombra cobre ~60 m)
   };
 }
