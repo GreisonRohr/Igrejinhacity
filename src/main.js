@@ -262,7 +262,69 @@ interact.add((px, pz) => {
   return { dist: Math.hypot(a.x - px, a.z - pz), label: 'E · conversar', touchLabel: 'Toque em FALAR para conversar', button: 'Falar',
     run() { toast('', '“' + peds.talk(a) + '”', 5); } };
 });
-input.on('act', () => { if (!running) return; const c = interact.best(player.x, player.z); if (c) c.run(); });
+/* ---------- Uber: ponto na praça e chamada em qualquer lugar (U / botão) para visitar os pontos marcantes ---------- */
+const uberSpot = landmarks.pipoca ? [landmarks.pipoca.cart[0] + 1.5, landmarks.pipoca.cart[1] + 5] : [byId.praca.x - 30, byId.praca.z + 10];
+function freeSpotNear(x, z) {
+  for (let k = 0; k < 600; k++) {
+    const a = k * 0.7, r = 4 + k * 0.35, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
+    if (terrain.inside(px, pz, 10) && !spatial.blocked(px, pz, 1.2)) return [px, pz];
+  }
+  return [x, z];
+}
+// placa de Uber (poste preto) — uma na praça e uma em cada ponto marcante, onde o carro deixa e busca
+const uberTex = (() => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 160; const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, 256, 160); x.fillStyle = '#fff'; x.font = 'bold 64px system-ui'; x.textAlign = 'center'; x.fillText('Uber', 128, 82); x.font = '22px system-ui'; x.fillText('ponto de embarque', 128, 126);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const uberPoleGeo = new THREE.CylinderGeometry(0.05, 0.06, 2.8, 8), uberPoleMat = new THREE.MeshLambertMaterial({ color: 0x2b2b2b });
+const uberSignGeo = new THREE.PlaneGeometry(1.1, 0.7), uberSignMat = new THREE.MeshBasicMaterial({ map: uberTex });
+const uberSigns = [];
+function uberSign(ux, uz, ry) { uberSigns.push([ux, player.groundAt(ux, uz, terrain.heightAt(ux, uz)), uz, ry]); spatial.addCircle(ux, uz, 0.1); }
+const uberDests = [{ id: 'praca', nome: 'Praça Dona Luísa', x: uberSpot[0], z: uberSpot[1], spot: uberSpot }];
+for (const l of LANDMARKS) if (l.id !== 'praca') uberDests.push({ ...l, spot: freeSpotNear(l.x, l.z) });
+for (const d of uberDests) uberSign(d.spot[0], d.spot[1], Math.atan2(d.x - d.spot[0], d.z - d.spot[1]) || Math.PI / 4);
+{ // todas as placas em 3 malhas instanciadas (poste, frente, verso)
+  const poles = new THREE.InstancedMesh(uberPoleGeo, uberPoleMat, uberSigns.length), fr = new THREE.InstancedMesh(uberSignGeo, uberSignMat, uberSigns.length * 2), o = new THREE.Object3D();
+  uberSigns.forEach(([x, y, z, ry], i) => {
+    o.position.set(x, y + 1.4, z); o.rotation.set(0, ry, 0); o.updateMatrix(); poles.setMatrixAt(i, o.matrix);
+    for (const k of [0, 1]) { o.position.set(x, y + 2.5, z); o.rotation.set(0, ry + k * Math.PI, 0); o.updateMatrix(); fr.setMatrixAt(i * 2 + k, o.matrix); }
+  });
+  poles.castShadow = true; for (const m of [poles, fr]) { m.computeBoundingSphere(); m.frustumCulled = false; scene.add(m); }
+}
+function openUber() {
+  if (!running) return;
+  const list = $('uberList'); list.textContent = '';
+  for (const d of uberDests) {
+    const b = document.createElement('button'), km = Math.hypot(d.x - player.x, d.z - player.z) / 1000;
+    b.innerHTML = `${d.nome}<small>${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'} · R$ ${Math.max(7, 5 + km * 2.4).toFixed(2).replace('.', ',')}</small>`;
+    b.onclick = () => uberTo(d);
+    list.appendChild(b);
+  }
+  $('uber').hidden = false;
+}
+$('uberClose').onclick = () => { $('uber').hidden = true; };
+function uberTo(d) {
+  $('uber').hidden = true; $('fade').classList.add('on');
+  setTimeout(() => {
+    // desce ao lado da placa, de frente para o ponto
+    const a = Math.atan2(d.x - d.spot[0], d.z - d.spot[1]), x0 = d.spot[0] + Math.sin(a) * 1.6, z0 = d.spot[1] + Math.cos(a) * 1.6;
+    let x = x0, z = z0;
+    for (let k = 0; k < 16 && spatial.blocked(x, z, 0.5); k++) { const b = a + k * 0.4, r = 1.6 + (k >> 3) * 0.8; x = d.spot[0] + Math.sin(b) * r; z = d.spot[1] + Math.cos(b) * r; }   // em volta da placa
+    player.x = player.prev.x = x; player.z = player.prev.z = z;
+    player.surf = player.prev.y = player.groundAt(x, z, terrain.heightAt(x, z)); player.speed = 0;
+    cam.yaw = a; cam.first = true;
+    peds.prefill(x, z);
+    $('fade').classList.remove('on');
+    toast('Uber', `: “Chegamos: ${d.nome}. Bah, valeu pela corrida, tchê!” (a placa do Uber aqui do lado leva de volta)`, 5);
+  }, 650);
+}
+input.on('uber', openUber);
+interact.add((px, pz) => {
+  let dd = Infinity; for (const d of uberDests) dd = Math.min(dd, Math.hypot(px - d.spot[0], pz - d.spot[1]));
+  return dd < 3.5 ? { dist: dd - 0.3, label: 'E · chamar Uber', touchLabel: 'Toque em UBER para escolher o destino', button: 'Uber', run: openUber } : null;
+});
+input.on('act', () => { if (!running) return; const c = interact.best(player.x, player.z); if (c) c.run(); else openUber(); });   // longe de tudo: chama o Uber
 
 /* ---------- onde estou: rua, número e bairro (cadastro e bairros do GEO Igrejinha) ---------- */
 const addrGrid = new Map();
@@ -338,7 +400,7 @@ function frame(now) {
     const it = interact.best(player.x, player.z);
     $('prompt').style.display = it ? 'block' : 'none';
     if (it) $('prompt').textContent = isTouch ? it.touchLabel : it.label;
-    $('bAct').textContent = it ? it.button : 'Carro';
+    $('bAct').textContent = it ? it.button : 'Uber';
     minimap.draw(player.x, player.z, cam.yaw, player.ang, places);
     // ponto mais próximo
     let near = null, nd = 1e9;

@@ -2,6 +2,10 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Uber
+- Ponto de Uber na praça e uma placa em cada ponto marcante; de qualquer lugar, tecla U ou botão "Uber" (no lugar do
+  "Carro", que não fazia nada — B-001) abre a lista com distância e preço; a viagem deixa ao lado da placa do destino.
+
 ## 2026-11-23 — Cadastro e zoneamento do GEO Igrejinha
 - Pavimentos reais: área construída das unidades do cadastro imobiliário ÷ área do térreo (unidades agrupadas por
   edifício/endereço; condomínios de vários blocos divididos). 84 prédios com 5+ andares, 27 com 10+.

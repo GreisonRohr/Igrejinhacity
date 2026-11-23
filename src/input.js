@@ -13,7 +13,7 @@ export class Input {
     addEventListener('keydown', e => {
       if (e.repeat) return;
       this.keys[e.code] = true;
-      const h = { KeyE: 'act', KeyF: 'fly', KeyM: 'map', Space: 'jump' }[e.code];
+      const h = { KeyE: 'act', KeyF: 'fly', KeyM: 'map', KeyU: 'uber', Space: 'jump' }[e.code];
       if (h) this.emit(h);
       if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
     });
