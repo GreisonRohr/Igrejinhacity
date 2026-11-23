@@ -2,7 +2,7 @@
 export const LANDMARKS = [
   { id: 'praca', icon: 'P', cor: '#3d8a2e', nome: 'Praça Dona Luísa', lat: -29.5730284, lon: -50.7919383 },
   { id: 'ruacoberta', icon: 'R', cor: '#5fa8d3', nome: 'Rua Coberta Ary Delmar Koppe', lat: -29.5726129, lon: -50.7920396 },
-  { id: 'igreja', icon: '✝', cor: '#ffffff', nome: 'Igreja do Relógio', lat: -29.5718543, lon: -50.7931363 },
+  { id: 'igreja', icon: '✝', cor: '#ffffff', nome: 'Igreja Gabriel (do Relógio)', lat: -29.5718543, lon: -50.7931363 },
   { id: 'oktober', icon: 'O', cor: '#1d4e9e', nome: 'Parque da Oktoberfest', lat: -29.5665774, lon: -50.7940274 },
   { id: 'waldir', icon: 'W', cor: '#d6322c', nome: 'Bar do Waldir', lat: -29.5723825, lon: -50.7879606 },
   { id: 'piccfab', icon: 'F', cor: '#7a5bd1', nome: 'Piccadilly (fábrica)', lat: -29.5723332, lon: -50.7916414 },

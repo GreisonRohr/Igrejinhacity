@@ -2,6 +2,15 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Pontos montados a partir de fotos livres (Wikimedia Commons)
+- Igreja Gabriel (IECLB, "do Relógio"): cor creme e ocre das fotos, portas e janelas em arco pleno, medalhão "1900",
+  agulha octogonal.
+- Cascata da Solitária: paredão de arenito avermelhado em ferradura, poço e queda d'água animada.
+- Monte da Fé: cruz branca de 35 m no topo (iluminada à noite), deque do mirante voltado para a cidade e café.
+- Edifício Heidelberg: torre de 11 andares em estilo enxaimel (branco com madeiramento escuro, telhado íngreme com
+  torreões e mansardas), no lugar do prédio genérico.
+- Fotos de referência listadas em docs/referencias.md; ajuste fino depois, com as fotos do diretor.
+
 ## 2026-11-23 — Uber
 - Ponto de Uber na praça e uma placa em cada ponto marcante; de qualquer lugar, tecla U ou botão "Uber" (no lugar do
   "Carro", que não fazia nada — B-001) abre a lista com distância e preço; a viagem deixa ao lado da placa do destino.

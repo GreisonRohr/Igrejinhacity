@@ -37,3 +37,10 @@ farmácia de telhado de 4 águas ao sul da João Corrêa, lado oeste da Dorneles
 Street View abr/2026: Farmácias São João (SW da João Corrêa × Dorneles, platibanda com ameias), torre com o Mercadão dos
 Óculos (NE), Jair Cabeleireiro e Hashtag Presentes (Dorneles, ao norte), Agafarma (NW da Castelo Branco), rótula com
 canteiro, abrigo de telha com brasão e placas de direção na esquina SW da praça, bueiro do arroio sob a Dorneles (nº 496).
+
+## Wikimedia Commons (licenças livres, usadas só como referência visual)
+- "IECLB em Igrejinha 001.JPG" e "002.JPG" — Igreja Gabriel (IECLB).
+- "Cascata da Solitária - Igrejinha - RS - panoramio.jpg" (CC BY-SA 3.0).
+- "Edifício Heidelberg - Igrejinha" (CC BY-SA 4.0).
+- "Oktoberfest de Igrejinha-portico2007.jpg", "Vila Germânica III.jpg" — parque da Oktoberfest.
+- Monte da Fé: descrição pública (cruz de 35 m, mirante, café); sem foto livre encontrada, aguarda foto do diretor.

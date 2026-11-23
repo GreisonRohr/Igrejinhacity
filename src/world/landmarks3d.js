@@ -9,6 +9,7 @@ import { planOktober, buildOktober } from './oktoberfest.js';
 import { buildAvenida } from './avenida.js';
 import { buildPraca } from './praca.js';
 import { buildEntorno, entornoExclusions, buildCulverts } from './entorno.js';
+import { buildPontos, heidelbergExclusion } from './pontos.js';
 import { mergeStatic } from './merge.js';
 
 const PI = Math.PI;
@@ -119,7 +120,7 @@ export function placeLandmarks(world, terrain) {
   if (P.praca.poly) ex.push((x, z) => inPoly(x, z, P.praca.poly));
   if (P.praca.erni) ex.push((x, z) => inPoly(x, z, P.praca.erni));
   if (P.waldir.poly) { const wp = P.waldir.poly; ex.push((x, z) => inPoly(x, z, wp)); }
-  ex.push(...entornoExclusions());
+  ex.push(...entornoExclusions(), heidelbergExclusion);
   P.oktober = planOktober(world);
   if (P.oktober) ex.push(P.oktober.excl);
   P.exclusions = ex;
@@ -147,8 +148,9 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
     for (const [lx, lz] of [[x0, -W / 2], [x0, W / 2], [fx + L, -W / 2], [fx + L, W / 2]]) { const [wx, wz] = toWorld(o, lx, lz); const h = H(wx, wz); ymax = Math.max(ymax, h); ymin = Math.min(ymin, h); }
     const g = frame(o, ymax + 0.3);
     const k = new Kit();
-    const orange = lambert(0xf08a24), dark = lambert(0xc9621a), white = lambert(0xf4efe6), roof = lambert(0x6e3526),
-      glass = lambert(0x2b3542), wood = lambert(0x4a2e1c), stone = lambert(0xb7ab98), gold = lambert(0xd8b445);
+    // cores da foto (Wikimedia Commons, "IECLB em Igrejinha"): paredes rosa-creme, frisos mostarda, telha escura
+    const orange = lambert(0xf3dcc6), dark = lambert(0xd6a23f), white = lambert(0xf6efe2), roof = lambert(0x5a3226),
+      glass = lambert(0x3a3f44), wood = lambert(0x4a2e1c), stone = lambert(0xb7ab98), gold = lambert(0xd8b445);
     // embasamento
     k.box(L + 6, 0.3 + (ymax - ymin) + 0.6, W + 2, stone, fx + L / 2 - 1, -(ymax - ymin) - 0.9, 0);
     // nave
@@ -177,10 +179,13 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
     k.box(L + 0.3, 0.45, W + 0.5, dark, fx + L / 2, WH - 0.2, 0);
     // janelas ogivais nas laterais
     const lw = lancet(1.3, 3.4), lf = lancet(1.7, 3.9);
-    for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
-      const lx = fx + L / 5 * (i + 0.5) + 2.4;
-      k.add(lf, white, lx, 3.3, s * (W / 2 + 0.03), s > 0 ? 0 : PI);
-      k.add(lw, glass, lx, 3.5, s * (W / 2 + 0.06), s > 0 ? 0 : PI);
+    // laterais da nave: janelas em arco pleno com moldura mostarda (foto)
+    const aw = new THREE.ShapeGeometry((() => { const sh = new THREE.Shape(); sh.moveTo(-0.6, 0); sh.lineTo(0.6, 0); sh.lineTo(0.6, 1.8); sh.absarc(0, 1.8, 0.6, 0, PI, false); sh.lineTo(-0.6, 0); return sh; })(), 10);
+    const af = new THREE.ShapeGeometry((() => { const sh = new THREE.Shape(); sh.moveTo(-0.85, 0); sh.lineTo(0.85, 0); sh.lineTo(0.85, 1.8); sh.absarc(0, 1.8, 0.85, 0, PI, false); sh.lineTo(-0.85, 0); return sh; })(), 10);
+    for (const s of [-1, 1]) for (let i = 0; i < 6; i++) {
+      const lx = fx + 1.6 + i * (L - 3) / 5;
+      k.add(af, dark, lx, 3.4, s * (W / 2 + 0.03), s > 0 ? 0 : PI);
+      k.add(aw, glass, lx, 3.55, s * (W / 2 + 0.06), s > 0 ? 0 : PI);
     }
     // fachada: janelas ogivais ao lado da torre
     for (const s of [-1, 1]) {
@@ -198,8 +203,15 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
     for (const y of [T1, T2, T3]) k.box(TW + 0.5, 0.45, TW + 0.5, dark, tx, y - 0.2, 0);
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.box(0.45, T3, 0.45, dark, tx + sx * (TW / 2 - 0.05), 0, sz * (TW / 2 - 0.05));
     // porta ogival, rosácea e medalhão
-    k.add(lancet(2.3, 4.6), white, x0 - 0.04, 0, 0, -PI / 2);
-    k.add(lancet(1.9, 4.2), wood, x0 - 0.08, 0, 0, -PI / 2);
+    // porta em arco pleno com grade de ferro e o nome "IGREJA GABRIEL" na bandeira
+    const arch = (w, h) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, h - w / 2); sh.absarc(0, h - w / 2, w / 2, 0, PI, false); sh.lineTo(-w / 2, 0); return new THREE.ShapeGeometry(sh, 12); };
+    k.add(arch(2.5, 4.4), dark, x0 - 0.04, 0, 0, -PI / 2);
+    const gateT = tex(128, 256, (c, w, h) => { c.fillStyle = '#20242a'; c.fillRect(0, 0, w, h); c.strokeStyle = '#8a8f96'; c.lineWidth = 3; for (let x = 8; x < w; x += 14) { c.beginPath(); c.moveTo(x, 40); c.lineTo(x, h); c.stroke(); } for (let y = 70; y < h; y += 60) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); } c.fillStyle = '#f6efe2'; c.fillRect(6, 4, w - 12, 26); c.fillStyle = '#333'; c.font = 'bold 15px serif'; c.textAlign = 'center'; c.fillText('IGREJA GABRIEL', w / 2, 23); });
+    const gateG = arch(2.0, 4.0); { const uv = gateG.attributes.uv, pa = gateG.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, (pa.getX(i) + 1) / 2, pa.getY(i) / 4); }
+    const gateMesh = new THREE.Mesh(gateG, new THREE.MeshLambertMaterial({ map: gateT })); gateMesh.position.set(x0 - 0.08, 0, 0); gateMesh.rotation.y = -PI / 2; k.extra.push(gateMesh);
+    // medalhão "1900" na torre
+    const medT = tex(128, 128, c => { c.fillStyle = '#d6a23f'; c.beginPath(); c.arc(64, 64, 62, 0, 7); c.fill(); c.fillStyle = '#f3dcc6'; c.beginPath(); c.arc(64, 64, 50, 0, 7); c.fill(); c.fillStyle = '#8a6420'; c.font = 'bold 34px serif'; c.textAlign = 'center'; c.fillText('1900', 64, 76); });
+    const med = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), new THREE.MeshLambertMaterial({ map: medT })); med.position.set(x0 - 0.06 + 0, 12.6, 0); med.rotation.y = -PI / 2; k.extra.push(med);
     k.add(new THREE.CircleGeometry(1.05, 24), dark, x0 - 0.04, 9.2, 0, -PI / 2);
     k.add(new THREE.CircleGeometry(0.8, 24), glass, x0 - 0.08, 9.2, 0, -PI / 2);
     k.add(new THREE.CircleGeometry(0.75, 24), dark, x0 + 0.16, 16.8, 0, -PI / 2);
@@ -210,7 +222,7 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
       k.add(lou, glass, tx + ox * (TW / 2 - 0.05) + (oz ? off : 0), T1 + 1.3, oz * (TW / 2 - 0.05) + (ox ? off * -ox : 0), ry);
     }
     // agulha piramidal e cruz
-    k.add(new THREE.ConeGeometry(TW * 0.72, SP, 4), orange, tx, T3 + SP / 2, 0, PI / 4);
+    k.add(new THREE.ConeGeometry(TW * 0.62, SP * 1.15, 8), lambert(0xf0dcb4), tx, T3 + SP * 0.575, 0, PI / 8);   // coruchéu octogonal creme
     k.box(0.18, 2.2, 0.18, gold, tx, T3 + SP - 0.2, 0);
     k.box(0.18, 0.18, 1.1, gold, tx, T3 + SP + 1.2, 0);
     k.build(g);
@@ -233,7 +245,7 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
       cg.beginPath(); cg.arc(128, 128, 9, 0, 7); cg.fillStyle = '#222'; cg.fill(); ct.needsUpdate = true;
     };
     rectCollider(o, x0, fx + L + AR, -W / 2 - 0.3, W / 2 + 0.3);
-    const lab = makeLabel('Igreja do Relógio', 20); const [lx, lz] = toWorld(o, tx, 0);
+    const lab = makeLabel('Igreja Gabriel (IECLB)', 20); const [lx, lz] = toWorld(o, tx, 0);
     lab.position.set(lx, ymax + T3 + SP + 6, lz); lab.userData.maxDist = 2500; root.add(lab);
     return { update(hours, night) { const h = Math.floor(hours), mi = Math.floor((hours - h) * 60); if (mi !== last) { last = mi; draw(h, mi); } cmat.emissiveIntensity = night * 0.8; } };
   }
@@ -377,6 +389,7 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
   buildOktober(P.oktober, world, terrain, root, colliders, updaters);
   if (city) colliders.push(...buildAvenida(world, terrain, city, root).colliders);
   buildEntorno(terrain, root, colliders);
+  buildPontos(terrain, root, colliders, updaters);
   if (city) buildCulverts(city, terrain, root, colliders);
   // junta as peças estáticas por material e região de 250 m; regiões distantes somem
   const cells = mergeStatic(root, 500);
