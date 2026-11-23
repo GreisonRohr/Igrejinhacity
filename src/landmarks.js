@@ -13,12 +13,14 @@ export const LANDMARKS = [
   { id: 'avenida', icon: 'A', cor: '#f4b41a', nome: 'Av. Pres. Castelo Branco', lat: -29.5769738, lon: -50.7935843 },
   { id: 'ponte', icon: '=', cor: '#9a9a92', nome: 'Ponte do Centro', lat: -29.5699278, lon: -50.7930803 },
   { id: 'passarela', icon: '=', cor: '#9a9a92', nome: 'Passarela do Paranhana', lat: -29.5868318, lon: -50.8118363 },
-  { id: 'cruz', icon: '✝', cor: '#ffffff', nome: 'Monte da Fé (Morro da Cruz)', lat: -29.5398227, lon: -50.8366944 },
+  { id: 'cruz', icon: '✝', cor: '#ffffff', nome: 'Monte da Fé (Morro da Cruz)', lat: -29.5371338, lon: -50.8294916 },   // igrejinha.tur.br
   { id: 'cascata', icon: '≋', cor: '#4fb6e0', nome: 'Cascata da Solitária', lat: -29.557934, lon: -50.842511 },
   { id: 'viaduto', icon: '=', cor: '#9a9a92', nome: 'Viaduto (ERS-115)', lat: -29.574674, lon: -50.784972 },
   { id: 'paludo', icon: 'L', cor: '#d6322c', nome: 'Paludo', lat: -29.570062, lon: -50.792077 },
   { id: 'suci', icon: 'S', cor: '#1d4e9e', nome: 'SUCI', lat: -29.572130, lon: -50.794145 },
-  { id: 'asadelta', icon: '▲', cor: '#ff7a1a', nome: 'Morro da Asa Delta', lat: -29.5281898, lon: -50.8420120 },
+  { id: 'asadelta', icon: '▲', cor: '#ff7a1a', nome: 'Morro Alto da Pedra (voo livre)', lat: -29.5284708, lon: -50.8408725 },
+  { id: 'casapedra', icon: 'H', cor: '#9a8f80', nome: 'Casa de Pedra (Stein Haus)', lat: -29.5982670, lon: -50.8145238 },
+  { id: 'kinder', icon: 'K', cor: '#d6322c', nome: 'Kinder Park (Alles Blau)', lat: -29.6042518, lon: -50.8016180 },
 ];
 
 import { toXZ } from './geo.js';
@@ -31,5 +33,5 @@ export const PLACE_STYLE = {
   farmacia: { icon: '+', cor: '#d6322c' }, saude: { icon: 'H', cor: '#d6322c' }, cascata: { icon: '≋', cor: '#4fb6e0' },
   social: { icon: 'S', cor: '#1d4e9e' }, loja: { icon: 'L', cor: '#8a5a32' },
   praca: { icon: 'P', cor: '#3d8a2e' }, bombeiros: { icon: 'B', cor: '#d6322c' }, ponte: { icon: '=', cor: '#9a9a92' },
-  mirante: { icon: '▲', cor: '#ff7a1a' }, turismo: { icon: '★', cor: '#f2c12e' }, patrimonio: { icon: 'H', cor: '#9a5a32' }, feira: { icon: 'F', cor: '#3d8a2e' }, ref: { icon: '•', cor: '#ffffff' }, localidade: { icon: '◆', cor: '#f4b41a' }, onibus: { icon: '▪', cor: '#f4b41a' },
+  mirante: { icon: '▲', cor: '#ff7a1a' }, turismo: { icon: '★', cor: '#f2c12e' }, gastro: { icon: 'R', cor: '#e2683c' }, hotel: { icon: 'h', cor: '#6a5acd' }, evento: { icon: '♪', cor: '#c2185b' }, patrimonio: { icon: 'H', cor: '#9a5a32' }, feira: { icon: 'F', cor: '#3d8a2e' }, ref: { icon: '•', cor: '#ffffff' }, localidade: { icon: '◆', cor: '#f4b41a' }, onibus: { icon: '▪', cor: '#f4b41a' },
 };

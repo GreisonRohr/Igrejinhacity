@@ -2,6 +2,21 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Site de turismo da Prefeitura (igrejinha.tur.br)
+- Mapa interativo do site: 34 pontos (atrativos, gastronomia, hospedagem, compras, eventos) com nome e posição oficiais
+  no minimapa e em placas (`scripts/fetch-turismo.mjs` → `public/data/turismo.json`).
+- Monte da Fé no lugar oficial do site e refeito pelas fotos: cruz sobre o prédio branco do mirante, terraço e
+  escadaria com corrimão preto, letreiro colorido "MONTE DA FÉ".
+- Cascata da Solitária refeita pela foto do site: degraus largos de arenito com lâminas d'água, seixos e poço raso,
+  alinhada ao arroio do mapa.
+- Novos: Casa de Pedra (Stein Haus), Kinder Park (castelo do Alles Blau), Morro Alto da Pedra (balanço, rampa de voo
+  livre e biruta; antigo "Morro da Asa Delta").
+- Loja Piccadilly com painel vermelho e a McBenett em enxaimel com duas torres (foto Commons "Rs115-igrejinha.jpg").
+- Centro Administrativo Prefeito Lauri Auri Krause: 3 pavimentos com faixas de vidro, pórtico, nome e mastros.
+- Fábricas (Beira Rio, Usaflex, Piccadilly) com letreiro; pavilhões industriais com parede lisa e janelas altas no
+  lugar de fileiras de janelas de apartamento.
+- Correção: telhados de duas águas do Heidelberg, Casa de Pedra e McBenett com a inclinação certa.
+
 ## 2026-11-23 — Pontos montados a partir de fotos livres (Wikimedia Commons)
 - Igreja Gabriel (IECLB, "do Relógio"): cor creme e ocre das fotos, portas e janelas em arco pleno, medalhão "1900",
   agulha octogonal.

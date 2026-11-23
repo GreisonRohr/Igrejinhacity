@@ -604,7 +604,12 @@ export class City {
       const a = p[i], b = p[(i + 1) % p.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
       const out = [-(b[1] - a[1]), 0, b[0] - a[0]];   // polígono com área negativa → normal à esquerda é para fora
       const bays = Math.max(1, Math.round(len / (kind === 'i' ? 6 : 3.5)));
-      ch.walls.quad([a[0], floor, a[1]], [b[0], floor, b[1]], [b[0], top, b[1]], [a[0], top, a[1]], [[0, 0], [bays, 0], [bays, floors], [0, floors]], wall, lit, out);
+      if (kind === 'i' && h > 5) {
+        // pavilhão: parede lisa (faixa sem janela da textura) e uma fileira de janelas altas no topo
+        const ys = top - 2.4;
+        ch.walls.quad([a[0], floor, a[1]], [b[0], floor, b[1]], [b[0], ys, b[1]], [a[0], ys, a[1]], [[0, 0.08], [bays, 0.08], [bays, 0.24], [0, 0.24]], wall, 0, out);
+        ch.walls.quad([a[0], ys, a[1]], [b[0], ys, b[1]], [b[0], top, b[1]], [a[0], top, a[1]], [[0, 0.1], [bays, 0.1], [bays, 0.95], [0, 0.95]], wall, lit, out);
+      } else ch.walls.quad([a[0], floor, a[1]], [b[0], floor, b[1]], [b[0], top, b[1]], [a[0], top, a[1]], [[0, 0], [bays, 0], [bays, floors], [0, floors]], wall, lit, out);
       if (floor - base > 0.05) ch.walls.quad([a[0], base, a[1]], [b[0], base, b[1]], [b[0], floor, b[1]], [a[0], floor, a[1]], [[0, 0.02], [bays, 0.02], [bays, 0.05], [0, 0.05]], wall, 0, out);
     }
     if (roof === 'flat' || !rect) {

@@ -44,3 +44,10 @@ canteiro, abrigo de telha com brasão e placas de direção na esquina SW da pra
 - "Edifício Heidelberg - Igrejinha" (CC BY-SA 4.0).
 - "Oktoberfest de Igrejinha-portico2007.jpg", "Vila Germânica III.jpg" — parque da Oktoberfest.
 - Monte da Fé: descrição pública (cruz de 35 m, mirante, café); sem foto livre encontrada, aguarda foto do diretor.
+
+## Site de turismo da Prefeitura — igrejinha.tur.br (fotos usadas só como referência)
+- Mapa interativo (`/mapa/`): 44 pontos com coordenadas; os 34 dentro do relevo do jogo estão em `public/data/turismo.json`.
+- Atrações com fotos: Monte da Fé, Cascata da Solitária, Casa de Pedra (Stein Haus), Kinder Park e Igreja Mãe
+  Santíssima (Alles Blau), Morro Alto da Pedra, Morro do Xaxim, Cascata dos Italianos, Gruta N. Sra. do Equilíbrio,
+  Casa do Artesão/Feira ASSOAPE, pórtico do Parque de Eventos Almiro Grings.
+- Fora do relevo atual (não entram no jogo ainda): Morro do Xaxim, Cascata dos Italianos, Prommer Ecopark.

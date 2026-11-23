@@ -69,15 +69,19 @@ function toast(title, txt = '', sec = 4) {
 const BASE = import.meta.env.BASE_URL;
 const [terrain, world, navData, geoX] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json'), fetchPackedJSON(BASE + 'data/nav.data.json'),
   fetchPackedJSON(BASE + 'data/geoextra.data.json').catch(() => null)]);
+// pontos do mapa interativo do site de turismo (scripts/fetch-turismo.mjs)
+const turismo = await fetch(BASE + 'data/turismo.json').then(r => r.json()).catch(() => null);
 // dados do cadastro e zoneamento do GEO Igrejinha (scripts/build-geo-extra.mjs): pavimentos reais e zona industrial
 if (geoX) world.buildings.forEach((b, i) => {
   const fl = geoX.floors[i] || 0, area = b.rect ? b.rect[4] * b.rect[5] * 4 : 0;
   // prédios da Prefeitura já trazem pavimentos; o cadastro só sobe quando o prédio é grande (apartamentos/salas)
   const lv = b.src === 'pref' ? (fl > (b.lv || 1) && area > 120 ? fl : b.lv || 1) : fl || b.lv || 1;
-  if (lv !== b.lv) { b.lv = lv; b.h = lv * 3.0 + 0.4; if (lv >= 3 && b.kind === 'house') b.kind = 'commercial'; }
+  if (lv !== b.lv && b.kind === 'industrial' && area > 600) b.h = Math.max(b.h, Math.min(14, lv * 4)); // pavilhão: pé-direito alto, sem andares
+  else if (lv !== b.lv) { b.lv = lv; b.h = lv * 3.0 + 0.4; if (lv >= 3 && b.kind === 'house') b.kind = 'commercial'; }
   if (geoX.ind[i] && area > 300 && b.kind !== 'industrial') { b.kind = 'industrial'; b.h = Math.max(b.h, 8); }
 });
 if (geoX) for (const p of geoX.places) world.places.push(p);
+if (turismo) for (const p of turismo.places) world.places.push(p);
 const nav = new NavGraph(navData);                     // grafo de ruas e calçadas (src/nav/graph.js)
 // carregamento em etapas: a thread é liberada entre elas, a tela mostra o progresso e nunca congela
 const bar = $('loadbar'), barTxt = $('loadtxt');
