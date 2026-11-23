@@ -10,8 +10,14 @@ const PI = Math.PI;
 export const ENTORNO = {
   athos: { x: -84, z: -66, rot: Math.atan2(-0.12, 0.99), w: 26, d: 20 },
   caixa: { x: -80, z: -44, rot: Math.atan2(-0.12, 0.99), w: 16, d: 14 },
-  panvel: { x: 63, z: -59, rot: Math.PI, w: 14, d: 11 },
-  saojoao: { x: 52, z: 63, rot: Math.PI / 2, w: 16, d: 11 },
+  // SE da Osvaldo Cruz × Gen. Ernesto Dorneles; letreiro para o norte (+x local) e lateral na Dorneles (−z local)
+  panvel: { x: 61, z: -25, rot: Math.PI / 2, w: 24, d: 20 },
+  // SW da João Corrêa × Gen. Ernesto Dorneles (telhado de 4 águas na vista aérea); frente na Dorneles, lateral na João Corrêa
+  saojoao: { x: 14, z: 70, rot: 0, w: 26, d: 36 },
+  // NE da Osvaldo Cruz × Dorneles: sobrado de 3 andares com Levi, Casa de Carnes e Escola de Música (frente oeste)
+  levi: { x: 61, z: -60, rot: Math.PI, w: 17, d: 17 },
+  // R. Gen. Ernesto Dorneles 592: residencial de 10 andares, térreo com lojas (Sonia Moden Haus)
+  r592: { x: 62, z: -82, rot: Math.PI, w: 16, d: 22 },
 };
 /** Funções de exclusão (centro de prédio genérico dentro da área sai do mapa). */
 export function entornoExclusions() {
@@ -87,11 +93,66 @@ export function buildEntorno(terrain, root, colliders) {
     }
     k.build(g);
   }
+  /* ---------- sobrado da esquina: Levi, Casa de Carnes, Escola de Música ---------- */
+  {
+    const o = ENTORNO.levi, g = place(o), k = new Kit(), F = o.w / 2 + 0.05;
+    k.add(new THREE.BoxGeometry(o.w, 9.6, o.d), lambert(0xe9e7e1), 0, 4.8, 0);
+    k.add(new THREE.BoxGeometry(o.w + 0.2, 3.3, o.d + 0.2), lambert(0xb98a63), 0, 1.65, 0);       // térreo revestido
+    k.add(new THREE.BoxGeometry(o.w + 1.6, 0.25, o.d + 1.6), lambert(0x2f7a4a), 0, 3.4, 0);       // marquise verde
+    const tw = new THREE.MeshLambertMaterial({ map: windowsTex('#e9e7e1', '#3a4650', 4) }); tw.map.repeat.set(1, 2);
+    k.add(new THREE.PlaneGeometry(o.d - 1, 5.6), tw, F, 6.6, 0, PI / 2);
+    k.add(new THREE.PlaneGeometry(o.w - 1, 5.6), tw, 0, 6.6, -o.d / 2 - 0.05, PI);
+    const levi = sign(256, 96, '#4a2c22', (c, W, Hh) => { c.fillStyle = '#efe6d8'; c.font = 'italic 64px serif'; c.textAlign = 'center'; c.fillText('Levi', W / 2, 70); });
+    k.add(new THREE.PlaneGeometry(5, 1.9), new THREE.MeshLambertMaterial({ map: levi }), F + 0.03, 1.2, 2.5, PI / 2);
+    k.add(new THREE.BoxGeometry(1.6, 0.08, 6), lambert(0x6b5446), F + 0.8, 3.0, 2.5, 0, 0, -0.3);  // toldo marrom
+    const carnes = sign(256, 64, '#1d1d1d', (c, W, Hh) => { c.fillStyle = '#e8c23a'; c.font = 'bold 26px sans-serif'; c.textAlign = 'center'; c.fillText('CASA DE CARNES', W / 2, 40); });
+    k.add(new THREE.PlaneGeometry(4.5, 1.1), new THREE.MeshLambertMaterial({ map: carnes }), F + 0.03, 2.7, -4.5, PI / 2);
+    const esc = sign(512, 48, '#e9e7e1', (c, W, Hh) => { c.fillStyle = '#555'; c.font = '28px serif'; c.textAlign = 'center'; c.fillText('ESCOLA DE MÚSICA', W / 2, 34); });
+    k.add(new THREE.PlaneGeometry(8, 0.75), new THREE.MeshLambertMaterial({ map: esc }), F + 0.02, 9.1, 0, PI / 2);
+    k.build(g);
+  }
+  /* ---------- residencial 592: 10 andares, sacadas, térreo com lojas e grade verde ---------- */
+  {
+    const o = ENTORNO.r592, g = place(o), k = new Kit(), floors = 10, fh = 2.9, F = o.w / 2 + 0.05;
+    k.add(new THREE.BoxGeometry(o.w, floors * fh + 3.5, o.d), lambert(0xf0efea), 0, (floors * fh + 3.5) / 2, 0);
+    const tw = new THREE.MeshLambertMaterial({ map: windowsTex('#f0efea', '#5d6a72', 4) }); tw.map.repeat.set(1.5, floors);
+    k.add(new THREE.PlaneGeometry(o.d - 1, floors * fh), tw, F, 3.5 + floors * fh / 2, 0, PI / 2);
+    for (let i = 0; i < floors; i++) k.add(new THREE.BoxGeometry(1.1, 0.15, o.d * 0.45), lambert(0x6f7479), F + 0.55, 3.6 + i * fh, -o.d * 0.2);   // sacadas cinza
+    k.add(new THREE.BoxGeometry(0.15, 3.3, o.d), lambert(0x2f6e5e), F + 0.1, 1.65, 0);            // grade verde do térreo
+    const sm = sign(256, 64, '#4a3428', (c, W, Hh) => { c.fillStyle = '#f2e7d6'; c.font = 'italic 34px serif'; c.textAlign = 'center'; c.fillText('Sonia Moden Haus', W / 2, 44); });
+    k.add(new THREE.PlaneGeometry(5, 1.3), new THREE.MeshLambertMaterial({ map: sm }), F + 0.2, 3.0, 4, PI / 2);
+    k.build(g);
+  }
+  /* ---------- fachada da Piccadilly na Dorneles (cobre o galpão do GEO: faixas de janelas, base de tijolo, logo) ---------- */
+  {
+    const g = new THREE.Group(); root.add(g); const k = new Kit(), X = 42.12;
+    const band = new THREE.MeshLambertMaterial({ map: tex(256, 128, (c, W, Hh) => {
+      c.fillStyle = '#e6e1d4'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#d2bf7a'; c.fillRect(0, 22, W, 34); c.fillRect(0, 82, W, 34);
+      c.fillStyle = '#5c6670'; c.fillRect(70, 24, 60, 30); c.fillRect(190, 84, 50, 30);
+      for (let x = 70; x < 130; x += 5) { c.fillStyle = 'rgba(255,255,255,0.35)'; c.fillRect(x, 24, 2, 30); }
+      c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(0, 58, W, 4);
+    }, true) });
+    band.map.repeat.set(5, 1);
+    const L = 52, zc = -81, y = H(X, zc);
+    k.add(new THREE.PlaneGeometry(L, 7.5), band, X, y + 1.2 + 3.75, zc, PI / 2);
+    k.add(new THREE.PlaneGeometry(L, 1.2), new THREE.MeshLambertMaterial({ map: tex(64, 16, (c, W, Hh) => { c.fillStyle = '#c9b48c'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#b39a70'; for (let i = 0; i < 8; i++) c.fillRect(i * 8 + (i % 2) * 4, 0, 1, Hh); }, true) }), X, y + 0.6, zc, PI / 2);
+    const logo = tex(512, 96, (c, W, Hh) => { c.fillStyle = '#e6e1d4'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#6d6a66'; c.font = 'bold 54px serif'; c.textAlign = 'center'; c.fillText('PICCADILLY', W / 2, 56); c.font = '22px serif'; c.fillText('C O M P A N Y', W / 2, 86); });
+    k.add(new THREE.PlaneGeometry(7, 1.4), new THREE.MeshLambertMaterial({ map: logo }), X + 0.04, y + 6.2, -96, PI / 2);
+    k.add(new THREE.BoxGeometry(2.5, 0.25, 4.5), lambert(0x3a3d42), X + 1.2, y + 3.2, -96);      // marquise da entrada 577
+    k.add(new THREE.PlaneGeometry(2.2, 2.8), lambert(0x2c3238), X + 0.05, y + 1.4, -96, PI / 2);
+    // bloco de 4 andares mais ao norte (foto "Piccadilly Company 577")
+    k.add(new THREE.BoxGeometry(12, 14, 26), lambert(0xe4dfd2), X - 6, H(X - 6, -117) + 7, -117);
+    const b4 = band.clone(); b4.map = band.map.clone(); b4.map.repeat.set(2.5, 2); b4.map.needsUpdate = true;
+    k.add(new THREE.PlaneGeometry(26, 13), b4, X + 0.02, H(X, -117) + 7, -117, PI / 2);
+    k.build(g);
+    colliders.push({ p: [[X - 12, -130], [X, -130], [X, -104], [X - 12, -104]] });
+  }
   /* ---------- Farmácias São João: sobrado cinza-claro, sacada de ferro, floreiras ---------- */
   {
     const o = ENTORNO.saojoao, g = place(o), k = new Kit();
     k.add(new THREE.BoxGeometry(o.w, 7.4, o.d), lambert(0xd9dadb), 0, 3.7, 0);
     k.add(new THREE.BoxGeometry(o.w + 0.3, 0.5, o.d + 0.3), lambert(0xeeeeee), 0, 7.6, 0);
+    { const r = new THREE.ConeGeometry(1, 1, 4, 1).rotateY(PI / 4); r.scale(o.w * 0.75, 4, o.d * 0.75); k.add(r, lambert(0x6c7075), 0, 9.85, 0); }   // telhado de 4 águas
     k.add(new THREE.BoxGeometry(o.w + 0.2, 0.25, o.d + 0.2), lambert(0xffffff), 0, 3.6, 0);           // friso entre andares
     const sj = sign(256, 64, '#ffffff', (c, W, Hh) => { c.fillStyle = '#1f4fa0'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.fillText('Farmácias', W / 2, 30); c.fillStyle = '#2c8f3e'; c.fillText('São João', W / 2, 60); });
     const sm = new THREE.MeshLambertMaterial({ map: sj });

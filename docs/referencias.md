@@ -27,3 +27,8 @@ R. Gen. Ernesto Dorneles 450–546 (Panvel, banheiro da praça, arroio com pedra
 
 ## Imagem aérea
 GEO Igrejinha — "Imagem Aérea Igrejinha 2016" (Prefeitura de Igrejinha), via sites.google.com/view/geoigrejinha.
+
+## Esquina Osvaldo Cruz × Gen. Ernesto Dorneles (fotos do diretor, 23/11/2026)
+Street View abr/2026 + vista aérea: Panvel no canto SE; sobrado Levi/Casa de Carnes/Escola de Música no canto NE;
+residencial nº 592 (Sonia Moden Haus) ao norte dele; fachada da Piccadilly (nº 577) no lado oeste;
+farmácia de telhado de 4 águas ao sul da João Corrêa, lado oeste da Dorneles.
