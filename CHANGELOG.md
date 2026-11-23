@@ -2,6 +2,19 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Piloto de vegetação junto ao arroio (2ª rodada)
+- Copas (espécie nova `bigP` em trees.js, só nas árvores do piloto): 11 galhos e 300 cartões menores agrupados em
+  lóbulos nas pontas (silhueta recortada, vãos de céu); textura de ramos com folhas pequenas e pecíolos; verdes mais
+  claros; miolo da copa mais escuro e bordas mais claras; luz que atravessa as folhas; sombra recortada pelas folhas
+  (antes a sombra era o cartão inteiro, em blocos escuros).
+- Câmera dentro da vegetação: folhas, colmos e arbustos a menos de ~4 m da câmera somem aos poucos (pontilhado); de
+  fora a árvore fica igual e nunca some inteira.
+- Bambu: colmo de 4–6 cm, ramos curtos com cachos de folhas na metade de cima, touceiras com altura e abertura
+  diferentes, metade dos colmos.
+- Margem: a lajota termina numa linha paralela ao arroio com guia de concreto e faixa de terra (sem degraus de 2 m
+  sobre a grama); pedras com material PBR.
+- Desempenho: 692 chamadas de desenho (+2), 2.557 mil triângulos (−4 mil), heap igual.
+
 ## 2026-11-23 — Piloto de qualidade visual (margem do arroio junto à passarela, raio 24 m)
 - Vegetação nova (`src/world/foliage.js`, reutilizável): bambu com colmo curvo, nós e folhas em leque (touceira mais
   aberta), arbustos de folhas em planos cruzados com transparência e sombra recortada, tufos de grama; pedras

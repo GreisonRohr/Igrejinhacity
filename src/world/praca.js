@@ -477,16 +477,24 @@ export function buildPraca(ctx) {
 
   /* ---------- piso: lajotas em toda a praça, grama nos canteiros (grade drapeada no relevo) ---------- */
   {
+    const EDGE = 6.0, clipHalf = (poly, f) => { const out = []; for (let k = 0; k < poly.length; k++) { const a = poly[k], b = poly[(k + 1) % poly.length], fa = f(a), fb = f(b); if (fa >= 0) out.push(a); if ((fa >= 0) !== (fb >= 0)) { const t = fa / (fa - fb); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); } } return out; };
     const S = 2, pav = [], pavUV = [], grass = [], curb = [], pavP = [], pavPUV = [], grassPP = [], grassPUV = [], soil = [], soilUV = [], curbP = [], curbPUV = [];
     const pushQ = (arr, uv, a, b, c, d) => { arr.push(...a, ...b, ...c, ...a, ...c, ...d); if (uv) uv.push(a[0] / 4, a[2] / 4, b[0] / 4, b[2] / 4, c[0] / 4, c[2] / 4, a[0] / 4, a[2] / 4, c[0] / 4, c[2] / 4, d[0] / 4, d[2] / 4); };
-    const cell = (i, j) => { const x = X0 + (i + 0.5) * S, z = Z0 + (j + 0.5) * S; if (!inside(x, z) || nearStream(x, z, WALL + 0.6)) return 0; return inBed(x, z) ? 2 : 1; };
+    const cell = (i, j) => { const x = X0 + (i + 0.5) * S, z = Z0 + (j + 0.5) * S; if (!inside(x, z) || nearStream(x, z, inPil(x, z) ? EDGE - 1.42 : WALL + 0.6)) return 0; return inBed(x, z) ? 2 : 1; };
     const ni = Math.ceil((X1 - X0) / S), nj = Math.ceil((Z1 - Z0) / S);
     for (let i = 0; i < ni; i++) for (let j = 0; j < nj; j++) {
       const t = cell(i, j); if (!t) continue;
       const x0 = X0 + i * S, z0 = Z0 + j * S, x1 = x0 + S, z1 = z0 + S, lift = t === 2 ? 0.32 : 0.06;
       const P = (x, z) => [x, (nearStream(x, z, 9) ? Yb(x, z) : Y(x, z)) + lift, z];
       const pil = inPil(x0 + S / 2, z0 + S / 2);
-      if (t === 1) { if (pil) pushQ(pavP, pavPUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0)); else pushQ(pav, pavUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0)); }
+      if (t === 1 && pil) {
+        // piloto: a lajota termina numa linha reta paralela ao arroio (a 6 m do eixo), sem degraus de 2 m sobre a grama
+        let poly = [[x0, z0], [x0, z1], [x1, z1], [x1, z0]];
+        const sd = streamD(x0 + S / 2, z0 + S / 2);
+        if (sd && sd.d < EDGE + 3) { const nx = (x0 + S / 2 - sd.q[0]) / (sd.d || 1), nz = (z0 + S / 2 - sd.q[1]) / (sd.d || 1), f = q => (q[0] - sd.q[0]) * nx + (q[1] - sd.q[1]) * nz - EDGE; poly = clipHalf(poly, f); }
+        if (poly.length >= 3) for (let k = 1; k < poly.length - 1; k++) { const A = P(...poly[0]), B = P(...poly[k]), C = P(...poly[k + 1]); pavP.push(...A, ...B, ...C); pavPUV.push(A[0] / 4, A[2] / 4, B[0] / 4, B[2] / 4, C[0] / 4, C[2] / 4); }
+      }
+      else if (t === 1) pushQ(pav, pavUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
       else if (pil) {
         // canteiro do piloto: grama com textura; junto ao meio-fio, faixa de terra (25 cm) e tufos que quebram a linha reta
         pushQ(grassPP, grassPUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
@@ -513,6 +521,22 @@ export function buildPraca(ctx) {
     mk(pav, pavUV, new THREE.MeshLambertMaterial({ map: paverTex() }));
     mk(grass, null, M.grass);
     mk(curb, null, new THREE.MeshLambertMaterial({ color: 0xd8d4cc, side: THREE.DoubleSide }));
+    for (const [a, b] of stream) {
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.2) continue;
+      const ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, n = Math.ceil(L / 1.5);
+      for (let q = 0; q < n; q++) for (const sd of [-1, 1]) {
+        const t0 = q / n, t1 = (q + 1) / n, A = [a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0], B = [a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1];
+        const off = (p2, o) => [p2[0] - uz * sd * o, p2[1] + ux * sd * o], mid = off([(A[0] + B[0]) / 2, (A[1] + B[1]) / 2], EDGE);
+        if (!inPil(mid[0], mid[1]) || !inside(mid[0], mid[1])) continue;
+        if (footbridges.some(fb => Math.hypot(fb[0] - mid[0], fb[1] - mid[1]) < 2.6)) continue;         // cabeceira da passarela livre
+        const y = (p2) => Yb(p2[0], p2[1]);
+        const a0 = off(A, EDGE - 0.06), b0 = off(B, EDGE - 0.06), a1 = off(A, EDGE + 0.1), b1 = off(B, EDGE + 0.1);
+        pushQ(curbP, curbPUV, [a0[0], y(a0) + 0.1, a0[1]], [b0[0], y(b0) + 0.1, b0[1]], [b1[0], y(b1) + 0.1, b1[1]], [a1[0], y(a1) + 0.1, a1[1]]);   // topo da guia
+        pushQ(curbP, curbPUV, [a0[0], y(a0) - 0.02, a0[1]], [b0[0], y(b0) - 0.02, b0[1]], [b0[0], y(b0) + 0.1, b0[1]], [a0[0], y(a0) + 0.1, a0[1]]);  // face para a grama
+        const s0 = off(A, EDGE - 0.06), s1 = off(B, EDGE - 0.06), s2 = off(B, EDGE - 0.4), s3 = off(A, EDGE - 0.4);                                   // terra junto à guia
+        pushQ(soil, soilUV, [s0[0], y(s0) + 0.045, s0[1]], [s1[0], y(s1) + 0.045, s1[1]], [s2[0], y(s2) + 0.045, s2[1]], [s3[0], y(s3) + 0.045, s3[1]]);
+      }
+    }
     // piloto: lajota com relevo e rugosidade (PBR), grama, terra e meio-fio com textura
     const pp = paverPilot(); pp.normalMap.repeat.set(1, 1);
     mk(pavP, pavPUV, new THREE.MeshStandardMaterial({ map: pp.map, normalMap: pp.normalMap, normalScale: new THREE.Vector2(0.7, 0.7), roughness: 0.88, metalness: 0 }));
@@ -541,12 +565,13 @@ export function buildPraca(ctx) {
   const inst = (geo, mat, list, f, color) => { if (!list.length) return; const im = new THREE.InstancedMesh(geo, mat, list.length), d = new THREE.Object3D(), c = new THREE.Color(); list.forEach((t, i) => { f(d, t); d.updateMatrix(); im.setMatrixAt(i, d.matrix); if (color) im.setColorAt(i, c.setHex(color(t, i))); }); im.castShadow = true; im.receiveShadow = true; im.computeBoundingSphere(); g.add(im); };
   // árvores grandes e palmeiras vão para o sistema de árvores detalhadas (src/world/trees.js)
   const treeList = [];
-  trees.forEach(([x, z, sc, r], i) => treeList.push({ x, y: Y(x, z) + (inBed(x, z) ? 0.3 : 0), z, s: sc, rot: r, kind: 'big', color: [0x4f7f33, 0x5a8a3a, 0x46752f, 0x628f3f][i % 4] }));
+  // piloto: árvores junto ao arroio com a copa nova (trees.js bigP) e verdes mais vivos (nada de verde quase preto)
+  trees.forEach(([x, z, sc, r], i) => { const p = inPil(x, z); treeList.push({ x, y: Y(x, z) + (inBed(x, z) ? 0.3 : 0), z, s: sc * (p ? 0.92 + (i % 3) * 0.08 : 1), rot: r, kind: p ? 'bigP' : 'big', color: p ? [0x7fa356, 0x8aaa5c, 0x739a4c, 0x96b265][i % 4] : [0x4f7f33, 0x5a8a3a, 0x46752f, 0x628f3f][i % 4] }); });
   palms.forEach(([x, z, sc]) => treeList.push({ x, y: Y(x, z), z, s: sc, rot: x * 7 % 6.28, kind: 'palm', color: 0x5d9a3d }));
   const bambooG = new THREE.CylinderGeometry(0.07, 0.07, 9, 5).translate(0, 4.5, 0), bl = [];
   bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) { const bx = x + (rnd() - 0.5) * 2.4, bz = z + (rnd() - 0.5) * 2.4, r = rnd();
     // piloto: touceira natural (colmo curvo com nós e folhas), altura e inclinação variadas, mais aberta para não fechar a visão
-    if (inPil(bx, bz)) { if (i % 3 !== 2) FL.bamboo.push([bx, Yb(bx, bz), bz, 0.75 + r * 0.4, (r - 0.5) * 0.25, rnd() * 6.28]); } else bl.push([bx, bz, r]); } });
+    if (inPil(bx, bz)) { const cl = ((x * 7 + z * 3) % 1 + 1) % 1; if (i % 2 === 0 && i < 12) FL.bamboo.push([x + (bx - x) * (0.5 + cl * 0.4), Yb(bx, bz), z + (bz - z) * (0.5 + cl * 0.4), (0.62 + cl * 0.3) * (0.85 + r * 0.3), (r - 0.5) * (0.2 + cl * 0.25), rnd() * 6.28]); } else bl.push([bx, bz, r]); } });
   inst(bambooG, lambert(0x7fa04a), bl, (d, [x, z, r]) => { d.position.set(x, Yb(x, z), z); d.rotation.set((r - 0.5) * 0.3, 0, (r - 0.4) * 0.3); d.scale.set(1, 0.8 + r * 0.4, 1); });
   for (const [x, z] of trees) colliders.push({ circle: [x, z, 0.65] });
   for (const [x, z] of palms) colliders.push({ circle: [x, z, 0.3] });

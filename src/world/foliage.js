@@ -23,8 +23,8 @@ const leafTex = () => canvasTex(256, 256, (g, w, h) => {
 /** Folhas de bambu: lanças finas, verde-amarelado, em leque. */
 const bambooLeafTex = () => canvasTex(128, 256, (g, w, h) => {
   seed = 31;
-  for (let i = 0; i < 70; i++) {
-    const x = w / 2 + (rnd() - 0.5) * 30, y = 20 + rnd() * (h - 40), a = (rnd() - 0.5) * 2.2, L = 22 + rnd() * 26;
+  for (let i = 0; i < 110; i++) {
+    const x = w / 2 + (rnd() - 0.5) * 40, y = 20 + rnd() * (h - 40), a = (rnd() - 0.5) * 2.4, L = 16 + rnd() * 20;
     const v = rnd(); g.fillStyle = v < 0.4 ? '#4f7f2e' : v < 0.8 ? '#6f9a3a' : '#8db04e';
     g.save(); g.translate(x, y); g.rotate(a + PI / 2); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(L * 0.5, 4, L, 0); g.quadraticCurveTo(L * 0.5, -3, 0, 0); g.fill(); g.restore();
   }
@@ -64,13 +64,15 @@ function merge(parts) {
 }
 /** Colmo de bambu de 8 m, afinando e curvando para fora no alto, com as folhas no terço superior. */
 function bambooGeometry() {
-  const culm = new THREE.CylinderGeometry(0.028, 0.05, 8, 6, 16, true).translate(0, 4, 0), P = culm.attributes.position;
+  const culm = new THREE.CylinderGeometry(0.018, 0.032, 8, 6, 16, true).translate(0, 4, 0), P = culm.attributes.position;   // 4–6 cm de diâmetro
   const bend = y => 0.55 * (y / 8) ** 2;
   for (let i = 0; i < P.count; i++) P.setX(i, P.getX(i) + bend(P.getY(i)));
   culm.computeVertexNormals();
   const leaves = [];
-  for (let k = 0; k < 7; k++) {
-    const y = 4.2 + k * 0.55, p = new THREE.PlaneGeometry(1.1, 1.6); p.rotateZ(PI / 2 * (k % 2 ? 1 : -1) * 0.6); p.rotateY(k * 2.1); p.translate(bend(y) + (k % 2 ? 0.35 : -0.35), y, (k % 3 - 1) * 0.3); leaves.push(p);
+  // ramos curtos alternados a partir de 3,5 m, cada um com um cacho de folhas (cartão pequeno), mais densos no alto
+  for (let k = 0; k < 13; k++) {
+    const y = 3.4 + k * 0.36, sz = 0.6 + (k / 13) * 0.55, a = k * 2.4, ox = Math.cos(a) * sz * 0.45, oz = Math.sin(a) * sz * 0.45;
+    const p = new THREE.PlaneGeometry(sz, sz * 1.5); p.rotateZ(-0.5 - (k % 3) * 0.15); p.rotateY(a); p.translate(bend(y) + ox, y - 0.1, oz); leaves.push(p);
   }
   return { culm, leaves: merge(leaves) };
 }
@@ -90,10 +92,19 @@ const rockTex = () => canvasTex(128, 128, (g, w, h) => {
   for (let i = 0; i < 14; i++) { g.fillStyle = 'rgba(70,90,50,0.25)'; g.beginPath(); g.ellipse(rnd() * w, rnd() * h, 6 + rnd() * 14, 4 + rnd() * 8, rnd() * 3, 0, 7); g.fill(); }   // líquen
 });
 
-const alphaMat = (map, color = 0xffffff) => {
-  const m = new THREE.MeshLambertMaterial({ map, color, alphaTest: 0.45, side: THREE.DoubleSide });
+/** Some aos poucos (pontilhado) o que está a menos de ~4 m da câmera: folhas e colmos não tampam a tela; de longe nada muda.
+ *  `glow` = luz que atravessa a folhagem (evita verde-preto na sombra). */
+export function cameraFade(m, glow = 0) {
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = 'varying vec3 vFW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvFW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = 'varying vec3 vFW;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+      { float keep = smoothstep(1.0, 4.0, length(vFW - cameraPosition)); float n = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453); if (n > keep) discard; }`)
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * ' + glow.toFixed(2) + ';');
+  };
+  m.customProgramCacheKey = () => 'fade' + glow;
   return m;
-};
+}
+const alphaMat = (map, color = 0xffffff) => cameraFade(new THREE.MeshLambertMaterial({ map, color, alphaTest: 0.45, side: THREE.DoubleSide }), 0.14);
 const depthMat = map => new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map, alphaTest: 0.45 });
 
 /** Monta as malhas instanciadas. Listas: shrubs [x,y,z,escala,tom], bamboo [x,y,z,escala,inclinação,rot],
@@ -113,10 +124,10 @@ export function buildFoliage(parent, { shrubs = [], bamboo = [], rocks = [], tuf
   if (bamboo.length) {
     const { culm, leaves } = bambooGeometry();
     const place = (o, [x, y, z, s, tilt, r]) => { o.position.set(x, y - 0.1, z); o.rotation.set(tilt * 0.6, r, tilt); o.scale.setScalar(s); };
-    inst(culm, new THREE.MeshLambertMaterial({ map: ct }), bamboo, place, (cc, q) => cc.setHSL(0.2, 0.2, 0.82 + q[4] * 0.2));
+    inst(culm, cameraFade(new THREE.MeshLambertMaterial({ map: ct }), 0.05), bamboo, place, (cc, q) => cc.setHSL(0.2, 0.2, 0.82 + q[4] * 0.2));
     inst(leaves, alphaMat(bt), bamboo, place, (cc, q) => cc.setHSL(0.25 + q[4] * 0.06, 0.3, 0.8), bt);
   }
-  inst(rockGeometry(), new THREE.MeshLambertMaterial({ map: rt }), rocks, (o, [x, y, z, sx, sy, sz, r]) => { o.position.set(x, y, z); o.rotation.set(0, r, 0); o.scale.set(sx, sy, sz); }, (cc, q) => cc.setHSL(0.09, 0.06 + q[7] * 0.08, 0.78 + q[7] * 0.16));
+  inst(rockGeometry(), new THREE.MeshStandardMaterial({ map: rt, roughness: 0.92, metalness: 0 }), rocks, (o, [x, y, z, sx, sy, sz, r]) => { o.position.set(x, y, z); o.rotation.set(0, r, 0); o.scale.set(sx, sy, sz); }, (cc, q) => cc.setHSL(0.09, 0.06 + q[7] * 0.08, 0.78 + q[7] * 0.16));
   inst(crossCards(0.6, 0.45, 3, false), alphaMat(tt), tufts, (o, [x, y, z, s, r]) => { o.position.set(x, y - 0.03, z); o.rotation.set(0, r, 0); o.scale.setScalar(s); }, (cc, q) => cc.setHSL(0.25, 0.25, 0.8 + (q[4] % 1) * 0.12));
   return out;
 }

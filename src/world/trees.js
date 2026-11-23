@@ -24,6 +24,31 @@ function leafTexture() {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   return t;
 }
+/** Piloto: ramo com muitas folhas pequenas e pecíolos, tons por folha (claro nas bordas, mais escuro dentro), recorte
+ *  irregular — de perto lê como folhagem, não como placa. Tons de cinza claros (a cor vem da instância). */
+function leafTextureP() {
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  let s = 11; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const twig = (x0, y0, a, L, depth) => {
+    const x1 = x0 + Math.cos(a) * L, y1 = y0 + Math.sin(a) * L;
+    g.strokeStyle = 'rgb(95,85,70)'; g.lineWidth = Math.max(1, depth * 1.4); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    const n = 5 + Math.floor(r() * 4);
+    for (let i = 0; i < n; i++) {
+      const t = 0.25 + i / n * 0.8, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+      for (const side of [-1, 1]) {
+        const la = a + side * (0.7 + r() * 0.5), len = 13 + r() * 10, v = 165 + r() * 80 | 0, w = len * (0.36 + r() * 0.1);
+        g.save(); g.translate(x + Math.cos(la) * len * 0.55, y + Math.sin(la) * len * 0.55); g.rotate(la);
+        g.fillStyle = `rgb(${v},${v},${v - 10})`; g.beginPath(); g.moveTo(-len * 0.55, 0); g.quadraticCurveTo(0, -w, len * 0.55, 0); g.quadraticCurveTo(0, w, -len * 0.55, 0); g.fill();
+        g.strokeStyle = 'rgba(60,60,50,0.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-len * 0.5, 0); g.lineTo(len * 0.5, 0); g.stroke();
+        g.restore();
+      }
+    }
+    if (depth > 1) for (let k = 0; k < 2; k++) twig(x0 + (x1 - x0) * (0.4 + k * 0.3), y0 + (y1 - y0) * (0.4 + k * 0.3), a + (k ? 0.6 : -0.6) + (r() - 0.5) * 0.3, L * 0.55, depth - 1);
+  };
+  for (let i = 0; i < 6; i++) { const a = -PI / 2 + (i - 2.5) * 0.42 + (r() - 0.5) * 0.2; twig(256, 470, a, 170 + r() * 60, 3); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
 function frondTexture() {
   // folha de palmeira: nervura central e folíolos
   const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d');
@@ -43,10 +68,26 @@ function barkTexture() {
 
 /* ------------------------------ materiais com vento ------------------------------ */
 /** Lambert com vento por vértice (atributo `wind` 0..1) e normais radiais sem inverter na face de trás. */
-function windMaterial(opts, radial) {
+function windMaterial(opts, radial, pilot = false) {
   const m = new THREE.MeshLambertMaterial(opts);
   m.onBeforeCompile = sh => {
     sh.uniforms.uTime = wind.time;
+    if (pilot) {
+      // varyings: posição no mundo (fade perto da câmera) e "exterioridade" da folha (wind ~ altura/raio → oclusão)
+      sh.vertexShader = 'varying vec3 vWPos;\nvarying float vOut;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvWPos = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;\nvOut = wind;');
+      sh.fragmentShader = 'varying vec3 vWPos;\nvarying float vOut;\n' + sh.fragmentShader
+        .replace('#include <alphatest_fragment>', `#include <alphatest_fragment>
+          { // folhas entre a câmera e o personagem: somem aos poucos (pontilhado), só perto da câmera
+            float dc = length(vWPos - cameraPosition);
+            float keep = smoothstep(1.2, 4.5, dc);
+            float n = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453);
+            if (n > keep) discard;
+          }`)
+        .replace('#include <map_fragment>', `#include <map_fragment>
+          diffuseColor.rgb *= mix(0.72, 1.12, clamp(vOut, 0.0, 1.0));   // miolo da copa mais escuro, bordas mais claras`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          totalEmissiveRadiance += diffuseColor.rgb * 0.16;              // luz que atravessa as folhas (sem verde-preto na sombra)`);
+    }
     sh.vertexShader = 'attribute float wind;\nuniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       {
         vec3 wp = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -60,7 +101,7 @@ function windMaterial(opts, radial) {
     // copa: a normal radial já aponta para fora dos dois lados do cartão; não inverter na face de trás
     if (radial) sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;', ''));
   };
-  m.customProgramCacheKey = () => 'wind' + (radial ? 'R' : '');
+  m.customProgramCacheKey = () => 'wind' + (radial ? 'R' : '') + (pilot ? 'P' : '');
   return m;
 }
 
@@ -69,7 +110,7 @@ const clean = g => { g = g.index ? g.toNonIndexed() : g; for (const k of Object.
 const withWind = (g, f) => { const p = g.attributes.position, a = new Float32Array(p.count); for (let i = 0; i < p.count; i++) a[i] = f(p.getX(i), p.getY(i), p.getZ(i)); g.setAttribute('wind', new THREE.BufferAttribute(a, 1)); return g; };
 
 /** Árvore folhosa: tronco, galhos primários e secundários; cachos de cartões nas pontas. */
-function broadleaf({ trunkH, trunkR, crownR, crownH, crownY, branches, cards, seed }) {
+function broadleaf({ trunkH, trunkR, crownR, crownH, crownY, branches, cards, seed, cardScale = 1, lobes = 0 }) {
   let s = seed; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const wood = [], leaves = [], tips = [];
   const limb = (x0, y0, z0, x1, y1, z1, r0, r1) => {
@@ -92,8 +133,9 @@ function broadleaf({ trunkH, trunkR, crownR, crownH, crownY, branches, cards, se
   // cartões: planos cruzados orientados ao acaso dentro do elipsoide da copa, mais densos nas pontas dos galhos
   const C = new THREE.Vector3(0, crownY, 0);
   for (let i = 0; i < cards; i++) {
-    const t = tips[i % tips.length], sz = crownR * (0.38 + r() * 0.22);
-    let px = t[0] + (r() - 0.5) * crownR * 0.9, py = t[1] + (r() - 0.4) * crownH * 0.7, pz = t[2] + (r() - 0.5) * crownR * 0.9;
+    const t = tips[i % tips.length], sz = crownR * (0.38 + r() * 0.22) * cardScale, spread = lobes ? 0.55 : 0.9;
+    // piloto: cachos em volta das pontas dos galhos (lóbulos) — silhueta recortada, com vãos de céu
+    let px = t[0] + (r() - 0.5) * crownR * spread, py = t[1] + (r() - 0.4) * crownH * 0.7 * (lobes ? 0.8 : 1), pz = t[2] + (r() - 0.5) * crownR * spread;
     // mantém dentro do elipsoide
     const ex = px / crownR, ey = (py - crownY) / crownH, ez = pz / crownR, e = Math.hypot(ex, ey, ez); if (e > 1) { px /= e; pz /= e; py = crownY + (py - crownY) / e; }
     const g = new THREE.PlaneGeometry(sz, sz).rotateX(r() * PI).rotateY(r() * PI).rotateZ((r() - 0.5) * 0.8).translate(px, py, pz);
@@ -139,6 +181,8 @@ function palm() {
 const SPECIES = {
   leafy: () => broadleaf({ trunkH: 2.6, trunkR: 0.2, crownR: 3.3, crownH: 2.2, crownY: 5.0, branches: 5, cards: 46, seed: 3 }),
   big: () => broadleaf({ trunkH: 4.6, trunkR: 0.55, crownR: 8.0, crownH: 3.6, crownY: 10.2, branches: 7, cards: 120, seed: 7 }),
+  // piloto (árvores da praça junto ao arroio): mais galhos, 2,5× cartões com metade do tamanho, copa em lóbulos
+  bigP: () => broadleaf({ trunkH: 4.2, trunkR: 0.5, crownR: 7.6, crownH: 4.0, crownY: 9.8, branches: 11, cards: 300, seed: 19, cardScale: 0.52, lobes: 1 }),
   palm,
 };
 
@@ -150,12 +194,15 @@ export class TreeLOD {
   constructor(scene, { cap = { leafy: 160, big: 30, palm: 40 }, radius = 130 } = {}) {
     this.radius = radius; this.trees = []; this.grid = new Map(); this.timer = 0; this.alwaysNear = [];
     const leafM = windMaterial({ map: leafTexture(), alphaTest: 0.45, side: THREE.DoubleSide }, true);
+    const leafTP = leafTextureP(), leafMP = windMaterial({ map: leafTP, alphaTest: 0.4, side: THREE.DoubleSide }, true, true);
+    const depthP = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: leafTP, alphaTest: 0.4 });   // sombra recortada pelas folhas
     const frondM = windMaterial({ map: frondTexture(), alphaTest: 0.4, side: THREE.DoubleSide }, true);
     const barkM = windMaterial({ map: barkTexture() }, false);
     this.pools = {};
     for (const [kind, make] of Object.entries(SPECIES)) {
-      const g = make(), n = cap[kind];
-      const wood = new THREE.InstancedMesh(g.wood, barkM, n), leaf = new THREE.InstancedMesh(g.leaf, kind === 'palm' ? frondM : leafM, n);
+      const g = make(), n = cap[kind] ?? (kind === 'bigP' ? 8 : 10);
+      const wood = new THREE.InstancedMesh(g.wood, barkM, n), leaf = new THREE.InstancedMesh(g.leaf, kind === 'palm' ? frondM : kind === 'bigP' ? leafMP : leafM, n);
+      if (kind === 'bigP') leaf.customDepthMaterial = depthP;
       for (const m of [wood, leaf]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; m.userData.dynamic = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
       leaf.setColorAt(0, new THREE.Color(1, 1, 1));
       wood.castShadow = false;                     // a sombra da copa domina; tronco sem sombra economiza draw calls
