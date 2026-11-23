@@ -412,7 +412,7 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
   };
 
   return {
-    colliders, root, waldir: waldirNpc, cells, seats, footbridges: praca.footbridges || [], inPraca: (x, z) => (P.praca.poly && inPoly(x, z, P.praca.poly)) || (P.praca.erni && inPoly(x, z, P.praca.erni)), pipoca: praca.pipoca, parking: praca.parking || [], trees: praca.trees || [],
+    colliders, root, waldir: waldirNpc, cells, seats, footbridges: praca.footbridges || [], inPraca: (x, z) => (P.praca.poly && inPoly(x, z, P.praca.poly)) || (P.praca.erni && inPoly(x, z, P.praca.erni)), pipoca: praca.pipoca, parking: [...(praca.parking || []), ...(P.tur?.parking || [])], trees: [...(praca.trees || []), ...(P.tur?.trees || [])],
     blocked,
     cull(px, pz, dist) { for (const c of cells) { const v = Math.hypot(px - c.cx, pz - c.cz) < dist; for (const m of c.meshes) m.visible = v; } },
     update(dt, state) { for (const u of updaters) u(dt, state); },

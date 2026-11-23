@@ -6,6 +6,8 @@ Formato por data; o mais recente em cima. Detalhes técnicos nos commits do bran
 - Ao lado da Igreja Gabriel, do lado da R. Santos Dumont (fotos do diretor, Street View abr/2026 só como referência, e do
   site de turismo): casa branca de rodapé e molduras vermelhas, varanda em "A" de madeira escura com mãos-francesas,
   telhado de fibrocimento, ala comprida nos fundos, degraus vermelho e branco e a placa.
+- Lateral pela R. Santos Dumont (fotos do diretor): prédio comprido rosado nos fundos, com janelas e ar-condicionado;
+  canteiro com folhagens e quatro árvores grandes; vagas a 90° com carros de frente para o prédio.
 - Calçada de lajotas em volta da casa com meio-fio amarelo; árvores (copas da imagem aérea) não nascem mais dentro de
   nenhum ponto marcante (antes só eram tiradas dos prédios genéricos).
 

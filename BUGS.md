@@ -14,6 +14,7 @@ Severidade: **S1** quebra o jogo · **S2** quebra uma função · **S3** visual/
 | B-012 | S4 | Pedestres ainda não esperam carros (não há trânsito); atravessam após olhar | `pedestrians.js` | aberto → Ciclo 5 |
 | B-013 | S4 | Algumas avenidas largas (GEO: 22 m por sentido) sobrepõem as calçadas da outra pista; pedestres às vezes andam pela borda | dados / `city.js` | aberto |
 | B-011 | S3 | Carregamento ainda leva ~13 s em emulação (sem congelar); alvo 5 s | carga | aberto → Worker (P2) |
+| B-012 | S3 | Teste de pedestres: pior passo às vezes 33–116 ms (média 0,5 ms; em outras rodadas 4–5 ms). Suspeita: coleta de lixo ou primeira troca de modelo humano no navegador sem GPU | pedestres | aberto → medir com perfil (P2) |
 
 ## Resolvidos
 | ID | Descrição | Como |

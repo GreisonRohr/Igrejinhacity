@@ -108,7 +108,7 @@ function pick(world, l, r, re) {
 const groundOf = (H, p) => { let lo = Infinity, hi = -Infinity; for (const [x, z] of p) { const y = H(x, z); lo = Math.min(lo, y); hi = Math.max(hi, y); } return { lo, hi }; };
 
 export function placePontosTur(world, igreja = null) {
-  const T = { signs: [], ex: [] };
+  const T = { signs: [], ex: [], trees: [], parking: [] };
   const own = b => { const p = b.p; T.ex.push((x, z) => inPoly(x, z, p)); };
   // fábricas: letreiro na fachada do maior pavilhão
   for (const [id, r, re, row] of [['beirario', 130, null, 1], ['usaflex', 170, /Usaflex/i, 2], ['piccfab', 80, null, 3]]) {
@@ -128,7 +128,7 @@ export function placePontosTur(world, igreja = null) {
     for (const r of world.roads) if (/Santos Dumont/.test(r.n || '')) for (const q of r.p) { const d = Math.hypot(q[0] - S[0], q[1] - S[1]); if (d < sd) { sd = d; side = Math.sign((q[0] - S[0]) * -o.uz + (q[1] - S[1]) * o.ux) || 1; } }
     T.artesao = { S, ux: o.ux, uz: o.uz, side };
     const W = (a, p) => [S[0] + o.ux * a - o.uz * p * side, S[1] + o.uz * a + o.ux * p * side];
-    T.ex.push((x, z) => { const dx = x - S[0], dz = z - S[1], a = dx * o.ux + dz * o.uz, p = (dx * -o.uz + dz * o.ux) * side; return a > 7 && a < 32 && p > 9.5 && p < 20.5; });
+    T.ex.push((x, z) => { const dx = x - S[0], dz = z - S[1], a = dx * o.ux + dz * o.uz, p = (dx * -o.uz + dz * o.ux) * side; return a > 7 && a < 47 && p > 9.5 && p < 17; });
     T.artesao.W = W;
   }
   // Casa de Pedra e Kinder Park: tira o que houver no lugar
@@ -214,26 +214,33 @@ export function buildPontosTur(T, terrain, root, colliders, updaters) {
   // fibrocimento cinza e uma ala comprida atrás (fotos do diretor e do site de turismo)
   if (T.artesao) {
     const { W, ux, uz, side } = T.artesao, k = new Kit();
-    const [cx, cz] = W(15.5, 14), g2 = new THREE.Group(); g2.position.set(cx, 0, cz); g2.rotation.y = Math.atan2(-ux, -uz) + (side < 0 ? 0 : 0); g.add(g2);
+    const [cx, cz] = W(15.5, 13.5), g2 = new THREE.Group(); g2.position.set(cx, 0, cz); g2.rotation.y = Math.atan2(-ux, -uz) + (side < 0 ? 0 : 0); g.add(g2);
     const sx = side;                                                     // x local = para o lado da Santos Dumont (sinal)
-    let y = Infinity; for (const [a, p] of [[11, 10.5], [11, 17.5], [30, 10.5], [30, 19.5]]) { const [x, z] = W(a, p); y = Math.min(y, H(x, z)); }
+    let y = Infinity; for (const [a, p] of [[11, 10.4], [11, 16.6], [46, 10], [46, 14.6]]) { const [x, z] = W(a, p); y = Math.min(y, H(x, z)); }
     g2.position.y = y;
     const white = lambert(0xf6f5f1), red = lambert(0xd32f2f), brown = lambert(0x3e2a1e), grey = lambert(0x8f9194), under = lambert(0xe3ded4), dark = lambert(0x2c2f33), glass = lambert(0x3a4a55);
     const Hw = 3.4;
-    // corpo da frente (7 × 9 m) e ala dos fundos (9 × 10 m)
-    k.box(7, Hw, 9, white, 0, 0, 0); k.box(7.1, 0.55, 9.1, red, 0, -0.05, 0);
-    k.box(9, Hw - 0.2, 10, white, sx * 1, 0, -9.5); k.box(9.1, 0.55, 10.1, red, sx * 1, -0.05, -9.5);
+    // eixos locais: x = sx·(p − 13,5) (lado da R. Santos Dumont), z = −(a − 15,5) (para a R. Independência)
+    const LX = p => sx * (p - 13.5), LZ = a => -(a - 15.5);
+    // corpo da frente (6,2 × 9 m) e o prédio comprido rosado dos fundos, ao longo da R. Santos Dumont (fotos do diretor)
+    k.box(6.2, Hw, 9, white, 0, 0, 0); k.box(6.3, 0.55, 9.1, red, 0, -0.05, 0);
+    const pink = lambert(0xe9d0c1), pinkB = lambert(0xc9a596), xw = LX(12.3), zw = LZ(33);
+    k.box(4.6, 3.2, 26, pink, xw, 0, zw); k.box(4.7, 0.45, 26.1, pinkB, xw, -0.05, zw);
     // telhados de duas águas (cumeeira na direção do fundo)
     const roof = (w, d, x0, z0, y0, rh) => { const sl = Math.hypot(w / 2 + 0.5, rh), ang = Math.atan2(rh, w / 2 + 0.5);
       for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(sl, 0.08, d + 0.6), grey, x0 + s * (w / 4 + 0.1), y0 + rh / 2, z0, 0, 0, -s * ang);
       const tri = new THREE.Shape([new THREE.Vector2(-w / 2, 0), new THREE.Vector2(w / 2, 0), new THREE.Vector2(0, rh)]);
       k.add(new THREE.ShapeGeometry(tri), white, x0, y0, z0 + d / 2, 0); k.add(new THREE.ShapeGeometry(tri), white, x0, y0, z0 - d / 2, PI); };
-    roof(7, 9, 0, 0, Hw, 2.2); roof(9, 10, sx * 1, -9.5, Hw - 0.2, 1.8);
+    roof(6.2, 9, 0, 0, Hw, 2.0); roof(4.6, 26, xw, zw, 3.2, 1.3);
     // porta (grade escura), janelas de moldura vermelha, placa
     k.add(new THREE.BoxGeometry(1.3, 2.3, 0.08), dark, 0, 1.15 + 0.5, 4.52);
     for (const s of [-1, 1]) { k.add(new THREE.BoxGeometry(1.4, 1.5, 0.06), red, s * 2.3, 1.95, 4.52); k.add(new THREE.BoxGeometry(1.1, 1.2, 0.08), glass, s * 2.3, 1.95, 4.55); }
-    for (let i = 0; i < 3; i++) { const z = 2 - i * 3; k.add(new THREE.BoxGeometry(0.06, 1.4, 1.3), red, sx * 3.52, 1.95, z); k.add(new THREE.BoxGeometry(0.08, 1.1, 1.0), glass, sx * 3.55, 1.95, z); }
-    for (let i = 0; i < 3; i++) { const z = -6 - i * 3; k.add(new THREE.BoxGeometry(0.06, 1.3, 1.3), red, sx * 5.52, 1.85, z); k.add(new THREE.BoxGeometry(0.08, 1.0, 1.0), glass, sx * 5.55, 1.85, z); }
+    for (let i = 0; i < 3; i++) { const z = 2 - i * 3; k.add(new THREE.BoxGeometry(0.06, 1.4, 1.3), red, sx * 3.12, 1.95, z); k.add(new THREE.BoxGeometry(0.08, 1.1, 1.0), glass, sx * 3.15, 1.95, z); }
+    // janelas do prédio rosado (moldura branca), alguns aparelhos de ar-condicionado e uma porta
+    const wx = LX(14.62), frame = lambert(0xf4f2ee), ac = lambert(0xdedfdc);
+    for (let i = 0; i < 8; i++) { const z = LZ(21.5 + i * 3.2); if (i === 3) { k.add(new THREE.BoxGeometry(0.08, 2.2, 1.0), dark, wx, 1.1 + 0.3, z); continue; }
+      k.add(new THREE.BoxGeometry(0.06, 1.2, 1.1), frame, wx, 1.9, z); k.add(new THREE.BoxGeometry(0.08, 0.95, 0.85), glass, wx + sx * 0.01, 1.9, z);
+      if (i % 3 === 1) k.add(new THREE.BoxGeometry(0.45, 0.4, 0.6), ac, wx + sx * 0.25, 2.75, z + 0.9); }
     k.add(quad(2.2, 0.4, 15, 1, 0, 0.625), A, 0, 3.05, 4.58);   // placa (coordenadas locais da casa)
     // degraus vermelhos e brancos
     for (let i = 0; i < 3; i++) k.box(2.6, 0.18, 0.5 * (3 - i), i % 2 ? white : red, 0, i * 0.18 - 0.05, 4.5 + 0.25 * (3 - i));
@@ -250,15 +257,23 @@ export function buildPontosTur(T, terrain, root, colliders, updaters) {
     for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(0.14, 1.4, 0.14), brown, s * 0.75, ey + 1.5, pz1 - 0.1, 0, 0, -s * 0.9);
     k.add(new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-ew + 0.6, 0), new THREE.Vector2(ew - 0.6, 0), new THREE.Vector2(0, ay - ey - 0.7)])), red, 0, ey + 0.4, pz0 + 0.06);   // empena vermelha sob a varanda
     // calçada de lajotas em volta da casa (entre a igreja e o estacionamento) com meio-fio amarelo do lado da rua lateral
-    let ytop = -Infinity; for (const [a, p] of [[7, 9], [7, 21.5], [31, 9], [31, 21.5], [19, 15]]) { const [x, z] = W(a, p); ytop = Math.max(ytop, H(x, z)); }
-    const pave = lambert(0xcbc6bd), curbY = lambert(0xe8c32e), top = ytop - y + 0.12;
-    // eixos locais: x = lado (p, a partir do centro p=14), z = para a rua (a, a partir do centro a=15.5, invertido)
-    k.box(12.5, top + 0.6, 24, pave, sx * (15.25 - 14), -0.6, -(19 - 15.5));
-    k.box(0.25, top + 0.75, 24, curbY, sx * (21.6 - 14), -0.6, -(19 - 15.5));
+    let ytop = -Infinity; for (const [a, p] of [[7, 9], [7, 17], [20, 17], [20, 9], [46, 17]]) { const [x, z] = W(a, p); ytop = Math.max(ytop, H(x, z)); }
+    const pave = lambert(0xcbc6bd), curbY = lambert(0xe8c32e), soil = lambert(0x5a4632), leaf = lambert(0x3f6e2c), leaf2 = lambert(0x5b8a3a), orange = lambert(0xf08a24), top = ytop - y + 0.12;
+    k.box(8, top + 0.6, 13, pave, LX(13), -0.6, LZ(13.5));                                   // calçada da frente e da esquina (p 9–17, a 7–20)
+    k.box(0.25, top + 0.75, 39, curbY, LX(17.1), -0.6, LZ(26.5));                            // meio-fio amarelo junto às vagas
+    // canteiro entre o prédio rosado e as vagas: terra, folhagens (estrelícias) e as árvores grandes da foto
+    k.box(2.4, top + 0.85, 26, soil, LX(15.8), -0.6, LZ(33));
+    for (let i = 0; i < 18; i++) { const z = LZ(20.8 + i * 1.45), x = LX(15.2 + (i % 3) * 0.5), h = 0.7 + (i * 7 % 5) * 0.18;
+      k.add(new THREE.IcosahedronGeometry(0.55, 0), i % 2 ? leaf : leaf2, x, top + 0.25 + h / 2, z, i, 0, 0, 1, h / 0.9, 1);
+      if (i % 3 === 0) k.add(new THREE.ConeGeometry(0.12, 0.35, 4), orange, x + 0.2, top + 0.3 + h, z, 0, 0, PI / 2); }
+    for (const [a, sc] of [[23, 1.25], [30.5, 1.45], [38, 1.3], [45, 1.15]]) { const [x, z] = W(a, 15.9); T.trees.push({ x, y: H(x, z) + top - (H(x, z) - y) + 0.1, z, s: sc, rot: a, kind: 'big', color: [0x4f7f33, 0x5a8a3a, 0x46752f, 0x628f3f][Math.round(a) % 4] }); colliders.push({ circle: [x, z, 0.35] }); }
+    // vagas a 90° na R. Santos Dumont (de lajota), carros de frente para o prédio
+    const [dx0, dz0] = W(0, 1), [dx1, dz1] = W(0, 0), yawIn = Math.atan2(dx1 - dx0, dz1 - dz0);
+    for (let i = 0; i < 9; i++) if (i !== 4) { const [x, z] = W(21.6 + i * 2.7, 19.6); T.parking.push({ x, z, yaw: yawIn }); }
     k.build(g2);
     const qx = (a, p) => W(a, p);
-    colliders.push({ p: [qx(11, 10.5), qx(11, 17.5), qx(20, 17.5), qx(20, 19.5), qx(30, 19.5), qx(30, 10.5)] });
-    for (const [a, p] of [[7.4, 10.8], [7.4, 17.2]]) { const [x, z] = qx(a, p); colliders.push({ circle: [x, z, 0.25] }); }
+    colliders.push({ p: [qx(11, 10.4), qx(11, 16.6), qx(20, 16.6), qx(20, 14.6), qx(46, 14.6), qx(46, 10), qx(20, 10), qx(20, 10.4)] });
+    for (const [a, p] of [[7.4, 10.4], [7.4, 16.6]]) { const [x, z] = qx(a, p); colliders.push({ circle: [x, z, 0.25] }); }
     flush();
   }
 
