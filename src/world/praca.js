@@ -5,6 +5,7 @@
 // floreiras redondas, parquinho, o Arroio Koetz com muros de pedra e ponte de madeira, e o carrinho do pipoqueiro.
 import * as THREE from 'three';
 import { Kit, lambert, tex, inPoly, segClosest } from './landmarks3d.js';
+import { buildFoliage } from './foliage.js';
 
 const PI = Math.PI;
 
@@ -18,6 +19,62 @@ const paverTex = () => tex(256, 256, (c, w, h) => {
     c.fillStyle = 'rgba(0,0,0,0.06)'; c.fillRect(x + 2 + r() * 30, y + 4 + r() * 18, 8, 5);
   }
 }, true);
+/* ---------- piloto de qualidade (margem do arroio junto à passarela): materiais com textura física ---------- */
+// lajota de concreto retangular em amarração (fotos e capturas do diretor), junta fina e pouco contrastada, tom por peça,
+// desgaste e sujeira; 512 px = 4 m. O mapa de normais sai da mesma imagem (juntas rebaixadas).
+const PIL = { x: 8.1, z: 17.5, r: 24 };                       // centro: passarela da praça (coordenadas do jogo, GEO)
+const inPil = (x, z) => Math.hypot(x - PIL.x, z - PIL.z) < PIL.r;
+function paverPilot() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'), h = document.createElement('canvas'); h.width = h.height = S; const gh = h.getContext('2d');
+  let sd = 13; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  g.fillStyle = '#9a968e'; g.fillRect(0, 0, S, S); gh.fillStyle = '#000'; gh.fillRect(0, 0, S, S);
+  const bw = 64, bh = 32;                                     // 0,5 × 0,25 m
+  for (let y = 0; y < S; y += bh) for (let x = -((y / bh) % 2) * bw / 2; x < S; x += bw) {
+    const v = 150 + (r() - 0.5) * 26, warm = (r() - 0.5) * 8;
+    g.fillStyle = `rgb(${v + warm},${v},${v - 6 - warm})`; g.fillRect(x + 1, y + 1, bw - 2, bh - 2);
+    gh.fillStyle = '#fff'; gh.fillRect(x + 1.5, y + 1.5, bw - 3, bh - 3);
+    for (let k = 0; k < 18; k++) { const q = 120 + r() * 70; g.fillStyle = `rgba(${q},${q},${q - 5},0.35)`; g.fillRect(x + 2 + r() * (bw - 6), y + 2 + r() * (bh - 6), 1 + r() * 2, 1 + r() * 2); }
+    if (r() < 0.12) { g.fillStyle = 'rgba(60,55,45,0.10)'; g.fillRect(x + 1, y + 1, bw - 2, bh - 2); }     // peça manchada
+  }
+  for (let k = 0; k < 9; k++) { const gr = g.createRadialGradient(0, 0, 0, 0, 0, 1); const x = r() * S, y = r() * S, rr = 40 + r() * 110;
+    g.save(); g.translate(x, y); g.scale(rr, rr * (0.5 + r() * 0.5)); gr.addColorStop(0, r() < 0.5 ? 'rgba(70,62,50,0.13)' : 'rgba(235,232,222,0.10)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 1, 0, 7); g.fill(); g.restore(); }
+  const map = new THREE.CanvasTexture(c); map.wrapS = map.wrapT = THREE.RepeatWrapping; map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8;
+  return { map, normalMap: normalFrom(gh, S, 2.2) };
+}
+/** Mapa de normais a partir de uma altura em tons de cinza (Sobel). */
+function normalFrom(g, S, k) {
+  const src = g.getImageData(0, 0, S, S).data, c = document.createElement('canvas'); c.width = c.height = S; const o = c.getContext('2d'), im = o.createImageData(S, S);
+  const H = (x, y) => src[(((y + S) % S) * S + ((x + S) % S)) * 4] / 255;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const dx = (H(x + 1, y) - H(x - 1, y)) * k, dy = (H(x, y + 1) - H(x, y - 1)) * k, l = Math.hypot(dx, dy, 1), i = (y * S + x) * 4;
+    im.data[i] = (-dx / l * 0.5 + 0.5) * 255; im.data[i + 1] = (dy / l * 0.5 + 0.5) * 255; im.data[i + 2] = (1 / l * 0.5 + 0.5) * 255; im.data[i + 3] = 255;
+  }
+  o.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+const grassPilot = () => tex(256, 256, (c, w, h) => { let sd = 21; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  c.fillStyle = '#5a7f3a'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 5000; i++) { const v = r(); c.strokeStyle = v < 0.3 ? 'rgba(50,80,30,0.7)' : v < 0.8 ? 'rgba(96,132,58,0.6)' : 'rgba(150,160,90,0.5)'; const x = r() * w, y = r() * h; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 3, y - 2 - r() * 5); c.stroke(); }
+  for (let i = 0; i < 18; i++) { c.fillStyle = r() < 0.5 ? 'rgba(110,95,60,0.14)' : 'rgba(40,70,25,0.15)'; c.beginPath(); c.ellipse(r() * w, r() * h, 10 + r() * 30, 6 + r() * 20, r() * 3, 0, 7); c.fill(); } }, true);
+const soilPilot = () => tex(128, 128, (c, w, h) => { let sd = 27; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  c.fillStyle = '#5b4632'; c.fillRect(0, 0, w, h); for (let i = 0; i < 600; i++) { const v = 60 + r() * 70; c.fillStyle = `rgba(${v + 20},${v + 8},${v - 8},0.6)`; c.fillRect(r() * w, r() * h, 1 + r() * 2.5, 1 + r() * 2); }
+  for (let i = 0; i < 40; i++) { c.fillStyle = 'rgba(70,95,40,0.45)'; c.fillRect(r() * w, r() * h, 2, 3); } }, true);
+const concPilot = () => tex(128, 64, (c, w, h) => { let sd = 33; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  c.fillStyle = '#c9c4ba'; c.fillRect(0, 0, w, h); for (let i = 0; i < 500; i++) { const v = 150 + r() * 70; c.fillStyle = `rgba(${v},${v - 2},${v - 8},0.35)`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 2); }
+  const gr = c.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, 'rgba(70,70,55,0.35)'); gr.addColorStop(0.5, 'rgba(70,70,55,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h); }, true);
+/** Muro de pedra argamassada: pedras irregulares de tamanhos e tons variados, fiadas desencontradas, sem padrão. */
+const stonePilot = () => tex(512, 320, (c, w, h) => { let sd = 41; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  c.fillStyle = '#5e5a52'; c.fillRect(0, 0, w, h);
+  let y = 0; while (y < h) { const rh = 18 + r() * 26; let x = -r() * 30; while (x < w) { const rw = 26 + r() * 60, v = 105 + r() * 75, t = (r() - 0.5) * 18;
+      c.fillStyle = `rgb(${v + t},${v},${v - 10 - t})`; c.beginPath();
+      const pts = 7; for (let k = 0; k < pts; k++) { const a = k / pts * Math.PI * 2, px = x + rw / 2 + Math.cos(a) * (rw / 2 - 2) * (0.85 + r() * 0.15), py = y + rh / 2 + Math.sin(a) * (rh / 2 - 2) * (0.8 + r() * 0.2); k ? c.lineTo(px, py) : c.moveTo(px, py); }
+      c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fillRect(x + 4, y + 3, rw * 0.5, 2); x += rw; } y += rh; }
+  for (let i = 0; i < 26; i++) { const x = r() * w, ln = 40 + r() * 160, gr = c.createLinearGradient(0, 0, 0, ln); gr.addColorStop(0, 'rgba(30,30,25,0.4)'); gr.addColorStop(1, 'rgba(30,30,25,0)'); c.fillStyle = gr; c.fillRect(x, 0, 2 + r() * 5, ln); }
+  const gm = c.createLinearGradient(0, h, 0, h * 0.5); gm.addColorStop(0, 'rgba(55,75,38,0.75)'); gm.addColorStop(1, 'rgba(55,75,38,0)'); c.fillStyle = gm; c.fillRect(0, h * 0.5, w, h * 0.5); }, true);
+/** Ondulação da água (normal map) a partir de ondas sobrepostas. */
+function waterNormal() { const S = 128, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'), im = g.createImageData(S, S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const v = 0.5 + 0.18 * Math.sin((x + y * 0.3) / S * Math.PI * 8) + 0.12 * Math.sin((y - x * 0.5) / S * Math.PI * 14) + 0.08 * Math.sin((x * 0.7 + y) / S * Math.PI * 22); const i = (y * S + x) * 4; im.data[i] = im.data[i + 1] = im.data[i + 2] = v * 255; im.data[i + 3] = 255; }
+  g.putImageData(im, 0, 0); return normalFrom(g, S, 3); }
+
 const woodCladTex = () => tex(128, 64, (c, w, h) => {
   c.fillStyle = '#8a6448'; c.fillRect(0, 0, w, h);
   for (let y = 0; y < h; y += 12) { c.fillStyle = y % 24 ? '#7d5a40' : '#94704f'; c.fillRect(0, y, w, 11); c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(0, y + 11, w, 1); }
@@ -136,6 +193,10 @@ export function buildPraca(ctx) {
     const gm = c.createLinearGradient(0, h, 0, h * 0.5); gm.addColorStop(0, 'rgba(58,78,40,0.7)'); gm.addColorStop(1, 'rgba(58,78,40,0)'); c.fillStyle = gm; c.fillRect(0, h * 0.5, w, h * 0.5); }, true);
   const gravelT = tex(128, 128, (c, w, h) => { let sd = 3; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     c.fillStyle = '#857d71'; c.fillRect(0, 0, w, h); for (let i = 0; i < 700; i++) { const v = 100 + r() * 110; c.fillStyle = `rgb(${v},${v - 5},${v - 12})`; c.beginPath(); c.ellipse(r() * w, r() * h, 1 + r() * 3.5, 1 + r() * 2.5, r() * 3, 0, 7); c.fill(); } }, true);
+  const FL = { shrubs: [], bamboo: [], rocks: [], tufts: [] };   // vegetação e pedras naturais do piloto (foliage.js)
+  const stoneP = new THREE.MeshLambertMaterial({ map: stonePilot() }), grassP = new THREE.MeshLambertMaterial({ map: grassPilot() });
+  const wn = waterNormal(), waterP = new THREE.MeshStandardMaterial({ color: 0x55614f, roughness: 0.12, metalness: 0, normalMap: wn, normalScale: new THREE.Vector2(0.6, 0.6), transparent: true, opacity: 0.82 });
+  wn.repeat.set(2, 2); updaters.push(dt => { wn.offset.x = (wn.offset.x + dt * 0.05) % 1; wn.offset.y = (wn.offset.y + dt * 0.02) % 1; });
   const WALL = 2.8, gravel = new THREE.MeshLambertMaterial({ map: gravelT }), conc = new THREE.MeshLambertMaterial({ map: concT }), stoneW = new THREE.MeshLambertMaterial({ map: stoneT });
   const waterM = new THREE.MeshPhongMaterial({ color: 0x5f6f62, specular: 0x9fb8c8, shininess: 70, transparent: true, opacity: 0.85 });
   for (const [a, b] of stream) {
@@ -145,16 +206,24 @@ export function buildPraca(ctx) {
       const t = (j + 0.5) / n, cx2 = a[0] + (b[0] - a[0]) * t, cz2 = a[1] + (b[1] - a[1]) * t;
       for (const s of [-1, 1]) {
         const mx = cx2 - uz * s * (WALL + 0.25), mz = cz2 + ux * s * (WALL + 0.25), yb = Yb(mx - uz * s * 2, mz + ux * s * 2);
-        k.add(new THREE.BoxGeometry(L / n + 0.05, 2.6, 0.5), s > 0 ? stoneW : conc, mx, yb - 1.2, mz, ry);
+        k.add(new THREE.BoxGeometry(L / n + 0.05, 2.6, 0.5), s > 0 ? (inPil(mx, mz) ? stoneP : stoneW) : conc, mx, yb - 1.2, mz, ry);
         // faixa de margem com vegetação baixa cobrindo a borda da escavação até o piso
         const gx = cx2 - uz * s * (WALL + 2.0), gz = cz2 + ux * s * (WALL + 2.0);
-        k.add(new THREE.BoxGeometry(L / n + 0.05, 1.2, 3.1), M.grass, gx, yb - 0.55, gz, ry);
-        if ((j + (s > 0 ? 1 : 0)) % 2 === 0) k.add(new THREE.IcosahedronGeometry(0.5, 0), M.shrub2, gx, yb + 0.2, gz, j, 0, 0, 1.4, 0.6, 1.2);
+        if (inPil(gx, gz)) {
+          // piloto: grama com textura rente ao piso, tufos quebrando a borda reta e arbustos de folhas (sem bolas)
+          k.add(new THREE.BoxGeometry(L / n + 0.05, 1.2, 3.1), grassP, gx, yb - 0.57, gz, ry);
+          for (let q = 0; q < 4; q++) { const tt = (q + 0.5) / 4 - 0.5, ex = gx + ux * tt * L / n - uz * s * (1.4 + (q % 2) * 0.12), ez = gz + uz * tt * L / n + ux * s * (1.4 + (q % 2) * 0.12); FL.tufts.push([ex, yb + 0.03, ez, 0.7 + ((j * 7 + q * 3) % 5) * 0.12, j + q]); }
+          if ((j + (s > 0 ? 1 : 0)) % 2 === 0) FL.shrubs.push([gx + ux * 0.6, yb + 0.03, gz + uz * 0.6, 0.75 + ((j * 13) % 7) * 0.08, ((j * 37) % 10) / 10, j * 1.3]);
+        } else {
+          k.add(new THREE.BoxGeometry(L / n + 0.05, 1.2, 3.1), M.grass, gx, yb - 0.55, gz, ry);
+          if ((j + (s > 0 ? 1 : 0)) % 2 === 0) k.add(new THREE.IcosahedronGeometry(0.5, 0), M.shrub2, gx, yb + 0.2, gz, j, 0, 0, 1.4, 0.6, 1.2);
+        }
       }
       const yb = Math.min(Yb(cx2 - uz * 5, cz2 + ux * 5), Yb(cx2 + uz * 5, cz2 - ux * 5));
       k.add(new THREE.BoxGeometry(L / n + 0.05, 0.6, WALL * 2), gravel, cx2, yb - 2.2, cz2, ry);   // leito (topo 1,9 m abaixo)
-      k.add(new THREE.BoxGeometry(L / n + 0.05, 0.06, 2.2), waterM, cx2 + uz * 1.4, yb - 1.86, cz2 - ux * 1.4, ry);   // lâmina d'água rasa junto a uma parede
-      for (let r = 0; r < 1; r++) { const o = ((j * 7 + r * 3) % 9) / 9 - 0.5; k.add(new THREE.DodecahedronGeometry(0.18 + r * 0.06, 0), M.rock, cx2 + ux * o * 2 - uz * o * 3, yb - 1.85, cz2 + uz * o * 2 + ux * o * 3); }
+      k.add(new THREE.BoxGeometry(L / n + 0.05, 0.06, 2.2), inPil(cx2, cz2) ? waterP : waterM, cx2 + uz * 1.4, yb - 1.86, cz2 - ux * 1.4, ry);   // lâmina d'água rasa junto a uma parede
+      if (inPil(cx2, cz2)) for (let r = 0; r < 3; r++) { const o = ((j * 7 + r * 5) % 11) / 11 - 0.5, sz = 0.12 + ((j * 3 + r * 7) % 6) * 0.05; FL.rocks.push([cx2 + ux * o * 3 - uz * (o * 2.6 - 0.2), yb - 1.9, cz2 + uz * o * 3 + ux * (o * 2.6 - 0.2), sz * 1.3, sz, sz * 1.1, j + r, ((j + r) % 5) / 5]); }
+      else for (let r = 0; r < 1; r++) { const o = ((j * 7 + r * 3) % 9) / 9 - 0.5; k.add(new THREE.DodecahedronGeometry(0.18 + r * 0.06, 0), M.rock, cx2 + ux * o * 2 - uz * o * 3, yb - 1.85, cz2 + uz * o * 2 + ux * o * 3); }
     }
   }
   // passarela de madeira de troncos sobre o arroio (fotos TripAdvisor), levemente arqueada, guarda-corpo em X
@@ -383,7 +452,8 @@ export function buildPraca(ctx) {
       for (const side of [-1, 1]) for (let t = 1; t < L; t += 2.2) {
         const x = a[0] + ux * t - uz * side * 3.9, z = a[1] + uz * t + ux * side * 3.9; if (!inside(x, z)) continue;
         sd = (sd * 16807) % 2147483647; const r = sd / 2147483647;
-        if (r < 0.45) k.add(new THREE.DodecahedronGeometry(0.45 + r * 0.5, 0), M.rock, x - uz * side * 0.8, Yb(x, z) + 0.15, z + ux * side * 0.8, r * 6, r * 3, 0, 1.3, 0.8, 1.1);
+        if (r < 0.45 && inPil(x, z)) { const sz = 0.35 + r * 0.6; FL.rocks.push([x - uz * side * 0.8, Yb(x, z) + 0.05, z + ux * side * 0.8, sz * 1.4, sz, sz * 1.15, r * 6, r * 2]); }
+        else if (r < 0.45) k.add(new THREE.DodecahedronGeometry(0.45 + r * 0.5, 0), M.rock, x - uz * side * 0.8, Yb(x, z) + 0.15, z + ux * side * 0.8, r * 6, r * 3, 0, 1.3, 0.8, 1.1);
         if (!footbridges.some(f => Math.hypot(f[0] - x, f[1] - z) < 4.5)) k.add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 4), M.metal, x - uz * side * 0.6, Yb(x, z) + 0.5, z + ux * side * 0.6);
       }
       const nearBridge = footbridges.some(f => segClosest(f[0], f[1], a, b) && Math.hypot(segClosest(f[0], f[1], a, b)[0] - f[0], segClosest(f[0], f[1], a, b)[1] - f[1]) < 1 && Math.hypot((a[0] + b[0]) / 2 - f[0], (a[1] + b[1]) / 2 - f[1]) < L / 2 + 2);
@@ -407,7 +477,7 @@ export function buildPraca(ctx) {
 
   /* ---------- piso: lajotas em toda a praça, grama nos canteiros (grade drapeada no relevo) ---------- */
   {
-    const S = 2, pav = [], pavUV = [], grass = [], curb = [];
+    const S = 2, pav = [], pavUV = [], grass = [], curb = [], pavP = [], pavPUV = [], grassPP = [], grassPUV = [], soil = [], soilUV = [], curbP = [], curbPUV = [];
     const pushQ = (arr, uv, a, b, c, d) => { arr.push(...a, ...b, ...c, ...a, ...c, ...d); if (uv) uv.push(a[0] / 4, a[2] / 4, b[0] / 4, b[2] / 4, c[0] / 4, c[2] / 4, a[0] / 4, a[2] / 4, c[0] / 4, c[2] / 4, d[0] / 4, d[2] / 4); };
     const cell = (i, j) => { const x = X0 + (i + 0.5) * S, z = Z0 + (j + 0.5) * S; if (!inside(x, z) || nearStream(x, z, WALL + 0.6)) return 0; return inBed(x, z) ? 2 : 1; };
     const ni = Math.ceil((X1 - X0) / S), nj = Math.ceil((Z1 - Z0) / S);
@@ -415,7 +485,22 @@ export function buildPraca(ctx) {
       const t = cell(i, j); if (!t) continue;
       const x0 = X0 + i * S, z0 = Z0 + j * S, x1 = x0 + S, z1 = z0 + S, lift = t === 2 ? 0.32 : 0.06;
       const P = (x, z) => [x, (nearStream(x, z, 9) ? Yb(x, z) : Y(x, z)) + lift, z];
-      if (t === 1) pushQ(pav, pavUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
+      const pil = inPil(x0 + S / 2, z0 + S / 2);
+      if (t === 1) { if (pil) pushQ(pavP, pavPUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0)); else pushQ(pav, pavUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0)); }
+      else if (pil) {
+        // canteiro do piloto: grama com textura; junto ao meio-fio, faixa de terra (25 cm) e tufos que quebram a linha reta
+        pushQ(grassPP, grassPUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
+        const edgeP = (ax, az, bx, bz, nx, nz) => {
+          const A0 = [ax, Y(ax, az) + 0.04, az], B0 = [bx, Y(bx, bz) + 0.04, bz];
+          pushQ(curbP, curbPUV, A0, B0, [bx, B0[1] + 0.3, bz], [ax, A0[1] + 0.3, az]);
+          const yA = P(ax, az)[1] + 0.006, yB = P(bx, bz)[1] + 0.006, w = 0.25;
+          pushQ(soil, soilUV, [ax, yA, az], [bx, yB, bz], [bx + nx * w, yB, bz + nz * w], [ax + nx * w, yA, az + nz * w]);
+          for (let q = 0; q < 3; q++) { const tq = (q + 0.3 + ((i * 7 + j * 3 + q) % 5) * 0.08) / 3, x = ax + (bx - ax) * tq + nx * (0.25 + (q % 2) * 0.12), z = az + (bz - az) * tq + nz * (0.25 + (q % 2) * 0.12); FL.tufts.push([x, P(x, z)[1], z, 0.6 + ((i + j + q) % 4) * 0.15, i * 3 + q]); }
+        };
+        if (cell(i - 1, j) !== 2) edgeP(x0, z1, x0, z0, 1, 0); if (cell(i + 1, j) !== 2) edgeP(x1, z0, x1, z1, -1, 0);
+        if (cell(i, j - 1) !== 2) edgeP(x0, z0, x1, z0, 0, 1); if (cell(i, j + 1) !== 2) edgeP(x1, z1, x0, z1, 0, -1);
+        if (((i * 31 + j * 17) % 7) === 0) FL.shrubs.push([x0 + S / 2, P(x0 + S / 2, z0 + S / 2)[1], z0 + S / 2, 0.8 + ((i + j) % 3) * 0.15, ((i * 7 + j) % 10) / 10, i + j]);
+      }
       else {
         pushQ(grass, null, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
         // meio-fio de concreto onde o canteiro encontra o piso
@@ -428,6 +513,12 @@ export function buildPraca(ctx) {
     mk(pav, pavUV, new THREE.MeshLambertMaterial({ map: paverTex() }));
     mk(grass, null, M.grass);
     mk(curb, null, new THREE.MeshLambertMaterial({ color: 0xd8d4cc, side: THREE.DoubleSide }));
+    // piloto: lajota com relevo e rugosidade (PBR), grama, terra e meio-fio com textura
+    const pp = paverPilot(); pp.normalMap.repeat.set(1, 1);
+    mk(pavP, pavPUV, new THREE.MeshStandardMaterial({ map: pp.map, normalMap: pp.normalMap, normalScale: new THREE.Vector2(0.7, 0.7), roughness: 0.88, metalness: 0 }));
+    mk(grassPP, grassPUV, grassP);
+    mk(soil, soilUV, new THREE.MeshLambertMaterial({ map: soilPilot(), polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
+    mk(curbP, curbPUV, new THREE.MeshLambertMaterial({ map: concPilot(), side: THREE.DoubleSide }));
   }
 
   /* ---------- árvores grandes, palmeiras e bambus (instanciados) ---------- */
@@ -453,7 +544,9 @@ export function buildPraca(ctx) {
   trees.forEach(([x, z, sc, r], i) => treeList.push({ x, y: Y(x, z) + (inBed(x, z) ? 0.3 : 0), z, s: sc, rot: r, kind: 'big', color: [0x4f7f33, 0x5a8a3a, 0x46752f, 0x628f3f][i % 4] }));
   palms.forEach(([x, z, sc]) => treeList.push({ x, y: Y(x, z), z, s: sc, rot: x * 7 % 6.28, kind: 'palm', color: 0x5d9a3d }));
   const bambooG = new THREE.CylinderGeometry(0.07, 0.07, 9, 5).translate(0, 4.5, 0), bl = [];
-  bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) bl.push([x + (rnd() - 0.5) * 2.4, z + (rnd() - 0.5) * 2.4, rnd()]); });
+  bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) { const bx = x + (rnd() - 0.5) * 2.4, bz = z + (rnd() - 0.5) * 2.4, r = rnd();
+    // piloto: touceira natural (colmo curvo com nós e folhas), altura e inclinação variadas, mais aberta para não fechar a visão
+    if (inPil(bx, bz)) { if (i % 3 !== 2) FL.bamboo.push([bx, Yb(bx, bz), bz, 0.75 + r * 0.4, (r - 0.5) * 0.25, rnd() * 6.28]); } else bl.push([bx, bz, r]); } });
   inst(bambooG, lambert(0x7fa04a), bl, (d, [x, z, r]) => { d.position.set(x, Yb(x, z), z); d.rotation.set((r - 0.5) * 0.3, 0, (r - 0.4) * 0.3); d.scale.set(1, 0.8 + r * 0.4, 1); });
   for (const [x, z] of trees) colliders.push({ circle: [x, z, 0.65] });
   for (const [x, z] of palms) colliders.push({ circle: [x, z, 0.3] });
@@ -601,5 +694,7 @@ export function buildPraca(ctx) {
     if (bank) return Yb(x, z) + 0.05;
     return null;
   };
+  // vegetação e pedras naturais do piloto (instanciadas; fora do mergeStatic)
+  const fol = new THREE.Group(); fol.userData.dynamic = true; g.add(fol); buildFoliage(fol, FL);
   return { footbridges, pipoca, parking, trees: treeList, bounds: [X0, Z0, X1, Z1], surfaceAt, deckAt };
 }

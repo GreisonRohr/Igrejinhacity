@@ -2,6 +2,20 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Piloto de qualidade visual (margem do arroio junto à passarela, raio 24 m)
+- Vegetação nova (`src/world/foliage.js`, reutilizável): bambu com colmo curvo, nós e folhas em leque (touceira mais
+  aberta), arbustos de folhas em planos cruzados com transparência e sombra recortada, tufos de grama; pedras
+  irregulares (forma deformada, textura com líquen) no leito e na margem. Tudo instanciado, cor/escala por planta.
+- Piso: lajota retangular em amarração com junta fina, tom por peça, manchas de desgaste e sujeira, relevo (normal map)
+  e rugosidade (MeshStandardMaterial).
+- Canteiros: grama com textura, faixa de terra junto ao meio-fio, tufos quebrando a borda reta, meio-fio de concreto
+  com textura e sujeira na base.
+- Arroio: muro de pedra argamassada com pedras de tamanhos/tons variados (sem padrão repetido), água com ondulação
+  animada (normal map) e reflexo.
+- Luz (cidade toda): céu/rebatimento mais forte e chão mais claro na luz de ambiente — sombras menos pretas; sol um
+  pouco mais fraco; borda de sombra suavizada (raio do PCF).
+- Desempenho: 690 chamadas de desenho (+20), 2.561 mil triângulos, heap 145 MB, carga igual.
+
 ## 2026-11-23 — Praça Dona Luísa e Rua Coberta: reconstrução fiel (1º ciclo)
 - Dossiê de referências em `docs/dossie-praca-dona-luisa.md` (14 categorias, confirmado × suposição, diferenças e ordem).
 - Rua Coberta: arcos em treliça (banzos curvos + diagonais) no lugar das argolas decorativas; ondulação das telhas

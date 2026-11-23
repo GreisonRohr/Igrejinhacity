@@ -12,8 +12,8 @@ const KEYS = [
   [-0.12, { fog: 0x141c35, hemiS: 0x2a3a6a, hemiG: 0x10141a, sun: 0x8ea6ff, sunI: 0.3, hemiI: 0.4 }],
   [0.0, { fog: 0xd88a5c, hemiS: 0x8a7aa0, hemiG: 0x3a3028, sun: 0xff8a4a, sunI: 0.9, hemiI: 0.65 }],
   [0.12, { fog: 0xe8c6a2, hemiS: 0xb9c8e0, hemiG: 0x5b5a3c, sun: 0xffc98a, sunI: 2.0, hemiI: 0.95 }],
-  [0.35, { fog: 0xbdd4e6, hemiS: 0xc9defa, hemiG: 0x6b7a4a, sun: 0xfff1dc, sunI: 2.7, hemiI: 1.15 }],
-  [1.0, { fog: 0xb4cde3, hemiS: 0xcfe2ff, hemiG: 0x6f7d4c, sun: 0xfff6ea, sunI: 3.0, hemiI: 1.2 }],
+  [0.35, { fog: 0xbdd4e6, hemiS: 0xc9defa, hemiG: 0x7d8a5c, sun: 0xfff1dc, sunI: 2.55, hemiI: 1.4 }],
+  [1.0, { fog: 0xb4cde3, hemiS: 0xcfe2ff, hemiG: 0x808c5e, sun: 0xfff6ea, sunI: 2.8, hemiI: 1.45 }],
 ];
 const C1 = new THREE.Color(), C2 = new THREE.Color();
 function sample(el, key, out) {
@@ -88,7 +88,7 @@ export class Sky {
     this.sun.shadow.mapSize.set(shadowSize, shadowSize);
     const sr = shadowRange;
     Object.assign(this.sun.shadow.camera, { left: -sr, right: sr, top: sr, bottom: -sr, near: 1, far: 800 });
-    this.sun.shadow.bias = -0.0005;
+    this.sun.shadow.bias = -0.0005; this.sun.shadow.radius = 2.5;   // borda mais suave (PCF)
     this.sun.shadow.normalBias = 0.4;
     scene.add(this.sun, this.sun.target);
     this.dir = new THREE.Vector3(); this._m = new THREE.Object3D();
