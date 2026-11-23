@@ -59,8 +59,10 @@ function frondTexture() {
 }
 function barkTexture() {
   const c = document.createElement('canvas'); c.width = 64; c.height = 128; const g = c.getContext('2d');
-  g.fillStyle = '#6a5848'; g.fillRect(0, 0, 64, 128);
+  g.fillStyle = '#6f6152'; g.fillRect(0, 0, 64, 128);
   let s = 9; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 14; i++) { g.strokeStyle = 'rgba(35,28,20,0.5)'; g.lineWidth = 1 + r() * 2; g.beginPath(); let x = r() * 64; g.moveTo(x, 0); for (let y = 0; y <= 128; y += 16) { x += (r() - 0.5) * 6; g.lineTo(x, y); } g.stroke(); }   // fissuras
+  for (let i = 0; i < 10; i++) { g.fillStyle = 'rgba(120,135,90,0.25)'; g.beginPath(); g.ellipse(r() * 64, r() * 128, 4 + r() * 8, 6 + r() * 14, 0, 0, 7); g.fill(); }   // líquen
   for (let i = 0; i < 60; i++) { g.fillStyle = r() < 0.5 ? 'rgba(40,30,22,0.45)' : 'rgba(150,130,110,0.3)'; g.fillRect(r() * 64, r() * 128, 2 + r() * 3, 8 + r() * 24); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
@@ -118,16 +120,30 @@ function broadleaf({ trunkH, trunkR, crownR, crownH, crownY, branches, cards, se
     const dir = new THREE.Vector3(x1 - x0, y1 - y0, z1 - z0).normalize(), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
     g.applyQuaternion(q).translate(x0, y0, z0); wood.push(g);
   };
-  limb(0, 0, 0, 0, trunkH, 0, trunkR, trunkR * 0.7);
+  // piloto (lobes): galho curvo em 3 trechos com afinamento contínuo e pequenos desvios (nada de cilindro reto longo)
+  const bent = (x0, y0, z0, x1, y1, z1, r0, r1, wob) => {
+    if (!lobes) return limb(x0, y0, z0, x1, y1, z1, r0, r1);
+    let px = x0, py = y0, pz = z0; const L = Math.hypot(x1 - x0, y1 - y0, z1 - z0);
+    for (let k = 1; k <= 3; k++) {
+      const t = k / 3, j = k < 3 ? wob * L : 0, sag = Math.sin(t * PI) * 0.12 * L;
+      const nx = x0 + (x1 - x0) * t + (r() - 0.5) * j, ny = y0 + (y1 - y0) * t + (k < 3 ? sag : 0), nz = z0 + (z1 - z0) * t + (r() - 0.5) * j;
+      limb(px, py, pz, nx, ny, nz, r0 + (r1 - r0) * (k - 1) / 3, r0 + (r1 - r0) * t); px = nx; py = ny; pz = nz;
+    }
+  };
+  bent(0, 0, 0, (r() - 0.5) * 0.4, trunkH, (r() - 0.5) * 0.4, trunkR, trunkR * 0.7, 0.04);
   for (let i = 0; i < branches; i++) {
     const a = i / branches * PI * 2 + r() * 0.6, out = crownR * (0.55 + r() * 0.3), y1 = crownY + (r() - 0.3) * crownH * 0.6;
     const bx = Math.cos(a) * out, bz = Math.sin(a) * out;
-    limb(0, trunkH * (0.8 + r() * 0.15), 0, bx, y1, bz, trunkR * 0.55, trunkR * 0.18);
+    bent(0, trunkH * (0.8 + r() * 0.15), 0, bx, y1, bz, trunkR * 0.55, trunkR * 0.16, 0.12);
     tips.push([bx, y1, bz]);
+    if (lobes) for (let q = 0; q < 2; q++) {   // raminhos finos saindo da ponta, para dentro dos cachos de folhas
+      const a3 = a + (r() - 0.5) * 2, l3 = crownR * (0.18 + r() * 0.12), tx3 = bx + Math.cos(a3) * l3, tz3 = bz + Math.sin(a3) * l3, ty3 = y1 + crownH * (0.1 + r() * 0.25);
+      limb(bx, y1, bz, tx3, ty3, tz3, trunkR * 0.14, trunkR * 0.05); tips.push([tx3, ty3, tz3]);
+    }
     // galho secundário
     const a2 = a + (r() - 0.5) * 1.4, mx = bx * 0.6, mz = bz * 0.6, my = trunkH + (y1 - trunkH) * 0.6;
     const tx = mx + Math.cos(a2) * crownR * 0.35, tz = mz + Math.sin(a2) * crownR * 0.35, ty = my + crownH * 0.35;
-    limb(mx, my, mz, tx, ty, tz, trunkR * 0.25, trunkR * 0.1); tips.push([tx, ty, tz]);
+    bent(mx, my, mz, tx, ty, tz, trunkR * 0.25, trunkR * 0.07, 0.15); tips.push([tx, ty, tz]);
   }
   tips.push([0, crownY + crownH * 0.35, 0]);
   // cartões: planos cruzados orientados ao acaso dentro do elipsoide da copa, mais densos nas pontas dos galhos

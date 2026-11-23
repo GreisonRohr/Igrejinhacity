@@ -2,6 +2,13 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Piloto de vegetação junto ao arroio (3ª rodada): galhos e grama
+- Galhos das árvores do piloto: curvos em 3 trechos com afinamento contínuo e pequenos desvios, raminhos finos entrando
+  nos cachos de folhas; casca com fissuras e líquen.
+- Grama do piloto em coordenadas de mundo (não estica nas caixas da margem), duas escalas da textura para quebrar a
+  repetição e manchas grandes de grama seca/terra batida; tufos irregulares, concentrados perto das bordas.
+- Desempenho: 692 chamadas de desenho, 2.559 mil triângulos (+2 mil).
+
 ## 2026-11-23 — Piloto de vegetação junto ao arroio (2ª rodada)
 - Copas (espécie nova `bigP` em trees.js, só nas árvores do piloto): 11 galhos e 300 cartões menores agrupados em
   lóbulos nas pontas (silhueta recortada, vãos de céu); textura de ramos com folhas pequenas e pecíolos; verdes mais

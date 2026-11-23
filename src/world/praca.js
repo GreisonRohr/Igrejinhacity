@@ -55,6 +55,25 @@ const grassPilot = () => tex(256, 256, (c, w, h) => { let sd = 21; const r = () 
   c.fillStyle = '#5a7f3a'; c.fillRect(0, 0, w, h);
   for (let i = 0; i < 5000; i++) { const v = r(); c.strokeStyle = v < 0.3 ? 'rgba(50,80,30,0.7)' : v < 0.8 ? 'rgba(96,132,58,0.6)' : 'rgba(150,160,90,0.5)'; const x = r() * w, y = r() * h; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 3, y - 2 - r() * 5); c.stroke(); }
   for (let i = 0; i < 18; i++) { c.fillStyle = r() < 0.5 ? 'rgba(110,95,60,0.14)' : 'rgba(40,70,25,0.15)'; c.beginPath(); c.ellipse(r() * w, r() * h, 10 + r() * 30, 6 + r() * 20, r() * 3, 0, 7); c.fill(); } }, true);
+/** Grama do piloto em coordenadas de mundo (sem esticar nas caixas da margem): grão a cada 2,5 m + mesma textura a
+ *  11 m girada (quebra a repetição) + manchas grandes de grama seca/terra batida (≈ 17 m) — nada de carpete uniforme. */
+function grassWorld(m) {
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = 'varying vec3 vGW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvGW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = 'varying vec3 vGW;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
+      vec2 q = vGW.xz;
+      vec3 a = texture2D(map, q / 2.5).rgb, b = texture2D(map, mat2(0.8, -0.6, 0.6, 0.8) * q / 11.0).rgb;
+      float big = texture2D(map, q / 47.0 + 0.3).g, big2 = texture2D(map, q / 17.0 + 0.7).r;
+      vec3 c = mix(a, b, 0.35);
+      float dry = smoothstep(0.22, 0.36, big * 0.7 + big2 * 0.5 - 0.15);
+      c = mix(c, c * vec3(1.18, 1.05, 0.72) + vec3(0.05, 0.03, 0.0), dry * 0.7);          // grama seca
+      c *= 0.9 + 0.2 * big2;                                                                // variação de tom
+      diffuseColor.rgb *= c;`);
+  };
+  m.customProgramCacheKey = () => 'grama-mundo';
+  m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping;
+  return m;
+}
 const soilPilot = () => tex(128, 128, (c, w, h) => { let sd = 27; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   c.fillStyle = '#5b4632'; c.fillRect(0, 0, w, h); for (let i = 0; i < 600; i++) { const v = 60 + r() * 70; c.fillStyle = `rgba(${v + 20},${v + 8},${v - 8},0.6)`; c.fillRect(r() * w, r() * h, 1 + r() * 2.5, 1 + r() * 2); }
   for (let i = 0; i < 40; i++) { c.fillStyle = 'rgba(70,95,40,0.45)'; c.fillRect(r() * w, r() * h, 2, 3); } }, true);
@@ -194,7 +213,7 @@ export function buildPraca(ctx) {
   const gravelT = tex(128, 128, (c, w, h) => { let sd = 3; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     c.fillStyle = '#857d71'; c.fillRect(0, 0, w, h); for (let i = 0; i < 700; i++) { const v = 100 + r() * 110; c.fillStyle = `rgb(${v},${v - 5},${v - 12})`; c.beginPath(); c.ellipse(r() * w, r() * h, 1 + r() * 3.5, 1 + r() * 2.5, r() * 3, 0, 7); c.fill(); } }, true);
   const FL = { shrubs: [], bamboo: [], rocks: [], tufts: [] };   // vegetação e pedras naturais do piloto (foliage.js)
-  const stoneP = new THREE.MeshLambertMaterial({ map: stonePilot() }), grassP = new THREE.MeshLambertMaterial({ map: grassPilot() });
+  const stoneP = new THREE.MeshLambertMaterial({ map: stonePilot() }), grassP = grassWorld(new THREE.MeshLambertMaterial({ map: grassPilot() }));
   const wn = waterNormal(), waterP = new THREE.MeshStandardMaterial({ color: 0x55614f, roughness: 0.12, metalness: 0, normalMap: wn, normalScale: new THREE.Vector2(0.6, 0.6), transparent: true, opacity: 0.82 });
   wn.repeat.set(2, 2); updaters.push(dt => { wn.offset.x = (wn.offset.x + dt * 0.05) % 1; wn.offset.y = (wn.offset.y + dt * 0.02) % 1; });
   const WALL = 2.8, gravel = new THREE.MeshLambertMaterial({ map: gravelT }), conc = new THREE.MeshLambertMaterial({ map: concT }), stoneW = new THREE.MeshLambertMaterial({ map: stoneT });
@@ -212,7 +231,7 @@ export function buildPraca(ctx) {
         if (inPil(gx, gz)) {
           // piloto: grama com textura rente ao piso, tufos quebrando a borda reta e arbustos de folhas (sem bolas)
           k.add(new THREE.BoxGeometry(L / n + 0.05, 1.2, 3.1), grassP, gx, yb - 0.57, gz, ry);
-          for (let q = 0; q < 4; q++) { const tt = (q + 0.5) / 4 - 0.5, ex = gx + ux * tt * L / n - uz * s * (1.4 + (q % 2) * 0.12), ez = gz + uz * tt * L / n + ux * s * (1.4 + (q % 2) * 0.12); FL.tufts.push([ex, yb + 0.03, ez, 0.7 + ((j * 7 + q * 3) % 5) * 0.12, j + q]); }
+          for (let q = 0; q < 3; q++) { const h = ((j * 13 + q * 7 + (s > 0 ? 5 : 0)) % 11) / 11; if (h < 0.3) continue; const tt = h - 0.5, o = 1.15 + h * 0.35, ex = gx + ux * tt * L / n - uz * s * o, ez = gz + uz * tt * L / n + ux * s * o; FL.tufts.push([ex, yb + 0.03, ez, 0.45 + h * 0.6, j * 1.7 + q]); }
           if ((j + (s > 0 ? 1 : 0)) % 2 === 0) FL.shrubs.push([gx + ux * 0.6, yb + 0.03, gz + uz * 0.6, 0.75 + ((j * 13) % 7) * 0.08, ((j * 37) % 10) / 10, j * 1.3]);
         } else {
           k.add(new THREE.BoxGeometry(L / n + 0.05, 1.2, 3.1), M.grass, gx, yb - 0.55, gz, ry);
