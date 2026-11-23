@@ -51,6 +51,10 @@ Formato: `[ ]` a fazer · `[~]` em andamento · `[x]` feito. ID do roadmap entre
 - [x] Olha para quem está perto (pessoa, Waldir); inclina ao arrancar/frear e em ladeira; amortece o pouso
 - [x] Parado: olha o relógio de vez em quando, olha em volta, troca o peso
 
+## Decisões do diretor
+- 23/11: Google Earth / 3D Tiles fora do jogo. Prints do Earth e do Street View só como referência visual;
+  o mundo continua com dados da Prefeitura/OSM e modelos próprios, melhorando aos poucos.
+
 ## Pendências que dependem do diretor
 - [ ] Confirmar: sem crime/violência (GAME_BIBLE)
 - [ ] Fotos: Igreja atual, Prefeitura, fábricas, Morro da Cruz, Alto da Pedra, Ponte do Centro
