@@ -358,7 +358,9 @@ export class City {
         if (sideR) for (let i = i0; i < i1; i++) { const a = off(i, -half), b = off(i + 1, -half), [nx, nz] = NRM[i];
           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.curb, 0, [nx, 0, nz]); }
         // canteiro central (pista única com canteiro)
-        if (r.med && !dual) { strip(ch.roads, r.med / 2, -r.med / 2, 0.2, C.median, 4, F()); }
+        // exceções conferidas em foto: o cadastro marca canteiro onde hoje é só asfalto
+        const noMedian = /Jo.o Corr/.test(r.n || '') && Math.min(...r.p.map(q => Math.hypot(q[0], q[1] - 47))) < 60;
+        if (r.med && !dual && !noMedian) { strip(ch.roads, r.med / 2, -r.med / 2, 0.2, C.median, 4, F()); }
         // pista dupla: canteiro gramado até o meio do vão entre as pistas, meio-fio pintado de amarelo
         if (dual && !r.br && !foot) {
           const G = []; for (let i = i0; i <= i1; i++) { const d = otherDist(r, pts[i][0], pts[i][1]); G.push(d === Infinity ? 0 : Math.max(0, Math.min(r.med / 2 + 1, (d - 2 * half) / 2))); }

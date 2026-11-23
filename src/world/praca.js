@@ -114,7 +114,7 @@ export function buildPraca(ctx) {
     const inner = stream.filter(([a, b]) => inside((a[0] + b[0]) / 2, (a[1] + b[1]) / 2));
     const lens = inner.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1])), tot = lens.reduce((x, y) => x + y, 0);
     const log = lambert(0xb08a5a), plank = lambert(0x8a6a48), BL = 7.5;
-    for (const f of tot > 12 ? [0.18, 0.5, 0.82] : [0.5]) {
+    for (const f of [0.3]) {   // fotos: uma passarela só, perto da João Corrêa
       let d = f * tot, i = 0; while (i < lens.length - 1 && d > lens[i]) { d -= lens[i]; i++; }
       if (!inner[i]) continue;
       const [a, b] = inner[i], ux = (b[0] - a[0]) / lens[i], uz = (b[1] - a[1]) / lens[i], qx = a[0] + ux * d, qz = a[1] + uz * d;
@@ -460,8 +460,26 @@ export function buildPraca(ctx) {
     pipoca = { x: bx, y: Y(bx, bz), z: bz, face, cart: [px, pz] };
   }
 
-  /* ---------- vagas em ângulo sob a Rua Coberta (lado da praça) ---------- */
   const parking = [];
+  /* ---------- vagas em ângulo na João Corrêa, junto à praça (fotos 697–735) ---------- */
+  {
+    const jc = world.roads.filter(r => /Jo.o Corr/.test(r.n || '') && r.p.some(q => Math.hypot(q[0] + 10, q[1] - 48) < 60));
+    const pm = new THREE.MeshBasicMaterial({ color: 0xf2f2ee }), pl = new Kit();
+    for (const r of jc) for (let i = 0; i < r.p.length - 1; i++) {
+      const a = r.p[i], b = r.p[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L;
+      let nx = -uz, nz = ux; if (nz > 0) { nx = -nx; nz = -nz; }                 // lado norte (praça)
+      const off = r.w / 2 - 2.6;
+      for (let t = 4; t < L - 3; t += 2.6) {
+        const x = a[0] + ux * t + nx * off, z = a[1] + uz * t + nz * off;
+        if (x < X0 + 6 || x > X1 - 6 || nearStream(x, z, 6)) continue;
+        pl.add(new THREE.BoxGeometry(0.1, 0.02, 5), pm, x - ux * 1.3, Y(x, z) + 0.11, z - uz * 1.3, Math.atan2(nx, nz) + 0.35);
+        if ((Math.floor(t * 3.7) % 4) !== 0) parking.push({ x, z, yaw: Math.atan2(nx, nz) + 0.35 + PI });
+      }
+    }
+    pl.build(g, false);
+  }
+
+  /* ---------- vagas em ângulo sob a Rua Coberta (lado da praça) ---------- */
   const coberta = world.areas.find(q => q.k === 'plaza' && /Rua Coberta/.test(q.n || ''));
   if (coberta) {
     const cp = coberta.p, czMax = Math.max(...cp.map(q => q[1]));     // borda sul da cobertura (lado da praça)
