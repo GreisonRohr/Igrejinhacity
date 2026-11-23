@@ -4,7 +4,7 @@
   "description": "Jogo 3D de mundo aberto de Igrejinha-RS no navegador",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/pack-models.mjs",
     "preview": "vite preview",
     "data:terrain": "node scripts/fetch-terrain.mjs",
     "data:osm": "NODE_USE_ENV_PROXY=1 node --no-warnings scripts/fetch-osm.mjs",

@@ -63,11 +63,19 @@ function clothe(mat) {
   return u;
 }
 
+/** Bytes de um modelo: tenta a cópia JSON base64 (hospedagem que só serve tipos comuns) e depois o arquivo. */
+async function modelBytes(url) {
+  try { const r = await fetch(url + '.b64.json'); if (r.ok) { const j = await r.json(); return Uint8Array.from(atob(j.base64), c => c.charCodeAt(0)).buffer; } } catch { /* sem cópia */ }
+  const r = await fetch(url); if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer();
+}
+const dirOf = url => url.slice(0, url.lastIndexOf('/') + 1);
+
 /** Carrega corpos, cabelos e animações. Devolve a fábrica de pessoas. */
 export async function loadHumans(base) {
   const L = new GLTFLoader(), dir = base + 'models/people/';
-  const [male, female, anims, ...hairs] = await Promise.all([L.loadAsync(dir + 'male.glb'), L.loadAsync(dir + 'female.glb'), L.loadAsync(dir + 'anims.glb'),
-    ...HAIRS.map(h => L.loadAsync(dir + 'hair_' + h + '.glb').catch(() => null))]);
+  const load = async url => L.parseAsync(await modelBytes(url), dirOf(url));
+  const [male, female, anims, ...hairs] = await Promise.all([load(dir + 'male.glb'), load(dir + 'female.glb'), load(dir + 'anims.glb'),
+    ...HAIRS.map(h => load(dir + 'hair_' + h + '.glb').catch(() => null))]);
   const clips = Object.fromEntries(anims.animations.map(c => [c.name, c]));
   const hairSrc = {}; HAIRS.forEach((h, i) => { let m = null; hairs[i]?.scene.traverse(o => { if (o.isSkinnedMesh) m = o; }); hairSrc[h] = m; });
   // altura do modelo (para escalar à altura de cada pessoa)
@@ -153,7 +161,7 @@ export async function loadHumans(base) {
    * transfere as animações da biblioteca e devolve a mesma interface de make() (play, bones, root).
    */
   async function makeFromFBX(url, map, { height = 1.78, rough = 0.8 } = {}) {
-    const obj = await new FBXLoader().loadAsync(url);
+    const obj = new FBXLoader().parse(await modelBytes(url), dirOf(url));
     obj.traverse(o => {
       if (!o.isMesh) return;
       const old = Array.isArray(o.material) ? o.material[0] : o.material;
