@@ -6,6 +6,10 @@ import { editHeights } from './terrain.js';
 import { freeAfterUpload } from './merge.js';
 
 const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
+// Piloto do upgrade visual (centro): sombra de contato, lojas no térreo e muros/portões das casas até PILOT_R da praça
+export const PILOT_R = 650;
+const SHOP_TINTS = [0xd8352a, 0x1f6fb5, 0xf2b01e, 0x2e8b57, 0x8e44ad, 0xe67e22, 0x16a085, 0xc0392b, 0xf4f1ea, 0x34495e, 0xff6f61, 0x27ae60];
+const hash = (x, z) => { const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return v - Math.floor(v); };   // sorteio fixo por posição
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const segDist = (px, pz, ax, az, bx, bz) => {
   const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz;
@@ -52,14 +56,35 @@ function windowTextures() {
 const noiseTex = (size, draw) => { const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
 /** Asfalto: grão fino, manchas de desgaste e remendos (multiplica a cor do vértice). */
 function asphaltTexture() {
-  return noiseTex(256, (g, S) => {
+  // asfalto usado: agregado fino, manchas de óleo, remendos retangulares mais escuros, trincas e desgaste claro
+  return noiseTex(512, (g, S) => {
     const im = g.createImageData(S, S); let s = 11; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < S * S; i++) { const v = 205 + r() * 50 - (r() < 0.04 ? 60 : 0); im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = v; im.data[i * 4 + 3] = 255; }
+    for (let i = 0; i < S * S; i++) { const v = 200 + r() * 45 - (r() < 0.05 ? 55 : 0) + (r() < 0.02 ? 30 : 0); im.data[i * 4] = v; im.data[i * 4 + 1] = v; im.data[i * 4 + 2] = v - 2; im.data[i * 4 + 3] = 255; }
     g.putImageData(im, 0, 0);
-    for (let k = 0; k < 14; k++) { g.fillStyle = `rgba(0,0,0,${0.04 + r() * 0.06})`; g.beginPath(); g.ellipse(r() * S, r() * S, 10 + r() * 40, 6 + r() * 25, r() * 3, 0, 7); g.fill(); }
-    g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 1; for (let k = 0; k < 3; k++) { g.beginPath(); let x = r() * S, y = r() * S; g.moveTo(x, y); for (let j = 0; j < 6; j++) { x += (r() - 0.5) * 30; y += (r() - 0.3) * 20; g.lineTo(x, y); } g.stroke(); }
+    for (let k = 0; k < 26; k++) { g.fillStyle = `rgba(0,0,0,${0.03 + r() * 0.06})`; g.beginPath(); g.ellipse(r() * S, r() * S, 14 + r() * 70, 8 + r() * 40, r() * 3, 0, 7); g.fill(); }        // manchas
+    for (let k = 0; k < 10; k++) { g.fillStyle = `rgba(255,255,250,${0.03 + r() * 0.05})`; g.beginPath(); g.ellipse(r() * S, r() * S, 20 + r() * 60, 10 + r() * 30, r() * 3, 0, 7); g.fill(); }   // desgaste claro
+    for (let k = 0; k < 4; k++) { const w = 30 + r() * 90, h = 20 + r() * 50, x = r() * S, y = r() * S; g.fillStyle = 'rgba(20,20,22,0.18)'; g.fillRect(x, y, w, h); g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 1.5; g.strokeRect(x, y, w, h); }   // remendos
+    for (let k = 0; k < 6; k++) { g.fillStyle = `rgba(10,10,12,${0.12 + r() * 0.12})`; g.beginPath(); g.ellipse(r() * S, r() * S, 4 + r() * 9, 3 + r() * 6, r() * 3, 0, 7); g.fill(); }   // óleo
+    g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1; for (let k = 0; k < 7; k++) { g.beginPath(); let x = r() * S, y = r() * S; g.moveTo(x, y); for (let j = 0; j < 8; j++) { x += (r() - 0.5) * 34; y += (r() - 0.3) * 22; g.lineTo(x, y); } g.stroke(); }   // trincas
   });
 }
+/** Fachada de loja (térreo): letreiro claro (tingido pela cor do vértice), vidro, porta e beiral; 1 baia = 5 m. */
+function shopTextures() {
+  const mk = (draw) => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; draw(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+  const map = mk(g => {
+    g.fillStyle = '#e9e6df'; g.fillRect(0, 0, 128, 64);
+    g.fillStyle = '#ffffff'; g.fillRect(4, 3, 120, 13);                                   // letreiro (cor da loja)
+    g.fillStyle = 'rgba(0,0,0,0.55)'; for (let i = 0; i < 7; i++) g.fillRect(14 + i * 14, 7, 9, 5);   // letras
+    g.fillStyle = '#2c3a44'; g.fillRect(6, 20, 74, 40); g.fillStyle = '#5d7686'; g.fillRect(6, 20, 74, 10);   // vitrine
+    g.fillStyle = '#d8d4cc'; g.fillRect(42, 20, 3, 40);
+    g.fillStyle = '#3a3f44'; g.fillRect(88, 22, 30, 42); g.fillStyle = '#6b7580'; for (let y = 24; y < 64; y += 4) g.fillRect(89, y, 28, 1);   // porta de enrolar
+    g.fillStyle = 'rgba(255,255,255,0.08)'; g.beginPath(); g.moveTo(10, 60); g.lineTo(30, 20); g.lineTo(38, 20); g.lineTo(18, 60); g.fill();
+  });
+  const emissive = mk(g => { g.fillStyle = '#000'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#fff2d0'; g.fillRect(4, 3, 120, 13); g.fillStyle = '#ffd9a0'; g.fillRect(6, 20, 74, 40); });
+  return { map, emissive };
+}
+/** Degradê da sombra de contato (oclusão ambiente "assada" no chão junto às paredes). */
+function aoTexture() { const c = document.createElement('canvas'); c.width = 4; c.height = 64; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 64, 0, 0); gr.addColorStop(0, '#fff'); gr.addColorStop(0.35, '#777'); gr.addColorStop(1, '#000'); g.fillStyle = gr; g.fillRect(0, 0, 4, 64); return new THREE.CanvasTexture(c); }
 /** Calçada de lajotas/blocos de concreto (1,2 m por repetição). */
 function paverTexture() {
   return noiseTex(128, (g, S) => {
@@ -108,6 +133,10 @@ export class City {
     this.colGrid = new Map();
     const tex = windowTextures();
     this.wallMat = litMaterial({ vertexColors: true, map: tex.map, emissive: 0xffffff, emissiveMap: tex.emissive, emissiveIntensity: 0 });
+    const st = shopTextures();
+    this.shopMat = litMaterial({ vertexColors: true, map: st.map, emissive: 0xffffff, emissiveMap: st.emissive, emissiveIntensity: 0 });
+    this.aoMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42, alphaMap: aoTexture(), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 });
+    this._fronts = [];
     this.roofMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: roofTexture() });
     this.roadMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: asphaltTexture(), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
     this.walkMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: paverTexture(), polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 });
@@ -123,7 +152,7 @@ export class City {
     const S = far && Math.hypot(x, z) > FAR_R ? FAR_CHUNK : CHUNK;
     const k = (S === CHUNK ? '' : 'F') + Math.floor(x / S) + ',' + Math.floor(z / S);
     let c = this.chunks.get(k);
-    if (!c) this.chunks.set(k, c = { walls: new GeoBuilder(), roofs: new GeoBuilder(), roads: new GeoBuilder(), cobble: new GeoBuilder(), walk: new GeoBuilder(), marks: new GeoBuilder(), bridge: new GeoBuilder(), cx: (Math.floor(x / S) + 0.5) * S, cz: (Math.floor(z / S) + 0.5) * S, size: S, meshes: [] });
+    if (!c) this.chunks.set(k, c = { walls: new GeoBuilder(), roofs: new GeoBuilder(), shops: new GeoBuilder(), ao: new GeoBuilder(), roads: new GeoBuilder(), cobble: new GeoBuilder(), walk: new GeoBuilder(), marks: new GeoBuilder(), bridge: new GeoBuilder(), cx: (Math.floor(x / S) + 0.5) * S, cz: (Math.floor(z / S) + 0.5) * S, size: S, meshes: [] });
     return c;
   }
 
@@ -243,10 +272,11 @@ export class City {
     this.buildRoads();
     await tick(0.3);
     await this.buildBuildings(f => tick(0.3 + f * 0.6));
+    this.buildFronts();
     this.buildLamps();
     await tick(0.95);
     for (const c of this.chunks.values()) {
-      for (const [key, mat, shadow] of [['walls', this.wallMat, true], ['roofs', this.roofMat, true], ['roads', this.roadMat, false], ['cobble', this.cobbleMat, false], ['walk', this.walkMat, false], ['marks', this.markMat, false], ['bridge', this.bridgeMat, true]]) {
+      for (const [key, mat, shadow] of [['walls', this.wallMat, true], ['roofs', this.roofMat, true], ['shops', this.shopMat, false], ['ao', this.aoMat, false], ['roads', this.roadMat, false], ['cobble', this.cobbleMat, false], ['walk', this.walkMat, false], ['marks', this.markMat, false], ['bridge', this.bridgeMat, true]]) {
         const g = c[key].build(); c[key] = null;
         if (!g) continue;
         freeAfterUpload(g);
@@ -315,6 +345,8 @@ export class City {
       const foot = r.k === 'path' || r.k === 'footway' || r.k === 'steps' || r.k === 'cycleway';
       const surf = foot ? C.path : unpaved ? C.dirt : r.pav === 'pedra' ? C.pedra : r.pav === 'bloco' ? C.bloco : C.asphalt;
       const asphalt = !foot && !unpaved && !cobble;
+      // tom próprio por rua (asfalto novo/velho, recapeado): ±8% sobre a cor base, fixo pela posição
+      const surfJ = surf.clone().multiplyScalar(0.92 + 0.16 * hash(r.p[0][0], r.p[0][1]));
       const urban = URBAN.has(r.k) && !unpaved;
       // pista dupla só se a pista irmã (mesmo nome, mão única com canteiro) estiver ao lado; senão desenha a rua inteira
       const dual = r.ow && r.med && !r.br && this._hasTwin(r);
@@ -364,7 +396,7 @@ export class City {
         const range = (s0) => s0 >= cum[i0] - 1e-6 && s0 < cum[i1] - 1e-6;
         const F = (f) => (a, b2) => range(a) && (!f || f(a, b2));
         // pista
-        strip(cobble ? ch.cobble : ch.roads, half, -half, 0, surf, cobble ? 2.5 : 4, F());
+        strip(cobble ? ch.cobble : ch.roads, half, -half, 0, surfJ, cobble ? 2.5 : 4, F());
         // calçadas (lajota) + meio-fio de concreto
         const curbH = 0.15;
         if (sideL) { strip(ch.walk, half + sideL, half, curbH, C.side, 1.2, F()); }
@@ -636,6 +668,35 @@ export class City {
       } else ch.walls.quad([a[0], floor, a[1]], [b[0], floor, b[1]], [b[0], top, b[1]], [a[0], top, a[1]], [[0, 0], [bays, 0], [bays, floors], [0, floors]], wall, lit, out);
       if (floor - base > 0.05) ch.walls.quad([a[0], base, a[1]], [b[0], base, b[1]], [b[0], floor, b[1]], [a[0], floor, a[1]], [[0, 0.02], [bays, 0.02], [bays, 0.05], [0, 0.05]], wall, 0, out);
     }
+    // ---- piloto do centro: sombra de contato, lojas no térreo, muro/portão das casas ----
+    if (Math.hypot(cx, cz) < PILOT_R) {
+      const n = p.length, H = this.t;
+      for (let i = 0; i < n; i++) {
+        const a = p[i], b = p[(i + 1) % n], ex = b[0] - a[0], ez = b[1] - a[1], len = Math.hypot(ex, ez); if (len < 0.5) continue;
+        const ox = -ez / len, oz = ex / len;   // normal para fora (mesma convenção de "out" acima: esquerda da aresta)
+        // sombra de contato no chão, 1,3 m para fora da parede (no piso da calçada quando houver)
+        const gy = (x, z) => H.heightAt(x, z) + this.surfOffset(x + ox * 0.6, z + oz * 0.6) + 0.03;
+        const A1 = [a[0] + ox * 1.3, a[1] + oz * 1.3], B1 = [b[0] + ox * 1.3, b[1] + oz * 1.3];
+        ch.ao.quad([a[0], gy(a[0], a[1]), a[1]], [b[0], gy(b[0], b[1]), b[1]], [B1[0], gy(B1[0], B1[1]), B1[1]], [A1[0], gy(A1[0], A1[1]), A1[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.plain, 0, [0, 1, 0]);
+        if (kind !== 'c' || len < 4 || h < 4) continue;
+        // loja no térreo quando a parede dá para a rua (sonda 2–6 m para fora: calçada ou pista)
+        const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+        let street = false; for (let k = 2; k <= 6 && !street; k += 2) street = this.surfOffset(mx + ox * k, mz + oz * k) > 0;
+        if (!street) continue;
+        const hv = hash(mx, mz), tint = new THREE.Color(0xffffff).lerp(new THREE.Color(SHOP_TINTS[Math.floor(hv * SHOP_TINTS.length)]), 0.55), bays = Math.max(1, Math.round(len / 5));
+        const o2 = 0.04, P0 = [a[0] + ox * o2, floor, a[1] + oz * o2], P1 = [b[0] + ox * o2, floor, b[1] + oz * o2];
+        ch.shops.quad(P0, P1, [P1[0], floor + 3.0, P1[2]], [P0[0], floor + 3.0, P0[2]], [[0, 0], [bays, 0], [bays, 1], [0, 1]], tint, 1, [ox, 0, oz]);
+        // toldo/marquise sobre a calçada (1,2 m), na cor da loja; por baixo, cinza
+        if (hv < 0.75) {
+          const aw = new THREE.Color(SHOP_TINTS[Math.floor(hash(mz, mx) * SHOP_TINTS.length)]).multiplyScalar(0.85), y0 = floor + 3.05, y1 = floor + 2.75, d = 1.2;
+          const Q = (q, k, y) => [q[0] + ox * k, y, q[1] + oz * k];
+          ch.walls.quad(Q(a, 0.05, y0), Q(b, 0.05, y0), Q(b, d, y1), Q(a, d, y1), [[0, 0.1], [1, 0.1], [1, 0.2], [0, 0.2]], aw, 0, [ox * 0.3, 1, oz * 0.3]);
+          ch.walls.quad(Q(a, 0.05, y0 - 0.02), Q(b, 0.05, y0 - 0.02), Q(b, d, y1 - 0.02), Q(a, d, y1 - 0.02), [[0, 0.1], [1, 0.1], [1, 0.2], [0, 0.2]], C.concreteDark, 0, [0, -1, 0]);
+        }
+      }
+      // casas: guarda a frente para o muro/portão (montado depois, quando todos os prédios já existem)
+      if (kind === 'h' && rect && rect.a * rect.b * 4 < 400) this._fronts.push({ p: p.map(q => q.slice()), cx, cz, floor, ch });
+    }
     if (roof === 'flat' || !rect) {
       const col = this._realRoof() || pick(FLAT), y = top + 0.05;
       const tris = THREE.ShapeUtils.triangulateShape(p.map(([x, z]) => new THREE.Vector2(x, z)), []);
@@ -702,18 +763,51 @@ export class City {
     return false;
   }
 
+  /** Muro baixo com portão na frente das casas do piloto (casas brasileiras: muro de alvenaria ou grade, portão de
+   *  ferro). A frente é o lado cuja sonda encontra calçada/pista; o muro fica no limite do lote, antes da calçada, e só
+   *  é feito se não cruzar outro prédio nem a calçada. Entra na malha das paredes (nenhuma chamada de desenho a mais). */
+  buildFronts() {
+    const H = this.t, plainUV = [[0, 0.1], [1, 0.1], [1, 0.2], [0, 0.2]], gateC = new THREE.Color(0x2b2e33), up = [0, 1, 0];
+    for (const f of this._fronts) {
+      const p = f.p, n = p.length; let best = null;
+      for (let i = 0; i < n; i++) {
+        const a = p[i], b = p[(i + 1) % n], ex = b[0] - a[0], ez = b[1] - a[1], len = Math.hypot(ex, ez); if (len < 4) continue;
+        const ox = -ez / len, oz = ex / len, mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+        for (let k = 1; k <= 9; k += 0.5) if (this.surfOffset(mx + ox * k, mz + oz * k) > 0) { if (!best || k < best.k) best = { a, b, ox, oz, k, len, ux: ex / len, uz: ez / len }; break; }
+      }
+      if (!best || best.k < 2) continue;                                             // casa colada na calçada: sem muro
+      const { a, b, ox, oz, k, len, ux, uz } = best, off = k - 0.45, ext = 1.2;
+      const A = [a[0] + ox * off - ux * ext, a[1] + oz * off - uz * ext], B = [b[0] + ox * off + ux * ext, b[1] + oz * off + uz * ext], L = len + 2 * ext;
+      let ok = true; for (let t = 0; t <= 1.0001 && ok; t += 0.1) { const x = A[0] + (B[0] - A[0]) * t, z = A[1] + (B[1] - A[1]) * t; if (this.blocked(x, z, 0.25) || this.surfOffset(x, z) > 0) ok = false; }
+      if (!ok) continue;
+      const hv = hash(f.cx, f.cz), wallH = 0.9 + hv * 0.9, grade = hash(f.cz, f.cx) < 0.45, col = new THREE.Color(WALLS[Math.floor(hv * WALLS.length)]).multiplyScalar(0.95);
+      const gate0 = 0.12 + hash(f.cx + 1, f.cz) * 0.4, gate1 = gate0 + Math.min(3.2, L * 0.35) / L;   // trecho do portão (fração)
+      const seg = (t0, t1, h, c, thick) => {
+        const P = t => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t], p0 = P(t0), p1 = P(t1), cx = (p0[0] + p1[0]) / 2, cz = (p0[1] + p1[1]) / 2;
+        const y = Math.min(H.heightAt(p0[0], p0[1]), H.heightAt(p1[0], p1[1])) - 0.1;
+        f.ch.walls.box(cx, y, cz, L * (t1 - t0), h + 0.1, thick, ux, uz, c, 0.0001);
+      };
+      seg(0, gate0, wallH, col, 0.18); seg(gate1, 1, wallH, col, 0.18);
+      if (grade) { seg(0, gate0, 0.08, C.concreteDark, 0.22); for (const [t0, t1] of [[0, gate0], [gate1, 1]]) seg(t0, t1, wallH + 0.7, gateC, 0.03); }   // grade sobre muro baixo
+      seg(gate0, gate1, 1.7, gateC, 0.05);                                                                                                        // portão de ferro
+      const W2 = 0.12, poly = [[A[0] - ox * W2, A[1] - oz * W2], [B[0] - ox * W2, B[1] - oz * W2], [B[0] + ox * W2, B[1] + oz * W2], [A[0] + ox * W2, A[1] + oz * W2]];
+      this.addCollider(poly, (A[0] + B[0]) / 2, (A[1] + B[1]) / 2, -1);
+    }
+    this._fronts = null;
+  }
+
   /** Mostra/esconde regiões pela distância da câmera. */
   update(px, pz) {
     for (const c of this.chunks.values()) {
       const d = Math.max(0, Math.hypot(px - c.cx, pz - c.cz) - c.size * 0.7);
       for (const m of c.meshes) {
         const k = m.userData.kind;
-        m.visible = d < (k === 'marks' || k === 'walk' ? this.detailDist : k === 'roads' || k === 'cobble' ? this.roadDist : this.buildDist);
+        m.visible = d < (k === 'marks' || k === 'walk' || k === 'ao' ? this.detailDist : k === 'roads' || k === 'cobble' ? this.roadDist : this.buildDist);
       }
     }
   }
 
-  setNight(n) { this.wallMat.emissiveIntensity = n * 0.95; if (this.lampMat) this.lampMat.emissiveIntensity = n * 1.6; if (this.poolMat) { this.poolMat.opacity = n * 0.55; this.pools.visible = n > 0.05; } }
+  setNight(n) { this.wallMat.emissiveIntensity = n * 0.95; this.shopMat.emissiveIntensity = n * 0.8; if (this.lampMat) this.lampMat.emissiveIntensity = n * 1.6; if (this.poolMat) { this.poolMat.opacity = n * 0.55; this.pools.visible = n > 0.05; } }
 }
 
 /** Marca na máscara as células da grade do terreno dentro do polígono (varredura por linha). */

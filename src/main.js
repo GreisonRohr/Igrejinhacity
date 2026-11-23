@@ -22,6 +22,7 @@ import { NavGraph } from './nav/graph.js';
 import { Pedestrians } from './sim/pedestrians.js';
 import { Interactions } from './interact/interact.js';
 import { TreeLOD } from './world/trees.js';
+import { buildUrbano } from './world/urbano.js';
 import { buildForest } from './world/forest.js';
 import { loadHumans } from './player/humans.js';
 import { MAP_MALE_CASUAL } from './player/retarget.js';
@@ -154,6 +155,8 @@ let spawn = byId.praca;
 if (params.get('spawn') && byId[params.get('spawn')]) spawn = byId[params.get('spawn')];
 const player = new Walker(scene, terrain, spawn.x + 6, spawn.z + 6);
 // consulta espacial única (prédios, árvores, carros parados, marcos) — src/core/spatial.js
+// mobiliário urbano (upgrade visual): abrigos nas paradas do GEO, rede elétrica e lixeiras no centro
+const urbano = buildUrbano({ world, terrain, city, scene });
 const spatial = buildSpatial(city, landmarks.colliders);
 city.colGrid.clear();                                  // os dados agora vivem só no spatial
 city.blocked = (x, z, r) => spatial.blocked(x, z, r);
@@ -477,4 +480,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { peds, interact, nav, spatial, sim, events, waldir, street, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { peds, interact, nav, spatial, sim, events, waldir, street, urbano, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

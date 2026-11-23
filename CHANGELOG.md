@@ -2,6 +2,16 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Upgrade visual: piloto do centro (até 650 m da praça)
+- Asfalto novo (512 px): agregado, manchas de óleo, remendos, desgaste claro e trincas; cada rua com tom próprio (±8%).
+- Sombra de contato ("oclusão ambiente assada") no chão junto às paredes dos prédios (visível até 400 m).
+- Lojas no térreo dos prédios comerciais voltados para a rua: letreiro, vitrine, porta de enrolar, toldos coloridos;
+  letreiros e vitrines acendem à noite. ~645 fachadas no piloto.
+- Muro baixo ou grade com portão de ferro na frente das casas recuadas (sem invadir calçada nem outro prédio; com colisão).
+- Rede elétrica (3 fios com catenária) entre os postes do centro; lixeiras junto a parte dos postes.
+- Abrigos de ônibus nas paradas reais do GEO Igrejinha (61 de 80; as demais caem longe de rua ou sobre prédio).
+- Custo medido no teste de orçamento: +12 chamadas de desenho (651 → 663 de 750), +76 mil triângulos, heap igual.
+
 ## 2026-11-23 — Piso da praça e passarela; fotos da Prefeitura
 - O personagem afundava: pisava no terreno, mas o piso visível fica acima dele. Agora o chão segue o que se vê —
   lajotas da praça (+6 cm), canteiros elevados (+32 cm), margens do valão (o terreno ali é escavado; a margem fica na
