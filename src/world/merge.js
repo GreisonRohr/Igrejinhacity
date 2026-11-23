@@ -5,6 +5,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 /** Depois do primeiro envio à GPU, descarta os arrays de vértices em memória (a GPU guarda a cópia dela). */
 export function freeAfterUpload(geometry) {
+  if (globalThis.__keepGeo) return;   // ?keepgeo: mantém os vértices (testes que medem a geometria, ex.: piso da praça)
   const free = function () { this.array = null; };
   for (const k in geometry.attributes) geometry.attributes[k].onUpload(free);
   if (geometry.index) geometry.index.onUpload(free);

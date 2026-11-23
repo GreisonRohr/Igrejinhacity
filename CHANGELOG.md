@@ -2,6 +2,17 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Piso da praça e passarela; fotos da Prefeitura
+- O personagem afundava: pisava no terreno, mas o piso visível fica acima dele. Agora o chão segue o que se vê —
+  lajotas da praça (+6 cm), canteiros elevados (+32 cm), margens do valão (o terreno ali é escavado; a margem fica na
+  altura da rua), varanda do Erni Engelmann, e em toda a cidade a pista (+8 cm), a calçada (+23 cm) e os canteiros.
+- Passarela de madeira da praça: anda-se por cima do tabuleiro; as paredes do valão e os guarda-corpos têm colisão
+  (não se desce mais para o leito). O teste `pontes` agora atravessa a passarela nos dois sentidos (28/28).
+- Fotos da Prefeitura (igrejinha.rs.gov.br, notícia 1188, 2026): Erni Engelmann com paredes de madeira cor de mel e o
+  nome do oitão legível (estava espelhado); Feira do Produtor com base de tijolo, painéis de madeira com mãos-francesas
+  em X e pérgola de metal preto com cobertura de vidro.
+- `?keepgeo` mantém os vértices na memória (para testes que medem a geometria, como a varredura do piso da praça).
+
 ## 2026-11-23 — Casa do Artesão
 - Ao lado da Igreja Gabriel, do lado da R. Santos Dumont (fotos do diretor, Street View abr/2026 só como referência, e do
   site de turismo): casa branca de rodapé e molduras vermelhas, varanda em "A" de madeira escura com mãos-francesas,

@@ -51,3 +51,10 @@ canteiro, abrigo de telha com brasão e placas de direção na esquina SW da pra
   Santíssima (Alles Blau), Morro Alto da Pedra, Morro do Xaxim, Cascata dos Italianos, Gruta N. Sra. do Equilíbrio,
   Casa do Artesão/Feira ASSOAPE, pórtico do Parque de Eventos Almiro Grings.
 - Fora do relevo atual (não entram no jogo ainda): Morro do Xaxim, Cascata dos Italianos, Prommer Ecopark.
+
+## Prefeitura — igrejinha.rs.gov.br e Plano Diretor (só referência)
+- Notícia 1188 (2026): reforma do Espaço Erni Engelmann Platz e da Feira do Produtor (fotos usadas na praça).
+- Notícia 1140: Marco da Gratidão (monumento pós-enchente) — local exato a confirmar.
+- Notícias 1150/1160/1198: eventos na Rua Coberta e na Av. Castelo Branco.
+- Drive do Plano Diretor (PDDURA 2020): mapas, zoneamento, patrimônio georreferenciado (anexo 10D, já no jogo pelo GEO)
+  e gabaritos viários (anexo 9B3; as larguras já vêm da camada ruas_estradas do GEO).

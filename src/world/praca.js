@@ -23,6 +23,17 @@ const woodCladTex = () => tex(128, 64, (c, w, h) => {
   for (let y = 0; y < h; y += 12) { c.fillStyle = y % 24 ? '#7d5a40' : '#94704f'; c.fillRect(0, y, w, 11); c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(0, y + 11, w, 1); }
   for (let x = 0; x < w; x += 9) { c.fillStyle = 'rgba(60,35,20,0.12)'; c.fillRect(x, 0, 1, h); }
 }, true);
+// fotos da Prefeitura (notícia 1188, 2026): madeira clara cor de mel; painéis com mãos-francesas escuras em X
+const honeyTex = () => tex(128, 64, (c, w, h) => {
+  c.fillStyle = '#c99a5c'; c.fillRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 16) { c.fillStyle = x % 32 ? '#bf8f52' : '#d2a467'; c.fillRect(x, 0, 15, h); c.fillStyle = 'rgba(70,40,15,0.35)'; c.fillRect(x + 15, 0, 1, h); }
+}, true);
+const xPanelTex = () => tex(128, 128, (c, w, h) => {
+  c.fillStyle = '#cf9e60'; c.fillRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 16) { c.fillStyle = 'rgba(80,45,15,0.18)'; c.fillRect(x, 0, 1, h); }
+  c.fillStyle = '#7a4e28'; c.fillRect(0, 0, w, 8); c.fillRect(0, h - 8, w, 8); c.fillRect(0, 0, 8, h); c.fillRect(w - 8, 0, 8, h);
+  c.strokeStyle = '#7a4e28'; c.lineWidth = 8; c.beginPath(); c.moveTo(6, 6); c.lineTo(w - 6, h - 6); c.moveTo(w - 6, 6); c.lineTo(6, h - 6); c.stroke();
+}, true);
 const brickTex = () => tex(128, 64, (c, w, h) => {
   c.fillStyle = '#d8d0c4'; c.fillRect(0, 0, w, h);
   for (let y = 0; y < h; y += 10) for (let x = ((y / 10) % 2) * -11; x < w; x += 22) { c.fillStyle = ['#a9583c', '#9c4d33', '#b5643f'][(x + y) % 3]; c.fillRect(x + 1, y + 1, 20, 8); }
@@ -81,13 +92,13 @@ export function buildPraca(ctx) {
     pedestal: lambert(0xb9b6ae), plaque: lambert(0x9c9890), glassDark: lambert(0x2d3a44), roofSlate: lambert(0x4b4f55), roofTile: lambert(0x7a3a28),
     rock: lambert(0x8c6f55), sand: lambert(0xe3d3a8), fruitR: lambert(0xd23a2a), fruitG: lambert(0x7ab83a), fruitO: lambert(0xf09a20), fruitY: lambert(0xf2d03a),
     lightWood: lambert(0xc08a52), yellowCurb: lambert(0xe8b923), restroom: lambert(0xf2f2ee),
-    clad: new THREE.MeshLambertMaterial({ map: woodCladTex() }), brick: new THREE.MeshLambertMaterial({ map: brickTex() }),
+    clad: new THREE.MeshLambertMaterial({ map: woodCladTex() }), honey: new THREE.MeshLambertMaterial({ map: honeyTex() }), xpanel: new THREE.MeshLambertMaterial({ map: xPanelTex() }), brick: new THREE.MeshLambertMaterial({ map: brickTex() }),
     totem: new THREE.MeshLambertMaterial({ map: totemTex() }), clock: new THREE.MeshLambertMaterial({ map: clockTex() }),
     rail: new THREE.MeshLambertMaterial({ map: railTex(), transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
     gable: new THREE.MeshLambertMaterial({ map: gableWoodTex(), side: THREE.DoubleSide }), banner: new THREE.MeshLambertMaterial({ map: bannerTex() }),
     flag: new THREE.MeshLambertMaterial({ map: flagPanelTex() }), pipoca: new THREE.MeshLambertMaterial({ map: pipocaTex(), side: THREE.DoubleSide }),
   };
-  M.clad.map.repeat.set(4, 1); M.brick.map.repeat.set(3, 1);
+  M.clad.map.repeat.set(4, 1); M.brick.map.repeat.set(3, 1); M.honey.map.repeat.set(6, 2); M.xpanel.map.repeat.set(4, 1);
   const lampGlass = new THREE.MeshLambertMaterial({ color: 0xfff1c8, emissive: 0xffd27a, emissiveIntensity: 0 });
   updaters.push((dt, s) => { lampGlass.emissiveIntensity = s.night * 1.5; });
   const Y = (x, z) => H(x, z);
@@ -134,7 +145,7 @@ export function buildPraca(ctx) {
     }
   }
   // passarela de madeira de troncos sobre o arroio (fotos TripAdvisor), levemente arqueada, guarda-corpo em X
-  const footbridges = [];
+  const footbridges = [], decks = [], porches = [];   // porches: [x0, z0, x1, z1, y] pisos elevados (varanda do Erni)
   {
     const inner = stream.filter(([a, b]) => inside((a[0] + b[0]) / 2, (a[1] + b[1]) / 2));
     const lens = inner.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1])), tot = lens.reduce((x, y) => x + y, 0);
@@ -159,7 +170,31 @@ export function buildPraca(ctx) {
       for (const sd of [-1, 1]) bk.add(new THREE.CylinderGeometry(0.1, 0.1, 1.1, 7), log, sd * 0.9, 0.5, BL / 2);
       bk.add(new THREE.CylinderGeometry(0.12, 0.12, BL, 7).rotateX(PI / 2), log, 0, -0.12, 0);   // viga de tronco sob o tabuleiro
       bk.build(bg);
-      footbridges.push([qx, qz]);
+      footbridges.push([qx, qz, -uz, ux]);   // centro e direção da travessia
+      decks.push({ qx, qz, nx: -uz, nz: ux, ux, uz, y: bg.position.y, L: BL });   // tabuleiro: atravessa o arroio na direção (nx, nz)
+      // guarda-corpos: não se cai da passarela para dentro do valão
+      for (const sd of [-1, 1]) { const ox = ux * sd * 0.95, oz = uz * sd * 0.95, P2 = (t, w) => [qx + -uz * t + ox + ux * w, qz + ux * t + oz + uz * w];
+        colliders.push({ p: [P2(-BL / 2, -0.08), P2(BL / 2, -0.08), P2(BL / 2, 0.08), P2(-BL / 2, 0.08)] }); }
+    }
+  }
+  // paredes do valão (2,2 m, retas): ninguém desce para o leito; a passarela é a travessia
+  for (const [a, b] of stream) {
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.1) continue;
+    const ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, n = Math.max(1, Math.ceil(L / 2));
+    const A = t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    // vão da passarela: entre os guarda-corpos (|w| < 0,95 m do eixo do tabuleiro) a parede fica aberta
+    const open = t => { const p = A(t); return decks.some(d => Math.abs((p[0] - d.qx) * d.ux + (p[1] - d.qz) * d.uz) < 0.95 && Math.hypot(p[0] - d.qx, p[1] - d.qz) < d.L / 2 + 1); };
+    const K = n * 10; let start = null;
+    for (let i = 0; i <= K; i++) {
+      const t = i / K, o = i < K && open((i + 0.5) / K);
+      if (!o && i < K && start === null) start = t;
+      if ((o || i === K) && start !== null) {
+        for (const s of [-1, 1]) {
+          const o0 = s * WALL, o1 = s * (WALL + 0.5), p0 = A(start), p1 = A(t), Q = (p, off) => [p[0] - uz * off, p[1] + ux * off];
+          colliders.push({ p: [Q(p0, o0), Q(p1, o0), Q(p1, o1), Q(p0, o1)] });
+        }
+        start = null;
+      }
     }
   }
 
@@ -170,7 +205,7 @@ export function buildPraca(ctx) {
     const x0 = 13, x1 = 25, z0 = eN + 2.6, z1 = z0 + 10.5, wallH = 3.3, ridge = 5.6, y = Y((x0 + x1) / 2, (z0 + z1) / 2) + 0.6;
     const mx = (x0 + x1) / 2, W = x1 - x0, D = z1 - z0;
     k.box(W + 0.4, 0.6, D + 0.4, M.brick, mx, y - 0.6, (z0 + z1) / 2);                     // embasamento de tijolo
-    k.box(W, wallH, D, M.white, mx, y, (z0 + z1) / 2);
+    k.box(W, wallH, D, M.honey, mx, y, (z0 + z1) / 2);                                        // madeira cor de mel (fotos 2026)
     k.add(new THREE.BoxGeometry(W - 1.2, 2.3, 0.08), M.glassDark, mx, y + 1.35, z0 - 0.02);  // vitrine da frente
     for (let i = 0; i <= 5; i++) k.add(new THREE.BoxGeometry(0.12, 2.5, 0.14), M.darkWood, x0 + 0.6 + i * (W - 1.2) / 5, y + 1.3, z0 - 0.05);
     k.add(new THREE.BoxGeometry(W + 0.2, 0.25, 0.3), M.darkWood, mx, y + wallH - 0.1, z0 - 0.05);
@@ -178,7 +213,7 @@ export function buildPraca(ctx) {
     const tri = new THREE.BufferGeometry();
     tri.setAttribute('position', new THREE.Float32BufferAttribute([-W / 2 - 0.4, 0, 0, W / 2 + 0.4, 0, 0, 0, ridge, 0], 3));
     tri.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, -1, 0, 0, -1, 0, 0, -1], 3));
-    tri.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2));
+    tri.setAttribute('uv', new THREE.Float32BufferAttribute([1, 0, 0, 0, 0.5, 1], 2));   // vista de frente (−z): sem espelhar o nome
     k.add(tri, M.gable, mx, y + wallH, z0 - 0.9);
     k.add(tri, M.white, mx, y + wallH, z1);
     const sl = Math.hypot(W / 2 + 1.2, ridge + 0.5), sa = Math.atan2(ridge + 0.5, W / 2 + 1.2);
@@ -198,7 +233,7 @@ export function buildPraca(ctx) {
       rectCol(wx0, z0 + 1, wx1, z1); occupy(wx0, z0, wx1, z1);
     }
     // varanda de madeira com guarda-corpo em X sobre base de tijolo
-    k.box(W + 1, 0.15, 2.6, M.wood, mx, y - 0.15, z0 - 1.3);
+    k.box(W + 1, 0.15, 2.6, M.wood, mx, y - 0.15, z0 - 1.3); porches.push([x0 - 0.5, z0 - 2.6, x1 + 0.5, z0, y]);
     k.box(W + 1, 0.6, 0.3, M.brick, mx, y - 0.6, z0 - 2.6);
     for (let i = 0; i < 9; i++) { const lx = x0 - 0.5 + (i + 0.5) * (W + 1) / 9; if (Math.abs(lx - mx) < 1) continue; kd.add(new THREE.PlaneGeometry((W + 1) / 9, 0.9), M.rail, lx, y + 0.45, z0 - 2.6); }
     kd.add(new THREE.PlaneGeometry(3.6, 1.8), M.banner, x0 + 2.6, y + 1.5, z0 - 0.08, PI);  // faixa do festival na fachada
@@ -208,7 +243,13 @@ export function buildPraca(ctx) {
   /* ---------- feira do produtor (à esquerda do Erni Engelmann) ---------- */
   {
     const x0 = 1, x1 = 11, z0 = eN + 3.5, z1 = z0 + 6.5, y = Y((x0 + x1) / 2, (z0 + z1) / 2), W = x1 - x0, D = z1 - z0, mx = (x0 + x1) / 2;
-    k.box(W, 3.2, 0.25, M.white, mx, y, z1); k.box(0.25, 3.2, D, M.white, x0, y, (z0 + z1) / 2); k.box(0.25, 3.2, D, M.white, x1, y, (z0 + z1) / 2);
+    k.box(W, 1.1, 0.3, M.brick, mx, y, z1); k.box(0.3, 1.1, D, M.brick, x0, y, (z0 + z1) / 2); k.box(0.3, 1.1, D, M.brick, x1, y, (z0 + z1) / 2);   // base de tijolo
+    k.box(W, 2.1, 0.25, M.xpanel, mx, y + 1.1, z1); k.box(0.25, 2.1, D, M.xpanel, x0, y + 1.1, (z0 + z1) / 2); k.box(0.25, 2.1, D, M.xpanel, x1, y + 1.1, (z0 + z1) / 2);   // painéis de madeira com X
+    // pérgola de metal preto com cobertura de vidro na frente (fotos 2026)
+    for (let i = 0; i <= 3; i++) k.box(0.12, 3.0, 0.12, M.black, x0 + 0.3 + i * (W - 0.6) / 3, y, z0 - 2.6);
+    k.box(W + 0.4, 0.14, 0.14, M.black, mx, y + 2.95, z0 - 2.6);
+    for (let i = 0; i <= 6; i++) k.add(new THREE.BoxGeometry(0.08, 0.1, 2.8), M.black, x0 + i * W / 6, y + 3.1, z0 - 1.2, 0, 0.12);
+    k.add(new THREE.BoxGeometry(W + 0.3, 0.04, 2.8), lambert(0xb9c8cf), mx, y + 3.17, z0 - 1.2, 0, 0.12);
     k.box(W, 1.0, 0.5, M.brick, mx, y, z0 + 0.4);                                             // balcão de tijolo
     // pilares de madeira clara na frente (fotos: R. Osvaldo Cruz 561) e telhado de uma água revestido de madeira
     for (let i = 0; i <= 4; i++) k.box(0.3, 3.4, 0.3, M.lightWood, x0 + 0.2 + i * (W - 0.4) / 4, y, z0 + 0.1);
@@ -216,7 +257,7 @@ export function buildPraca(ctx) {
     const rise = 1.6, sl = Math.hypot(D + 1.6, rise), sa = Math.atan2(rise, D + 1.6);
     k.add(new THREE.BoxGeometry(W + 1.2, 0.18, sl), M.lightWood, mx, y + 3.6 + rise / 2, (z0 + z1) / 2 - 0.3, 0, -sa);
     k.add(new THREE.BoxGeometry(W + 1.3, 0.55, 0.12), M.lightWood, mx, y + 3.75 + rise, z0 - 1.05);   // testeira alta na frente
-    k.box(W, rise, 0.25, M.white, mx, y + 3.2, z1);
+    k.box(W, rise, 0.25, M.honey, mx, y + 3.2, z1);
     // frutas e verduras em caixotes sobre o balcão
     const fr = [M.fruitR, M.fruitG, M.fruitO, M.fruitY];
     for (let i = 0; i < 8; i++) { const fx = x0 + 0.8 + i * (W - 1.6) / 7; k.box(0.9, 0.22, 0.45, M.wood, fx, y + 1.0, z0 + 0.4); for (let j = 0; j < 5; j++) k.add(new THREE.SphereGeometry(0.09, 5, 4), fr[(i + j) % 4], fx - 0.32 + j * 0.16, y + 1.3, z0 + 0.4 + ((j % 2) - 0.5) * 0.15); }
@@ -522,5 +563,23 @@ export function buildPraca(ctx) {
   }
 
   k.build(g); kd.build(g, false);
-  return { footbridges, pipoca, parking, trees: treeList, bounds: [X0, Z0, X1, Z1] };
+  /** Altura do piso da praça onde ele não é o terreno: tabuleiro da passarela e margens do valão (o terreno ali foi
+   *  escavado largo e plano; o piso das margens fica na altura da rua). null = usar o terreno. */
+  const deckAt = (x, z) => {
+    for (const d of decks) {
+      const s = (x - d.qx) * d.nx + (z - d.qz) * d.nz, w = (x - d.qx) * d.ux + (z - d.qz) * d.uz;
+      if (Math.abs(s) <= d.L / 2 + 0.3 && Math.abs(w) < 0.85) return d.y + Math.sin(Math.max(0, Math.min(1, (s + d.L / 2) / d.L)) * PI) * 0.45 + 0.05;
+    }
+    return null;
+  };
+  const surfaceAt = (x, z) => {
+    for (const [a, b, c, d, y] of porches) if (x > a && x < c && z > b && z < d) return y;
+    const s2 = streamD(x, z), bank = s2 && s2.d < 9.5;
+    if (s2 && s2.d <= WALL + 0.45) return null;                                   // dentro do canal: leito (terreno)
+    // mesma regra do piso (pav/grass acima): lajotas +6 cm, canteiros elevados +32 cm, margens na altura da rua
+    if (inside(x, z)) return (bank ? Yb(x, z) : Y(x, z)) + (inBed(x, z) ? 0.32 : 0.06);
+    if (bank) return Yb(x, z) + 0.05;
+    return null;
+  };
+  return { footbridges, pipoca, parking, trees: treeList, bounds: [X0, Z0, X1, Z1], surfaceAt, deckAt };
 }

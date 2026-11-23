@@ -29,6 +29,7 @@ import { MAP_MALE_CASUAL } from './player/retarget.js';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
+if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */
 const Q = isTouch
@@ -160,7 +161,12 @@ city.roofAt = (x, z) => spatial.roofAt(x, z, true);
 const _near = [];
 // pessoas também são sólidas para o jogador
 player.blocked = (x, z, r) => spatial.blocked(x, z, r) || spatial.agentsNear(x, z, r + 0.05, _near).length > 0;
-player.groundAt = (x, z, cur) => { const g = terrain.heightAt(x, z), d = city.deckAt(x, z); return d !== null && d > g - 0.3 && d - cur < 1.2 ? Math.max(d, g) : g; };
+player.groundAt = (x, z, cur) => {
+  let g = terrain.heightAt(x, z) + city.surfOffset(x, z);   // pista +8 cm, calçada +23 cm
+  const s = landmarks.surfaceAt(x, z); if (s !== null && s > g) g = s;                     // margens do valão da praça (piso sobre a escavação)
+  const f = landmarks.deckAt(x, z); if (f !== null && f > g - 0.3 && f - cur < 1.2) g = Math.max(f, g);   // passarela: só quem chega por cima
+  const d = city.deckAt(x, z); return d !== null && d > g - 0.3 && d - cur < 1.2 ? Math.max(d, g) : g;
+};
 player.surf = player.groundAt(player.x, player.z, terrain.heightAt(player.x, player.z));
 // se nasceu dentro de um prédio, procura um lugar livre em espiral
 for (let k = 0; k < 400 && player.blocked(player.x, player.z, 0.6); k++) { const a = k * 0.7, r = 1 + k * 0.25; player.x = spawn.x + Math.cos(a) * r; player.z = spawn.z + Math.sin(a) * r; }

@@ -331,6 +331,11 @@ export class City {
         let acc = 0; Y = pts.map((p, i) => { if (i) acc += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); const f = acc / L; return h0 + (h1 - h0) * f + arch * Math.sin(Math.PI * f); });
       }
       const hy = (p, i) => (Y ? Y[i] : t.heightAt(p[0], p[1]) + 0.08);
+      // piso por onde se anda: pista +8 cm e calçada +23 cm sobre o terreno (pontes: deckAt)
+      if (!Y) { const sb = this.surfBins || (this.surfBins = new Map());
+        for (let i = 0; i < r.p.length - 1; i++) { const a = r.p[i], b = r.p[i + 1], noMed = /Jo.o Corr/.test(r.n || '') && Math.min(...r.p.map(q => Math.hypot(q[0], q[1] - 47))) < 60,
+            seg = [a[0], a[1], b[0], b[1], half, sideL, sideR, dual && !foot ? r.med / 2 + 1 : 0, r.med && !dual && !noMed ? r.med / 2 : 0], R = half + Math.max(sideL, sideR, dual ? r.med / 2 + 1 : 0) + 1;
+          for (let bi = Math.floor((Math.min(a[0], b[0]) - R) / 50); bi <= Math.floor((Math.max(a[0], b[0]) + R) / 50); bi++) for (let bj = Math.floor((Math.min(a[1], b[1]) - R) / 50); bj <= Math.floor((Math.max(a[1], b[1]) + R) / 50); bj++) { const k = bi + ',' + bj; let L = sb.get(k); if (!L) sb.set(k, L = []); L.push(seg); } } }
       const NRM = pts.map((_, i) => perp(pts, i, true));
       const off = (i, o) => { const [nx, nz, m] = NRM[i]; return [pts[i][0] + nx * o * m, pts[i][1] + nz * o * m]; };
       const wuv = (q, s) => [q[0] / s, q[1] / s];
@@ -479,6 +484,22 @@ export class City {
   }
 
   /** Altura do tabuleiro de ponte em (x, z), ou null se não há ponte ali. */
+  /** Altura do piso de ruas e calçadas acima do terreno neste ponto (0 fora delas). */
+  surfOffset(x, z) {
+    const L = this.surfBins?.get(Math.floor(x / 50) + ',' + Math.floor(z / 50)); if (!L) return 0;
+    let best = 0;
+    for (const [ax, az, bx, bz, half, sl, sr, md, mm] of L) {
+      const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1, t = ((x - ax) * dx + (z - az) * dz) / l2; if (t < -0.02 || t > 1.02) continue;
+      const tt = Math.max(0, Math.min(1, t)), px = ax + dx * tt, pz = az + dz * tt, l = Math.sqrt(l2);
+      const o = ((x - px) * -dz + (z - pz) * dx) / l;          // > 0 = à esquerda (mesma convenção de perp)
+      if (mm && Math.abs(o) <= mm) return 0.28;                  // canteiro central de pista única
+      if (Math.abs(o) <= half) { if (best < 0.08) best = 0.08; }
+      else if ((o > 0 && o <= half + sl) || (o < 0 && -o <= half + sr)) return 0.23;
+      else if (md && o < 0 && -o <= half + md) best = Math.max(best, 0.23);   // canteiro gramado da pista dupla
+    }
+    return best;
+  }
+
   deckAt(x, z) {
     const list = this.decks?.get(Math.floor(x / 50) + ',' + Math.floor(z / 50)); if (!list) return null;
     let best = null;

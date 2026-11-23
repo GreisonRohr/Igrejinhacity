@@ -102,13 +102,24 @@ await suite('pontes', async () => {
         res.push({ n: r.n || '-', ok: ymid !== null && deck !== null && Math.abs(ymid - deck) < 0.6 });
       }
     }
+    // passarela de madeira da praça sobre o valão: atravessa por cima (não desce para o leito) e chega do outro lado
+    for (const [qx, qz, dx, dz] of g.landmarks.footbridges) {
+      const deck = g.landmarks.deckAt(qx, qz), ang = Math.atan2(dz, dx);
+      for (const s of [-1, 1]) {
+        const sx = qx - dx * s * 8, sz = qz - dz * s * 8;
+        pl.x = sx; pl.z = sz; pl.surf = pl.groundAt(sx, sz, g.terrain.heightAt(sx, sz) + 2); pl.speed = 0; pl.ang = Math.atan2(dx * s, dz * s);
+        let ymid = null, ymin = Infinity;
+        for (let k = 0; k < 900 && Math.hypot(pl.x - sx, pl.z - sz) < 16; k++) { pl.update(1 / 60, { f: 1, t: 0, run: false }, Math.atan2(dx * s, dz * s)); if (Math.hypot(pl.x - qx, pl.z - qz) < 0.6) ymid = pl.y; if (Math.hypot(pl.x - qx, pl.z - qz) < 4) ymin = Math.min(ymin, pl.y); }
+        res.push({ n: 'passarela da praça ' + JSON.stringify({ ymid: ymid && +ymid.toFixed(2), ymin: +ymin.toFixed(2), deck: +deck.toFixed(2), walk: +Math.hypot(pl.x - sx, pl.z - sz).toFixed(1), ang: +ang.toFixed(2), t0: +g.terrain.heightAt(sx, sz).toFixed(2), s0: g.landmarks.surfaceAt(sx, sz) }), ok: ymid !== null && Math.abs(ymid - deck) < 0.3 && ymin > deck - 0.7 && Math.hypot(pl.x - sx, pl.z - sz) > 14 });
+      }
+    }
     return res;
   });
   const bad = out.filter(o => !o.ok);
   assert(out.length >= 26, `só ${out.length} travessias`);
   assert(!bad.length, 'falharam: ' + bad.map(b => b.n).join(', '));
   await p.close();
-  return `${out.length}/${out.length} travessias no tabuleiro`;
+  return `${out.length}/${out.length} travessias no tabuleiro (inclui a passarela da praça)`;
 });
 
 await suite('colisao', async () => {
