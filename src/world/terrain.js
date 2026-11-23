@@ -129,7 +129,11 @@ export class Terrain {
     const tmp = new THREE.Color();
     let k = 0;
     const put = (i, j, drop) => {
-      const x = this.x0 + i * this.cell, z = this.z0 + j * this.cell, y = this.hi(i, j);
+      const x = this.x0 + i * this.cell, z = this.z0 + j * this.cell;
+      // LOD grosso: vértice no ponto mais baixo da vizinhança, para a malha simplificada nunca passar por cima
+      // de ruas e calçadas desenhadas sobre o relevo fino (aparecia grama/foto aérea no lugar do asfalto)
+      let y = this.hi(i, j);
+      if (step > 1) { const r = Math.min(step, 4); for (let a = -r; a <= r; a++) for (let b = -r; b <= r; b++) y = Math.min(y, this.hi(i + a, j + b)); }
       pos[k * 3] = x; pos[k * 3 + 1] = y - drop; pos[k * 3 + 2] = z;
       uv[k * 2] = (x - this.x0) / this.W; uv[k * 2 + 1] = 1 - (z - this.z0) / this.H;
       // normal analítica no grid original (igual em todos os LODs → menos emendas visíveis)

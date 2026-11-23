@@ -3,3 +3,4 @@ dist/
 data/raw/terrarium/
 data/raw/geoigrejinha/curvas_*.geojson
 tests/out/
+data/raw/geoigrejinha/uso_solo_2023.geojson

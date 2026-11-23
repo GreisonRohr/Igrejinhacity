@@ -313,7 +313,8 @@ export class City {
       const surf = foot ? C.path : unpaved ? C.dirt : r.pav === 'pedra' ? C.pedra : r.pav === 'bloco' ? C.bloco : C.asphalt;
       const asphalt = !foot && !unpaved && !cobble;
       const urban = URBAN.has(r.k) && !unpaved;
-      const dual = r.ow && r.med;
+      // pista dupla só se a pista irmã (mesmo nome, mão única com canteiro) estiver ao lado; senão desenha a rua inteira
+      const dual = r.ow && r.med && !r.br && this._hasTwin(r);
       const width = dual ? Math.max(3.5, (r.w - r.med) / 2) : r.w;
       const half = width / 2;
       const swAvg = r.sw ? (r.sw[0] + r.sw[1]) / 2 : (urban ? 2.2 : 0);
@@ -549,7 +550,10 @@ export class City {
       } else rect = asRect(p);
       const k = b.kind || 'house';
       const ind = /industrial|warehouse|shed/.test(k), com = /commercial|retail|office|apartments|school|church/.test(k);
-      const roof = !rect ? 'flat' : ind ? 'shed' : com ? 'flat' : rect.a * rect.b * 4 > 520 ? 'flat' : 'gable';
+      let roof = !rect ? 'flat' : ind ? 'shed' : com ? 'flat' : rect.a * rect.b * 4 > 520 ? 'flat' : 'gable';
+      // formato lido na imagem aérea (scripts/build-roofshape.py): 1 laje, 2 duas águas, 3 quatro águas
+      const rs = rect && this.roofShapes ? this.roofShapes[wi] : 0;
+      if (rs === 1) roof = 'flat'; else if (rs === 2 && !ind) roof = 'gable'; else if (rs === 3 && !ind) roof = 'hip';
       this._roofReal = this.roofColors && this.roofColors[wi] >= 0 ? this.roofColors[wi] : -1;   // cor da foto aérea
       this.addBuilding(p, b.h, roof, ind ? 'i' : com ? 'c' : k === 'annex' ? 'a' : 'h', rect, i++);
       this._roofReal = -1;
@@ -563,6 +567,15 @@ export class City {
       this.addBuilding(p, h, k === 'h' ? 'gable' : k === 'i' ? 'shed' : 'flat', k, rect, i++);
     }
     void t;
+  }
+
+  _hasTwin(r) {
+    const m = r.p[r.p.length >> 1];
+    for (const q of this.world.roads) {
+      if (q === r || !q.ow || !q.med || q.n !== r.n) continue;
+      for (let i = 0; i < q.p.length - 1; i++) { if (segDist(m[0], m[1], q.p[i][0], q.p[i][1], q.p[i + 1][0], q.p[i + 1][1]) < r.w * 1.2) return true; }
+    }
+    return false;
   }
 
   /** Cor real do telhado (foto aérea 2016), com leve ganho: a foto vem mais escura que a luz do jogo. */
@@ -582,7 +595,7 @@ export class City {
     for (const [x, z] of p) { const y = t.heightAt(x, z); ymin = Math.min(ymin, y); ymax = Math.max(ymax, y); cx += x; cz += z; }
     cx /= p.length; cz /= p.length;
     const floor = ymax + 0.15, top = floor + h, base = ymin - 0.6;
-    this._top = top + (roof === 'gable' && rect ? rect.b * 0.75 : 0.6);
+    this._top = top + (roof === 'gable' && rect ? rect.b * 0.75 : roof === 'hip' && rect ? rect.b * 0.55 : 0.6);
     const ch = this.chunk(cx, cz);
     const wall = kind === 'i' ? pick(IND_WALLS) : kind === 'c' ? pick(COM_WALLS) : pick(WALLS);
     const lit = kind === 'a' ? 0 : rand() < (kind === 'i' ? 0.15 : 0.6) ? 1 : 0;
@@ -606,10 +619,21 @@ export class City {
       return this.addCollider(p, cx, cz, id);
     }
     // telhado de duas águas (ou meia-água nos galpões) sobre o retângulo orientado
-    const { a, b, ua, ub } = rect, o = roof === 'shed' ? 0.4 : 0.55, pitch = roof === 'shed' ? 0.18 : 0.75;
+    const { a, b, ua, ub } = rect, o = roof === 'shed' ? 0.4 : 0.55, pitch = roof === 'shed' ? 0.18 : roof === 'hip' ? 0.55 : 0.75;
     const rh = b * pitch, col = this._realRoof() || (roof === 'shed' ? pick(METAL) : pick(ROOFS));
     const P = (sa, sb, y) => [rect.cx + ua[0] * sa + ub[0] * sb, y, rect.cz + ua[1] * sa + ub[1] * sb];
     const ye = top - o * pitch, yr = top + rh;
+    if (roof === 'hip') {
+      // quatro águas: cumeeira encurtada (recua b nas pontas), 2 trapézios + 2 triângulos
+      const ra = Math.max(0, a - b);
+      for (const s of [1, -1]) {
+        const e1 = P(a + o, s * (b + o), ye), e2 = P(-a - o, s * (b + o), ye), r2 = P(-ra, 0, yr), r1 = P(ra, 0, yr);
+        ch.roofs.quad(e1, e2, r2, r1, [[0, 0], [(2 * a + 2 * o) / 1.2, 0], [(2 * ra) / 1.2, (b + o) / 0.4], [0, (b + o) / 0.4]], col, 0, [ub[0] * s, 1, ub[1] * s]);
+        ch.roofs.tri(P(s * (a + o), -(b + o), ye), P(s * (a + o), b + o, ye), P(s * ra, 0, yr), [[0, 0], [(2 * b + 2 * o) / 1.2, 0], [(b + o) / 1.2, (b + o) / 0.4]], col, 0, [ua[0] * s, 1, ua[1] * s]);
+      }
+      ch.roofs.quad(P(a + o, b + o, ye), P(-a - o, b + o, ye), P(-a - o, -b - o, ye), P(a + o, -b - o, ye), [[0, 0], [1, 0], [1, 1], [0, 1]], col, 0, [0, -1, 0]);
+      return this.addCollider(p, cx, cz, id);
+    }
     for (const s of [1, -1]) {
       const e1 = P(a + o, s * (b + o), ye), e2 = P(-a - o, s * (b + o), ye), r2 = P(-a - o, 0, yr), r1 = P(a + o, 0, yr);
       const sl = Math.hypot(b + o, rh + o * pitch);

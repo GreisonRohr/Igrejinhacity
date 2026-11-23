@@ -36,7 +36,7 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
   for (const r of world.roads) {
     if (r.br || !URBAN.has(r.k) || r.pav === 'terra') continue;
     if (Math.min(...r.p.map(q => Math.hypot(q[0], q[1]))) > townR) continue;
-    const dual = r.ow && r.med, width = dual ? Math.max(3.5, (r.w - r.med) / 2) : r.w, half = width / 2;
+    const dual = r.ow && r.med && city._hasTwin(r), width = dual ? Math.max(3.5, (r.w - r.med) / 2) : r.w, half = width / 2;
     const sw = r.sw || [2.2, 2.2];
     const pts = resample(r.p, 2);
     let acc = 0, nextTree = [6 + rnd() * 8, 10 + rnd() * 8], nextCar = [4 + rnd() * 10, 8 + rnd() * 10];
