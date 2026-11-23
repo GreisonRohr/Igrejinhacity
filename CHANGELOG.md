@@ -2,6 +2,15 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Cadastro e zoneamento do GEO Igrejinha
+- Pavimentos reais: área construída das unidades do cadastro imobiliário ÷ área do térreo (unidades agrupadas por
+  edifício/endereço; condomínios de vários blocos divididos). 84 prédios com 5+ andares, 27 com 10+.
+- Nome dos edifícios (Heidelberg, Dom Vidal, Monaco, Vivalar…) em placa perto do topo.
+- HUD mostra onde você está: rua, número e bairro (cadastro + bairros do PDDURA 2020).
+- Zona industrial do PDDURA vira galpão; pontos turísticos, 122 imóveis do inventário do patrimônio histórico e as feiras
+  do produtor no minimapa.
+- Só campos úteis ao jogo são baixados do cadastro (sem inscrição, matrícula, ficha ou dados pessoais).
+
 ## 2026-11-23 — Dados reais da imagem aérea
 - Telhados: cor real de 17 mil prédios tirada da imagem aérea da Prefeitura (`scripts/build-roofs.py`).
 - Árvores: 9 mil copas reais detectadas na imagem aérea (`scripts/build-trees.py`) substituem as árvores sorteadas

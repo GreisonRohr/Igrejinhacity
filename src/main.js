@@ -66,7 +66,17 @@ function toast(title, txt = '', sec = 4) {
 
 /* ---------- carregamento ---------- */
 const BASE = import.meta.env.BASE_URL;
-const [terrain, world, navData] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json'), fetchPackedJSON(BASE + 'data/nav.data.json')]);
+const [terrain, world, navData, geoX] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json'), fetchPackedJSON(BASE + 'data/nav.data.json'),
+  fetchPackedJSON(BASE + 'data/geoextra.data.json').catch(() => null)]);
+// dados do cadastro e zoneamento do GEO Igrejinha (scripts/build-geo-extra.mjs): pavimentos reais e zona industrial
+if (geoX) world.buildings.forEach((b, i) => {
+  const fl = geoX.floors[i] || 0, area = b.rect ? b.rect[4] * b.rect[5] * 4 : 0;
+  // prédios da Prefeitura já trazem pavimentos; o cadastro só sobe quando o prédio é grande (apartamentos/salas)
+  const lv = b.src === 'pref' ? (fl > (b.lv || 1) && area > 120 ? fl : b.lv || 1) : fl || b.lv || 1;
+  if (lv !== b.lv) { b.lv = lv; b.h = lv * 3.0 + 0.4; if (lv >= 3 && b.kind === 'house') b.kind = 'commercial'; }
+  if (geoX.ind[i] && area > 300 && b.kind !== 'industrial') { b.kind = 'industrial'; b.h = Math.max(b.h, 8); }
+});
+if (geoX) for (const p of geoX.places) world.places.push(p);
 const nav = new NavGraph(navData);                     // grafo de ruas e calçadas (src/nav/graph.js)
 // carregamento em etapas: a thread é liberada entre elas, a tela mostra o progresso e nunca congela
 const bar = $('loadbar'), barTxt = $('loadtxt');
@@ -116,12 +126,14 @@ for (const l of LANDMARKS) {
   scene.add(s); labels.push(s);
 }
 
+// nome dos edifícios do cadastro: placa pequena perto do topo, visível de perto
+if (geoX) for (const [x, z, n, i] of geoX.names) { const b = world.buildings[i]; const s = makeLabel(n, 5); s.position.set(x, terrain.heightAt(x, z) + (b?.h || 12) + 3, z); s.userData.maxDist = 160; scene.add(s); labels.push(s); }
 // lugares do OSM (escolas, bancos, postos…): placa pequena, visível de perto, e ícone no minimapa
 const places = world.places
   .filter(p => !LANDMARKS.some(l => Math.hypot(l.x - p.x, l.z - p.z) < 60))
   .map(p => ({ ...p, ...PLACE_STYLE[p.k], nome: p.n }));
 for (const p of places) {
-  if (p.k === 'onibus') continue;                      // paradas: só o ícone no minimapa
+  if (p.k === 'onibus' || p.k === 'patrimonio') continue;   // paradas e patrimônio: só o ícone no minimapa
   const big = p.k === 'localidade';                    // morros e localidades: placa grande, vista de longe
   const s = makeLabel(p.n, big ? 60 : 9);
   s.position.set(p.x, terrain.heightAt(p.x, p.z) + (big ? 60 : 12), p.z);
@@ -245,6 +257,22 @@ interact.add((px, pz) => {
 });
 input.on('act', () => { if (!running) return; const c = interact.best(player.x, player.z); if (c) c.run(); });
 
+/* ---------- onde estou: rua, número e bairro (cadastro e bairros do GEO Igrejinha) ---------- */
+const addrGrid = new Map();
+if (geoX) for (const a of geoX.addr) { const k = Math.floor(a[0] / 50) + ',' + Math.floor(a[1] / 50); (addrGrid.get(k) || addrGrid.set(k, []).get(k)).push(a); }
+const inPolyXZ = (x, z, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c; };
+let whereT = 0, whereS = '';
+function whereAmI(x, z) {
+  if (!geoX) return `${Math.round(player.y)} m`;
+  if ((whereT -= 1) > 0) return whereS; whereT = 20;
+  let best = null, bd = 35;
+  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of addrGrid.get((Math.floor(x / 50) + a) + ',' + (Math.floor(z / 50) + b)) || []) { const d = Math.hypot(q[0] - x, q[1] - z); if (d < bd) { bd = d; best = q; } }
+  const bairro = geoX.bairros.find(([, p]) => inPolyXZ(x, z, p));
+  const b = bairro ? bairro[0].toLowerCase().replace(/(^|\s)(\S)/g, (m, s, c) => s + c.toUpperCase()) : '';
+  whereS = best ? `${best[2]}, ${best[3]}${b ? ' · ' + b : ''}` : b || `${Math.round(player.y)} m`;
+  return whereS;
+}
+
 /* ---------- laço ---------- */
 let running = false, last = performance.now(), lodT = 0, lastMin = -1;
 let fpsN = 0, fpsT = 0;
@@ -298,7 +326,7 @@ function frame(now) {
   if (running) {
     const h = Math.floor(sky.hours), m = Math.floor((sky.hours - h) * 60);
     if (m !== lastMin) { lastMin = m; $('clockT').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; }
-    $('spd').textContent = `${{ idle: 'Parado', walk: 'Andando', run: 'Correndo', sprint: 'Sprint!' }[player.mode] || 'A pé'} · ${Math.round(player.y)} m`;
+    $('spd').textContent = `${{ idle: 'Parado', walk: 'Andando', run: 'Correndo', sprint: 'Sprint!' }[player.mode] || 'A pé'} · ${whereAmI(player.x, player.z)}`;
     const it = interact.best(player.x, player.z);
     $('prompt').style.display = it ? 'block' : 'none';
     if (it) $('prompt').textContent = isTouch ? it.touchLabel : it.label;
