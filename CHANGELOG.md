@@ -2,6 +2,16 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Personagens realistas
+- Protagonista: modelo "homem casual" enviado pelo diretor (camiseta, jeans, barba), animado com a biblioteca
+  Quaternius (parado, andar, correr, sprint, pular, sentar) transferida para o esqueleto dele (`src/player/retarget.js`).
+- Pedestres perto da câmera (até 28 m; 10 no computador, 8 no celular) viram pessoas realistas com esqueleto e
+  animação (Quaternius Universal Base Characters, CC0): roupa pintada por shader conforme a parte do corpo
+  (camiseta/manga curta/comprida, calça/bermuda, tênis), pele, cabelos (curto, repartido, comprido, coque), barba,
+  altura; sentam nos bancos, conversam, olham o jogador. Longe, continua a multidão leve.
+- `scripts/build-characters.mjs`: converte os pacotes (texturas WebP, malha −50%, só as animações usadas) → 3 MB.
+- Desempenho: só os 4 pedestres realistas mais próximos fazem sombra; a multidão distante usa mancha de contato.
+
 ## 2026-11-22 — Centro real: Praça Dona Luísa, Rua Coberta, Av. Castelo Branco e árvores
 - Praça refeita a partir das fotos do diretor (Street View abr/2026, TripAdvisor): piso de lajotas de pedra, canteiros
   elevados com árvores grandes, pérgola de madeira com trepadeira e bancos, monumento com 4 mastros sobre canteiro

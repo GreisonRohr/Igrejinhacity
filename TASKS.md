@@ -38,6 +38,13 @@ Formato: `[ ]` a fazer · `[~]` em andamento · `[x]` feito. ID do roadmap entre
 - [ ] v0.6: grupos andando juntos, crianças acompanhadas, guarda-chuva com o clima (Ciclo 8), esperar carros (Ciclo 5)
 - [ ] v1.0: Oktoberfest lotada, rotinas completas por zona
 
+## Personagens realistas (23/11)
+- [x] Modelos CC0 Quaternius (corpos, cabelos, animações) convertidos; pool de pedestres realistas perto da câmera
+- [x] Protagonista = "male_casual" do diretor com animações transferidas
+- [ ] Diretor: confirmar origem/licença de male_casual e female_secretary
+- [ ] Usar female_secretary como pedestre (trabalhadora do centro)
+- [ ] Corpo base Quaternius é atlético: trocar por corpos com roupa real (pacote "Ultimate Modular Characters")
+
 ## Protagonista (pedido do diretor, 22/11)
 - [x] Tons de preto separados (jaqueta acetinada, camiseta fosca, cargo grafite), barba aparada, dedos, joelho embutido,
       manga sem ver o braço por dentro, braços rentes ao corpo

@@ -1,0 +1,3 @@
+male_casual.fbx + man_tex.png: modelo enviado pelo diretor do projeto em 23/11/2026 (protagonista).
+Origem e licença: a confirmar pelo diretor antes de publicar o jogo fora do ambiente privado.
+Animações: transferidas em tempo de carga da Universal Animation Library (Quaternius, CC0) — src/player/retarget.js.

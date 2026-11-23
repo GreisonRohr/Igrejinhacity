@@ -155,6 +155,12 @@ export class Pedestrians {
       cuia: old ? r() < 0.6 : r() < 0.08, old,
     };
     look.rgb = Crowd.rgb(look);
+    // aparência do modelo realista (perto da câmera): mesma pessoa, mesmas cores
+    const HUMAN_SKIN = [0xfff0e6, 0xf4d9c4, 0xdcb495, 0xb88566, 0x8a5c42, 0x5e3d2b];
+    look.human = { female, skin: HUMAN_SKIN[si], top: look.shirt, pants: look.pants, shoes: look.shoes, shorts: !female && r() < 0.12,
+      sleeve: old ? 2 : r() < 0.55 ? 1 : 2, puff: 0.01 + r() * 0.012, hairColor: look.hair,
+      hair: female ? pick(['long', 'long', 'buns', 'simpleparted']) : look.hairStyle === 'bald' ? null : pick(['buzzed', 'simpleparted', 'simpleparted']),
+      beard: !female && r() < 0.3, height: (female ? 1.63 : 1.75) * (young ? 0.96 : 1) * (0.96 + r() * 0.08) };
     return look;
   }
 
@@ -380,6 +386,7 @@ export class Pedestrians {
   _remove(i) {
     const a = this.agents[i], last = this.agents.length - 1;
     if (a.seat) a.seat.busy = 0;
+    if (a.human) { a.human.agent = null; a.human.root.visible = false; a.human.blob.visible = false; a.human = null; }
     if (i !== last) this.agents[i] = this.agents[last];
     this.agents.pop();
   }
@@ -495,11 +502,13 @@ export class Pedestrians {
       const far = dist > PED.animFull;   // longe: sem olhar/gesto fino
       P.x = a.px + (a.x - a.px) * alpha; P.z = a.pz + (a.z - a.pz) * alpha; P.y = a.py + (a.y - a.py) * alpha; P.gy = P.y - a.lift;
       let d = a.ang - a.pang; d = Math.atan2(Math.sin(d), Math.cos(d)); P.ang = a.pang + d * alpha;
+      if (this._realNear(a, dist, P, alpha, dt)) { a.slot = -1; continue; }   // desenhado pelo modelo realista
       animate(a, P, dt, this.player, far);
       C.dress(k, a.look); C.pose(k, a, P); a.slot = k++;
     }
     C.commit(k);
     this.drawn = k;
+    this._realEnd();
   }
 }
 
@@ -518,6 +527,46 @@ function trim(P, ra, rb) {
   const out = [at(ra)]; for (let i = 1; i < P.length - 1; i++) if (cum[i] > ra && cum[i] < L - rb) out.push(P[i]); out.push(at(L - rb));
   return out;
 }
+
+/* ---------- pessoas realistas perto da câmera (src/player/humans.js) ---------- */
+Pedestrians.prototype.useHumans = function (humans, scene, { male = 6, female = 6, radius = 32 } = {}) {
+  this.real = { radius, used: new Set(), pools: { m: [], f: [] } };
+  for (const [sex, n] of [['m', male], ['f', female]]) for (let i = 0; i < n; i++) {
+    const h = humans.make({ female: sex === 'f', top: 0x888888, pants: 0x333333, shoes: 0xffffff, hair: null });
+    h.root.visible = false; h.agent = null;
+    h.blob = this.crowd.blob.geometry && new THREE.Mesh(this.crowd.blob.geometry, this.crowd.blob.material); h.blob.renderOrder = 1; h.blob.visible = false; scene.add(h.blob);
+    h.root.traverse(o => { if (o.isSkinnedMesh && o.geometry.attributes.position.count >= 3000) h.body = o; });
+    h.root.traverse(o => { if (o.isSkinnedMesh && o !== undefined && o.geometry.attributes.position.count < 5000) o.castShadow = false; });   // olhos, cabelo: sem sombra
+    scene.add(h.root); this.real.pools[sex].push(h);
+  }
+};
+Pedestrians.prototype._realNear = function (a, dist, P, alpha, dt) {
+  const R = this.real; if (!R) return false;
+  if (dist > R.radius && !(a.human && dist < R.radius + 6)) { if (a.human) { a.human.agent = null; a.human.root.visible = false; a.human.blob.visible = false; a.human = null; } return false; }
+  if (!a.human) {
+    const pool = R.pools[a.look.human.female ? 'f' : 'm'], h = pool.find(q => !q.agent);
+    if (!h) return false;
+    h.agent = a; a.human = h; h.dress(a.look.human); h.root.visible = true;
+  }
+  const h = a.human; R.used.add(h);
+  P.x = a.px + (a.x - a.px) * alpha; P.z = a.pz + (a.z - a.pz) * alpha;
+  let d = a.ang - a.pang; d = Math.atan2(Math.sin(d), Math.cos(d));
+  const sit = a.state === 'sentado', ground = this.groundAt(P.x, P.z);
+  h.root.position.set(P.x, ground + (sit ? Math.max(0, a.lift) : Math.min(0.23, a.lift)), P.z);
+  h.root.rotation.y = a.pang + d * alpha;
+  h.dist = dist; h.blob.position.set(P.x, ground + 0.04, P.z); h.blob.visible = true;
+  h.play(dt, { speed: a.speed, mode: a.speed > 2.4 ? 'run' : 'walk', air: 0, sit, talk: a.state === 'falar' || a.state === 'grupo', formal: a.look.old });
+  // cabeça: olhar o jogador quando ele passa perto
+  if (a.lookP && h.bones.Head) { let w = Math.atan2(this.player.x - a.x, this.player.z - a.z) - h.root.rotation.y; w = Math.atan2(Math.sin(w), Math.cos(w)); h.bones.Head.rotation.y += Math.max(-1, Math.min(1, w)) * 0.7; }
+  return true;
+};
+Pedestrians.prototype._realEnd = function () {
+  const R = this.real; if (!R) return;
+  // sombra projetada só nos 4 mais próximos (orçamento); os outros ficam com a mancha de contato
+  [...R.used].sort((a, b) => a.dist - b.dist).forEach((h, i) => { if (h.body) h.body.castShadow = i < 4; });
+  for (const pool of Object.values(R.pools)) for (const h of pool) if (h.agent && (!R.used.has(h) || !this.agents.includes(h.agent))) { h.agent.human = null; h.agent = null; h.root.visible = false; h.blob.visible = false; }
+  R.used.clear();
+};
 
 const turn = (a, b, k) => { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * Math.min(1, k); };
 

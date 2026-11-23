@@ -22,6 +22,8 @@ import { NavGraph } from './nav/graph.js';
 import { Pedestrians } from './sim/pedestrians.js';
 import { Interactions } from './interact/interact.js';
 import { TreeLOD } from './world/trees.js';
+import { loadHumans } from './player/humans.js';
+import { MAP_MALE_CASUAL } from './player/retarget.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -144,6 +146,28 @@ tryLoadGLB(BASE + 'models/protagonista.glb', 1.8).then(glb => {
   m.add(glb.model);
   m.userData.animate = (dt, speed, run, air) => glb.animate(dt, speed, player.mode, air);
 });
+/* ---------- pessoas realistas (Quaternius CC0, src/player/humans.js) ---------- */
+const humans = await loadHumans(BASE).catch(e => { console.warn('personagens realistas não carregados:', e.message); return null; });
+// Protagonista: modelo "male_casual" enviado pelo diretor (public/models/hero), com as animações da biblioteca
+// Quaternius transferidas para o esqueleto dele (src/player/retarget.js). Sem ele, fica o procedural.
+const hero = humans ? await humans.makeFromFBX(BASE + 'models/hero/male_casual.fbx', MAP_MALE_CASUAL, { height: 1.80 }).catch(e => { console.warn('protagonista:', e.message); return null; }) : null;
+if (hero) {
+  const m = player.mesh;
+  for (const c of [...m.children]) c.visible = false;
+  m.add(hero.root);
+  const hb = hero.bones;
+  m.userData.animate = (dt, speed, run, air, ex) => {
+    hero.play(dt, { speed, mode: player.mode, air, vy: player.vy });
+    // por cima da animação: olhar para quem está perto e inclinar com o peso (arrancada, freada, ladeira)
+    if (ex) {
+      const ly = ex.lookYaw == null ? 0 : Math.max(-1, Math.min(1, ex.lookYaw));
+      hero.lookCur = (hero.lookCur || 0) + (ly - (hero.lookCur || 0)) * Math.min(1, dt * 5);
+      if (hb.head) hb.head.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), hero.lookCur * 0.6);
+      if (hb.spine) hb.spine.rotateX(ex.lean || 0);
+    }
+  };
+  window.__hero = hero;
+}
 const input = new Input(renderer.domElement);
 const cam = new FollowCam(camera, terrain);
 cam.blocked = (x, z, r) => spatial.blocked(x, z, r, true);
@@ -204,6 +228,7 @@ if (landmarks.pipoca) {
 const peds = new Pedestrians({ scene, nav, spatial, terrain, city, world, landmarks, places: world.places, quality: isTouch ? 'medium' : 'high',
   groundAt: (x, z) => player.groundAt(x, z, terrain.heightAt(x, z)), hours: () => sky.hours });
 peds.prefill(player.x, player.z);
+if (humans) peds.useHumans(humans, scene, isTouch ? { male: 4, female: 4, radius: 24 } : { male: 5, female: 5, radius: 28 });
 peds.toast = line => { if (toastT <= 0) toast('', '“' + line + '”', 2.5); };
 interact.add((px, pz) => {
   const a = peds.nearestTalker(px, pz); if (!a) return null;

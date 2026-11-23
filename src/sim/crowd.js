@@ -73,7 +73,7 @@ export class Crowd {
       const m = new THREE.InstancedMesh(g, mat, n);
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       m.setColorAt(0, new THREE.Color(1, 1, 1));
-      m.castShadow = !['hairShort', 'hairLong', 'cuia', 'shoe', 'foreArm'].includes(name); m.frustumCulled = false; m.count = 0;   // partes pequenas sem sombra
+      m.castShadow = false; m.frustumCulled = false; m.count = 0;   // multidão distante: só a mancha de contato (perto, o modelo realista faz sombra)
       m.userData.dynamic = true;
       this.meshes[name] = m; scene.add(m);
     }

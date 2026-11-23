@@ -1,0 +1,3 @@
+female_secretary.fbx + secretary_tex.png: modelo enviado pelo diretor em 23/11/2026 (ainda não usado; previsto como pedestre).
+Origem e licença: a confirmar pelo diretor antes de publicar o jogo fora do ambiente privado.
+Animações: transferidas em tempo de carga da Universal Animation Library (Quaternius, CC0) — src/player/retarget.js.
