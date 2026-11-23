@@ -123,7 +123,20 @@ export function buildPraca(ctx) {
     const dx = x - s2.q[0], dz = z - s2.q[1], L = Math.hypot(dx, dz) || 1;
     return H(s2.q[0] + dx / L * 9, s2.q[1] + dz / L * 9);
   };
-  const WALL = 2.8, gravel = lambert(0x8c8478), conc = lambert(0x9a958b);
+  // fotos (TripAdvisor e Street View): parede de concreto com manchas escuras escorridas e musgo na base; do outro lado,
+  // pedra argamassada; leito de cascalho com seixos. Texturas por segmento de 4 m × 2,6 m.
+  const concT = tex(256, 160, (c, w, h) => { let sd = 5; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    c.fillStyle = '#a19c92'; c.fillRect(0, 0, w, h); for (let i = 0; i < 400; i++) { const v = 130 + r() * 50; c.fillStyle = `rgba(${v},${v - 3},${v - 8},0.25)`; c.fillRect(r() * w, r() * h, 3 + r() * 10, 2 + r() * 5); }
+    for (let x = 0; x < w; x += 64) { c.fillStyle = 'rgba(60,58,52,0.35)'; c.fillRect(x, 0, 2, h); }                                   // juntas das placas
+    for (let i = 0; i < 40; i++) { const x = r() * w, ln = 30 + r() * 110; const gr = c.createLinearGradient(0, 0, 0, ln); gr.addColorStop(0, 'rgba(40,38,34,0.35)'); gr.addColorStop(1, 'rgba(40,38,34,0)'); c.fillStyle = gr; c.fillRect(x, 0, 2 + r() * 4, ln); }   // escorridos
+    const gm = c.createLinearGradient(0, h, 0, h * 0.55); gm.addColorStop(0, 'rgba(62,82,44,0.75)'); gm.addColorStop(1, 'rgba(62,82,44,0)'); c.fillStyle = gm; c.fillRect(0, h * 0.55, w, h * 0.45); }, true);   // musgo/limo
+  const stoneT = tex(256, 160, (c, w, h) => { let sd = 9; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    c.fillStyle = '#6f6a60'; c.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 22) for (let x = -((y / 22) % 2) * 20; x < w; x += 40) { const v = 120 + r() * 60; c.fillStyle = `rgb(${v},${v - 6},${v - 14})`; c.beginPath(); c.ellipse(x + 20, y + 11, 17 + r() * 3, 9 + r() * 2, r() * 0.3, 0, 7); c.fill(); }
+    const gm = c.createLinearGradient(0, h, 0, h * 0.5); gm.addColorStop(0, 'rgba(58,78,40,0.7)'); gm.addColorStop(1, 'rgba(58,78,40,0)'); c.fillStyle = gm; c.fillRect(0, h * 0.5, w, h * 0.5); }, true);
+  const gravelT = tex(128, 128, (c, w, h) => { let sd = 3; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    c.fillStyle = '#857d71'; c.fillRect(0, 0, w, h); for (let i = 0; i < 700; i++) { const v = 100 + r() * 110; c.fillStyle = `rgb(${v},${v - 5},${v - 12})`; c.beginPath(); c.ellipse(r() * w, r() * h, 1 + r() * 3.5, 1 + r() * 2.5, r() * 3, 0, 7); c.fill(); } }, true);
+  const WALL = 2.8, gravel = new THREE.MeshLambertMaterial({ map: gravelT }), conc = new THREE.MeshLambertMaterial({ map: concT }), stoneW = new THREE.MeshLambertMaterial({ map: stoneT });
   const waterM = new THREE.MeshPhongMaterial({ color: 0x5f6f62, specular: 0x9fb8c8, shininess: 70, transparent: true, opacity: 0.85 });
   for (const [a, b] of stream) {
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, ry = Math.atan2(-uz, ux);
@@ -132,7 +145,7 @@ export function buildPraca(ctx) {
       const t = (j + 0.5) / n, cx2 = a[0] + (b[0] - a[0]) * t, cz2 = a[1] + (b[1] - a[1]) * t;
       for (const s of [-1, 1]) {
         const mx = cx2 - uz * s * (WALL + 0.25), mz = cz2 + ux * s * (WALL + 0.25), yb = Yb(mx - uz * s * 2, mz + ux * s * 2);
-        k.add(new THREE.BoxGeometry(L / n + 0.05, 2.6, 0.5), s > 0 ? M.stone : conc, mx, yb - 1.2, mz, ry);
+        k.add(new THREE.BoxGeometry(L / n + 0.05, 2.6, 0.5), s > 0 ? stoneW : conc, mx, yb - 1.2, mz, ry);
         // faixa de margem com vegetação baixa cobrindo a borda da escavação até o piso
         const gx = cx2 - uz * s * (WALL + 2.0), gz = cz2 + ux * s * (WALL + 2.0);
         k.add(new THREE.BoxGeometry(L / n + 0.05, 1.2, 3.1), M.grass, gx, yb - 0.55, gz, ry);

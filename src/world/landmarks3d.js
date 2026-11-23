@@ -273,7 +273,12 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
         k.add(new THREE.CylinderGeometry(0.22, 0.24, colH - 0.7, 10), white, lx, y + 0.7 + (colH - 0.7) / 2, s * half);
       }
       k.add(outer, white, lx, y, 0); k.add(inner, white, lx, y, 0);
-      for (let j = 1; j < 8; j++) { const p = arcPt(j / 8, 0.35); k.add(ring, white, lx, y + p.y, p.z, PI / 2); }
+      // treliça do arco (fotos Street View abr/2026: banzos curvos ligados por diagonais em zigue-zague)
+      for (let j = 0; j < 14; j++) {
+        const pA = arcPt(j / 14, j % 2 ? 0.7 : 0), pB = arcPt((j + 1) / 14, j % 2 ? 0 : 0.7), L = pA.distanceTo(pB);
+        const m = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5), ang = Math.atan2(pB.y - pA.y, pB.z - pA.z);
+        k.add(new THREE.CylinderGeometry(0.045, 0.045, L, 5).rotateX(PI / 2), white, lx, y + m.y, m.z, 0, -ang);
+      }
     }
     // terças ao longo da cobertura e vigas laterais
     const yMid = ys.reduce((a, b) => a + b, 0) / ys.length;
@@ -284,7 +289,10 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
     for (let i = 0; i < N; i++) for (let j = 0; j < cols; j++) { const a = i * (cols + 1) + j, b = a + cols + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); rg.setIndex(idx); rg.computeVertexNormals();
     // policarbonato bege fosco com nervuras (fotos de abr/2026): deixa passar luz difusa e faz sombra embaixo
-    const ribT = tex(64, 64, (c, w, h) => { c.fillStyle = '#e4d8bf'; c.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 8) { c.fillStyle = 'rgba(120,100,70,0.18)'; c.fillRect(0, y, w, 2); c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(0, y + 3, w, 1); } }, true);
+    // telhas onduladas translúcidas: a ondulação segue o arco (de um lado ao outro), emendas entre placas a cada 1/3
+    const ribT = tex(64, 64, (c, w, h) => { c.fillStyle = '#e6dac2'; c.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += 6) { c.fillStyle = 'rgba(110,92,64,0.22)'; c.fillRect(x, 0, 2, h); c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(x + 3, 0, 1, h); }
+      c.fillStyle = 'rgba(90,75,55,0.35)'; c.fillRect(0, 0, w, 1); c.fillStyle = 'rgba(80,70,50,0.12)'; for (let i = 0; i < 6; i++) c.fillRect((i * 23) % w, (i * 37) % h, 9, 5); }, true);
     const uvs = []; for (let i = 0; i <= N; i++) for (let j = 0; j <= cols; j++) uvs.push(i * 3, j * 1.5);
     rg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     const roofM = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ map: ribT, color: 0xf4ecdc, emissive: 0x6a5e48, side: THREE.DoubleSide }));

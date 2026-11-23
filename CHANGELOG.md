@@ -2,6 +2,14 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Praça Dona Luísa e Rua Coberta: reconstrução fiel (1º ciclo)
+- Dossiê de referências em `docs/dossie-praca-dona-luisa.md` (14 categorias, confirmado × suposição, diferenças e ordem).
+- Rua Coberta: arcos em treliça (banzos curvos + diagonais) no lugar das argolas decorativas; ondulação das telhas
+  translúcidas no sentido do arco, com emendas entre placas (Street View abr/2026).
+- Arroio Koetz na praça: parede de concreto com manchas escorridas e limo na base, parede de pedra argamassada, leito de
+  cascalho com seixos (fotos TripAdvisor/Street View).
+- Desempenho: 670 chamadas de desenho (+6), 2.520 mil triângulos, carga igual.
+
 ## 2026-11-23 — Piloto do centro, etapa 2: telhados, quintais, janelas e placas de rua
 - Telhados: testeira/beiral com espessura (branca ou madeira), cumeeira, calha com condutor em ~65% das casas, leve
   variação de cor das telhas; caixa d'água azul em ~2/3 das lajes comerciais.
