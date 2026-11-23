@@ -223,8 +223,8 @@ export function buildPraca(ctx) {
     }
     // chaminé de pedra (fundo esquerdo)
     k.box(1.1, wallH + ridge + 1, 1.1, M.stone, x0 + 1.5, y, z1 - 2);
-    // ala leste mais baixa (telhado escuro)
-    const wx0 = x1, wx1 = Math.min(x1 + 7, X1 - 1);
+    // ala mais baixa (telhado escuro) do lado oeste; o lado leste (esquerda de quem olha a fachada) é da Feira do Produtor
+    const wx1 = x0, wx0 = Math.max(x0 - 7, X0 + 1);
     if (wx1 - wx0 > 3) {
       const wm = (wx0 + wx1) / 2, wW = wx1 - wx0;
       k.box(wW, 2.9, D - 2, M.white, wm, y, (z0 + z1) / 2 + 1);
@@ -240,9 +240,9 @@ export function buildPraca(ctx) {
     rectCol(x0, z0, x1, z1); occupy(x0 - 0.5, z0 - 3, x1, z1);
   }
 
-  /* ---------- feira do produtor (à esquerda do Erni Engelmann) ---------- */
+  /* ---------- feira do produtor: à esquerda do Erni Engelmann para quem olha a fachada (lado leste; diretor) ---------- */
   {
-    const x0 = 1, x1 = 11, z0 = eN + 3.5, z1 = z0 + 6.5, y = Y((x0 + x1) / 2, (z0 + z1) / 2), W = x1 - x0, D = z1 - z0, mx = (x0 + x1) / 2;
+    const x0 = 26, x1 = Math.min(34.5, X1 - 0.5), z0 = eN + 3.5, z1 = z0 + 6.5, y = Y((x0 + x1) / 2, (z0 + z1) / 2), W = x1 - x0, D = z1 - z0, mx = (x0 + x1) / 2;
     k.box(W, 1.1, 0.3, M.brick, mx, y, z1); k.box(0.3, 1.1, D, M.brick, x0, y, (z0 + z1) / 2); k.box(0.3, 1.1, D, M.brick, x1, y, (z0 + z1) / 2);   // base de tijolo
     k.box(W, 2.1, 0.25, M.xpanel, mx, y + 1.1, z1); k.box(0.25, 2.1, D, M.xpanel, x0, y + 1.1, (z0 + z1) / 2); k.box(0.25, 2.1, D, M.xpanel, x1, y + 1.1, (z0 + z1) / 2);   // painéis de madeira com X
     // pérgola de metal preto com cobertura de vidro na frente (fotos 2026)
@@ -261,7 +261,7 @@ export function buildPraca(ctx) {
     // frutas e verduras em caixotes sobre o balcão
     const fr = [M.fruitR, M.fruitG, M.fruitO, M.fruitY];
     for (let i = 0; i < 8; i++) { const fx = x0 + 0.8 + i * (W - 1.6) / 7; k.box(0.9, 0.22, 0.45, M.wood, fx, y + 1.0, z0 + 0.4); for (let j = 0; j < 5; j++) k.add(new THREE.SphereGeometry(0.09, 5, 4), fr[(i + j) % 4], fx - 0.32 + j * 0.16, y + 1.3, z0 + 0.4 + ((j % 2) - 0.5) * 0.15); }
-    rectCol(x0, z0 + 0.2, x1, z1); occupy(x0 - 0.5, z0 - 1, x1 + 0.5, z1 + 0.5);
+    rectCol(x0, z0 + 0.2, x1, z1); occupy(x0 - 1, z0 - 3.4, x1 + 1, z1 + 0.5);   // inclui a pérgola (sem árvore atravessando)
   }
 
   /* ---------- monumento: canteiro elevado revestido de madeira, pedestal de pedra e 4 mastros ---------- */
