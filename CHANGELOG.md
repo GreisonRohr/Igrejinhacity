@@ -2,6 +2,12 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Chão dos terrenos: detalhe de perto (cidade toda)
+- A foto aérea vista da rua era uma mancha escura e azulada (sombras de prédios/árvores pintadas na foto de 2016). No
+  shader do terreno, perto da câmera (até ~260 m): onde a foto é sombra, o chão vira grama/terra de quintal; grão
+  repetido em coordenadas de mundo (3 m, sem emenda) com variação de 37 m. Mesmo material: 0 chamadas de desenho a mais.
+- Antes/depois nas mesmas posições: docs não versionados; capturas no relatório da sessão.
+
 ## 2026-11-23 — Upgrade visual: piloto do centro (até 650 m da praça)
 - Asfalto novo (512 px): agregado, manchas de óleo, remendos, desgaste claro e trincas; cada rua com tom próprio (±8%).
 - Sombra de contato ("oclusão ambiente assada") no chão junto às paredes dos prédios (visível até 400 m).

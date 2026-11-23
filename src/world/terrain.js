@@ -29,6 +29,7 @@ export class Terrain {
     this.group = new THREE.Group();
     this.chunks = [];
     this.material = new THREE.MeshLambertMaterial({ vertexColors: true });
+    this.detailTex = detailTexture(); addDetail(this.material, this.detailTex);
     this.W = (this.nx - 1) * this.cell; this.H = (this.nz - 1) * this.cell;
   }
 
@@ -109,7 +110,7 @@ export class Terrain {
         const Dx = o.x1 - o.x0, Dz = o.z1 - o.z0;
         tex.repeat.set(this.W / Dx, this.H / Dz);
         tex.offset.set((this.x0 - o.x0) / Dx, 1 - (this.z0 + this.H - o.z0) / Dz);
-        const m = this.material.clone(); m.map = tex; o.mat = m; o.state = 2;
+        const m = this.material.clone(); m.map = tex; addDetail(m, this.detailTex); o.mat = m; o.state = 2;
         if (c.inNear) c.mesh.material = m;
       }, undefined, () => { o.state = 3; });
     }
@@ -222,4 +223,45 @@ function groundColor(h, ny, seed, out) {
   const n = Math.sin(seed * 12.9898) * 43758.5453;
   out.offsetHSL(0, 0, ((n - Math.floor(n)) - 0.5) * 0.04);
   return out;
+}
+
+/* ---------- detalhe de perto no chão (upgrade visual) ----------
+ * A foto aérea (0,2 m/px reamostrada) e o chão pintado ficam borrados e escuros vistos da rua. Um grão repetido em
+ * coordenadas de mundo (sem emendas entre blocos), a cada 3 m, com uma segunda escala de 37 m que quebra a repetição,
+ * multiplica a cor perto da câmera e some com a distância; levanta um pouco as sombras "pintadas" na foto.
+ * Mesmo material (só muda o shader): nenhuma chamada de desenho a mais. */
+function detailTexture() {
+  const S = 256, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+  let s = 7; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  g.fillStyle = '#808080'; g.fillRect(0, 0, S, S);
+  const wrap = f => { for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) { g.save(); g.translate(dx, dy); f(); g.restore(); } };   // desenha com volta: sem emenda
+  for (let i = 0; i < 2600; i++) { const x = r() * S, y = r() * S, v = 90 + r() * 90, l = 2 + r() * 5, a = -1.2 + r() * 0.8;   // folhinhas/grão
+    wrap(() => { g.strokeStyle = `rgb(${v},${v},${v})`; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }); }
+  for (let i = 0; i < 60; i++) { const x = r() * S, y = r() * S, rr = 6 + r() * 22, v = r() < 0.5 ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.06)';   // manchas de terra/capim
+    wrap(() => { g.fillStyle = v; g.beginPath(); g.ellipse(x, y, rr, rr * (0.5 + r() * 0.5), r() * 3, 0, 7); g.fill(); }); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = THREE.NoColorSpace;
+  return t;
+}
+function addDetail(m, tex) {
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uDetail = { value: tex };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vDW;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvDW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vDW;\nuniform sampler2D uDetail;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        {
+          float dist = length(vDW - cameraPosition);
+          float fade = 1.0 - smoothstep(60.0, 260.0, dist);
+          float d1 = texture2D(uDetail, vDW.xz / 3.0).r, d2 = texture2D(uDetail, vDW.xz / 37.0 + 0.37).r;
+          float det = (d1 - 0.5) * 0.9 + (d2 - 0.5) * 0.5;
+          vec3 c = diffuseColor.rgb;
+          float l = dot(c, vec3(0.299, 0.587, 0.114));
+          // sombra pintada na foto (escura e azulada) vira chão de quintal: grama e terra, variando na escala de 37 m
+          float shade = (1.0 - smoothstep(0.05, 0.22, l)) * (0.6 + 0.4 * smoothstep(-0.02, 0.06, c.b - c.g));
+          vec3 lawn = mix(vec3(0.27, 0.33, 0.16), vec3(0.36, 0.31, 0.22), smoothstep(0.35, 0.65, d2));
+          c = mix(c * 1.1 + 0.01, lawn, shade * 0.85);
+          diffuseColor.rgb = mix(diffuseColor.rgb, c * (1.0 + det), fade);
+        }`);
+  };
+  m.customProgramCacheKey = () => 'terreno-detalhe';
 }
