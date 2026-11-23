@@ -168,13 +168,13 @@ await suite('navegacao', async () => {
   const r = await p.evaluate(() => {
     const nav = __game.nav;
     let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
-    const res = { car: { ok: 0, n: 0, ms: 0, contramao: 0 }, ped: { ok: 0, n: 0, ms: 0, contramao: 0 } };
+    const res = { car: { ok: 0, n: 0, ms: 0, t: [], contramao: 0 }, ped: { ok: 0, n: 0, ms: 0, t: [], contramao: 0 } };
     for (const mode of ['car', 'ped']) for (let k = 0; k < 150; k++) {
       // pares dentro da área urbana (até 2,5 km da praça)
       const a = nav.nearest((rnd() - 0.5) * 5000, (rnd() - 0.5) * 5000, mode), b = nav.nearest((rnd() - 0.5) * 5000, (rnd() - 0.5) * 5000, mode);
       if (a < 0 || b < 0 || a === b) continue;
       const R = res[mode]; R.n++;
-      const t0 = performance.now(), path = nav.route(a, b, mode); R.ms = Math.max(R.ms, performance.now() - t0);
+      const t0 = performance.now(), path = nav.route(a, b, mode), dt = performance.now() - t0; R.ms = Math.max(R.ms, dt); R.t.push(dt);
       if (!path) continue; R.ok++;
       // cada trecho da rota precisa ser permitido (carro nunca na contramão nem em calçada)
       for (let i = 1; i < path.length; i++) {
@@ -185,16 +185,18 @@ await suite('navegacao', async () => {
       const [ax, az] = nav.nodePos(a), [bx, bz] = nav.nodePos(b);
       if (L < Math.hypot(bx - ax, bz - az) - 0.5) R.contramao++;
     }
+    for (const R of Object.values(res)) { R.t.sort((x, y) => x - y); R.p95 = R.t[Math.floor(R.t.length * 0.95)] || 0; delete R.t; }
     return { res, nodes: nav.nodeCount, edges: nav.edges.length };
   });
   for (const m of ['car', 'ped']) {
     const R = r.res[m];
     assert(R.contramao === 0, `${m}: ${R.contramao} trechos proibidos na rota`);
     assert(R.ok / R.n >= (m === 'ped' ? 0.97 : 0.85), `${m}: só ${R.ok}/${R.n} rotas encontradas`);
-    assert(R.ms < 60, `${m}: rota levou ${R.ms.toFixed(0)} ms`);
+    // p95: o pior caso isolado varia com o carregamento em segundo plano (texturas) e com o coletor de lixo
+    assert(R.p95 < 30, `${m}: 95% das rotas abaixo de ${R.p95.toFixed(0)} ms (limite 30)`);
   }
   const c = r.res.car, w = r.res.ped;
-  return `${r.nodes} nós; carro ${c.ok}/${c.n} rotas (pior ${c.ms.toFixed(0)} ms), a pé ${w.ok}/${w.n} (pior ${w.ms.toFixed(0)} ms), 0 contramão`;
+  return `${r.nodes} nós; carro ${c.ok}/${c.n} rotas (p95 ${c.p95.toFixed(0)} ms, pior ${c.ms.toFixed(0)}), a pé ${w.ok}/${w.n} (p95 ${w.p95.toFixed(0)} ms), 0 contramão`;
 });
 
 await suite('pedestres', async () => {

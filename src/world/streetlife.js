@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-const CELL = 800;
+const CELL = 400;   // células menores: corte por distância mais justo (árvores reais densas)
 const URBAN = new Set(['primary', 'secondary', 'tertiary', 'residential', 'living_street', 'unclassified']);
 const STREET_TREES = new Set(['secondary', 'tertiary', 'residential', 'living_street']);
 const PARK_ON = new Set(['tertiary', 'residential', 'living_street', 'secondary']);
@@ -18,7 +18,7 @@ function resample(p, step) {
 }
 const mergeAt = (parts) => mergeGeometries(parts.map(([g, x, y, z, rx = 0, sx = 1, sy = 1, sz = 1]) => { const q = (g.index ? g.toNonIndexed() : g.clone()); if (rx) q.rotateX(rx); q.scale(sx, sy, sz); q.translate(x, y, z); return q; }));
 
-export function buildStreetLife(world, terrain, city, Q, extraCars = []) {
+export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTrees = null, skipTree = () => false) {
   const group = new THREE.Group();
   let seed = 1234; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   // cruzamentos (vértices compartilhados por 3+ pontas de via)
@@ -46,7 +46,7 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = []) {
       for (const [si, s] of [[0, 1], [1, -1]]) {
         if (dual && s < 0) continue;   // pista dupla: só o lado de fora (à direita do sentido do trânsito)
         // árvore na borda externa da calçada
-        if (STREET_TREES.has(r.k) && acc >= nextTree[si] && sw[si] >= 1.8) {
+        if (!realTrees && STREET_TREES.has(r.k) && acc >= nextTree[si] && sw[si] >= 1.8) {
           nextTree[si] = acc + 11 + rnd() * 12;
           const off = half + sw[si] - 0.55, x = ax + nx * s * off, z = az + nz * s * off;
           if (!nearNode(x, z, 11) && !nearBridge(x, z) && !lampNear(x, z) && !city.blocked(x, z, 1.2) && rnd() < 0.8 && okSpot(x, z, 3)) {
@@ -67,11 +67,19 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = []) {
     }
   }
 
+  // árvores reais (copas detectadas na imagem aérea da Prefeitura, scripts/build-trees.py)
+  if (realTrees) for (const [x, z, rr] of realTrees) {
+    if (skipTree(x, z) || city.blocked(x, z, 0.4) || nearBridge(x, z)) continue;
+    const u = Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1;
+    const kind = u < 0.03 ? 'ipe' : u < 0.045 ? 'ipeA' : u < 0.12 ? 'palm' : 'leafy';   // ipês são poucos (florescem só no inverno)
+    trees.push({ x, z, y: terrain.heightAt(x, z) + 0.05, kind, s: Math.max(0.6, Math.min(1.9, rr / 3.3)), rot: u * 6.28 });
+  }
   // vagas extras (estacionamento em ângulo sob a Rua Coberta etc.)
   for (const c of extraCars) cars.push({ x: c.x, z: c.z, y: terrain.heightAt(c.x, c.z) + 0.08, yaw: c.yaw, c: rnd() });
   // geometrias
   const trunk = new THREE.CylinderGeometry(0.16, 0.26, 3.2, 6).translate(0, 1.6, 0);
-  const crownLeafy = mergeAt([[new THREE.IcosahedronGeometry(2.6, 0), 0, 5.2, 0, 0, 1.25, 0.72, 1.25], [new THREE.IcosahedronGeometry(1.8, 0), 1.4, 4.6, 0.6, 0, 1.1, 0.7, 1.0], [new THREE.IcosahedronGeometry(1.7, 0), -1.3, 4.8, -0.5, 0, 1.0, 0.75, 1.1]]);
+  // copa distante: 2 massas (as árvores reais são muitas; perto da câmera entra o modelo detalhado de trees.js)
+  const crownLeafy = mergeAt([[new THREE.IcosahedronGeometry(2.6, 0), 0, 5.2, 0, 0, 1.25, 0.72, 1.25], [new THREE.IcosahedronGeometry(1.8, 0), 1.2, 4.6, 0.4, 0, 1.15, 0.75, 1.1]]);
   const palmTrunk = new THREE.CylinderGeometry(0.14, 0.22, 7.5, 6).translate(0, 3.75, 0);
   const frond = new THREE.ConeGeometry(0.45, 3.6, 4).rotateX(Math.PI / 2).translate(0, 0, 1.8);
   const palmCrown = mergeGeometries(Array.from({ length: 8 }, (_, i) => { const f = frond.clone(); f.rotateX(0.55); f.rotateY(i / 8 * Math.PI * 2); f.scale(1, 0.35, 1); f.translate(0, 7.4, 0); return f; }));
@@ -97,6 +105,7 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = []) {
     const im = new THREE.InstancedMesh(geo, mat, list.length);
     list.forEach((o, i) => { place(d, o); d.updateMatrix(); im.setMatrixAt(i, d.matrix); if (color) im.setColorAt(i, col.set(color(o))); if (o.far) o.far.push([im, i]); });
     im.computeBoundingSphere(); im.castShadow = shadow; im.receiveShadow = true;
+    im.userData.kind = geo === body || geo === glass || geo === wheels ? 'car' : 'tree';
     group.add(im); cell.meshes.push(im);
   };
   for (const cell of cells.values()) {
@@ -119,6 +128,7 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = []) {
   const dist = Math.min(1100, Q.buildDist * 0.4);
   return {
     group, trees, counts: { arvores: trees.length, carros: cars.length, celulas: cells.size },
-    update(px, pz) { for (const c of cells.values()) { const v = Math.hypot(px - c.cx, pz - c.cz) < dist + CELL * 0.7; for (const m of c.meshes) m.visible = v; } },
+    // árvores até ~600 m e carros até ~450 m da câmera (as árvores reais são muitas e concentradas no centro)
+    update(px, pz) { for (const c of cells.values()) { const d = Math.hypot(px - c.cx, pz - c.cz) - CELL * 0.7; for (const m of c.meshes) m.visible = d < (m.userData.kind === 'car' ? Math.min(dist, 450) : Math.min(dist, 600)); } },
   };
 }

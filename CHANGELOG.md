@@ -2,6 +2,14 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Dados reais da imagem aérea
+- Telhados: cor real de 17 mil prédios tirada da imagem aérea da Prefeitura (`scripts/build-roofs.py`).
+- Árvores: 9 mil copas reais detectadas na imagem aérea (`scripts/build-trees.py`) substituem as árvores sorteadas
+  nas calçadas; tamanho pela copa medida.
+- Desempenho: árvores até 600 m e carros parados até 450 m, células de 400 m (2,36 mi triângulos).
+- Teste de navegação mede o percentil 95 do tempo de rota (o pior caso isolado varia com o carregamento).
+- Arroio da praça como valão de paredes retas; passarela de troncos; João Corrêa sem canteiro junto à praça.
+
 ## 2026-11-23 — Centro pelas fotos: Dorneles, João Corrêa e o arroio
 - Arroio Koetz (e todos os arroios urbanos): onde cruza uma rua, passa por bueiro — a rua não afunda mais; muro de
   concreto com a boca do canal e guarda-corpo dos dois lados. Na praça, três passarelas de madeira em arco.
