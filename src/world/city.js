@@ -190,16 +190,19 @@ export class City {
       });
       for (let i = 1; i < ys.length; i++) ys[i] = Math.min(ys[i], ys[i - 1] + 0.02);   // água não sobe rio abaixo
       for (let i = ys.length - 2; i >= 0; i--) ys[i] = Math.max(ys[i], ys[i + 1] - 0.6); // sem degraus bruscos
-      this.waterLines.push({ pts, ys, half, big });
+      // valão de paredes retas (arroio canalizado na praça): escavação larga e plana; paredes vêm do praca.js
+      const val = pts.map(([x, z]) => !big && (this.valaoZones || []).some(v => Math.hypot(x - v.x, z - v.z) < v.r));
+      this.waterLines.push({ pts, ys, half, big, val });
       const depth = big ? 2.2 : 0.8, bank = big ? 7 : 3;
       for (let i = 0; i < pts.length - 1; i++) {
         if (masked((pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2)) continue;   // trecho coberto pelo polígono
-        const [ax, az] = pts[i], [bx, bz] = pts[i + 1], R = half + bank;
+        const [ax, az] = pts[i], [bx, bz] = pts[i + 1], R = (val[i] || val[i + 1]) ? half + 6 : half + bank;
         editHeights(t, Math.min(ax, bx) - R, Math.min(az, bz) - R, Math.max(ax, bx) + R, Math.max(az, bz) + R, (x, z, h) => {
           const d = segDist(x, z, ax, az, bx, bz);
           if (d > R) return h;
-          const target = Math.min(ys[i], ys[i + 1]) - depth;
-          const carved = Math.min(h, target + (h - target) * smooth(half - 1, R, d));
+          const V = val[i] || val[i + 1];
+          const target = Math.min(ys[i], ys[i + 1]) - (V ? 1.9 : depth);
+          const carved = Math.min(h, target + (h - target) * (V ? smooth(half + 3.5, half + 5.5, d) : smooth(half - 1, R, d)));
           return h + (carved - h) * keep(x, z);
         });
       }
@@ -255,10 +258,14 @@ export class City {
 
   buildWater() {
     const b = new GeoBuilder(), col = C.plain;   // água: cor do material × cor do vértice
-    for (const { pts, ys, half } of this.waterLines) {
+    for (const { pts, ys: ys0, half, val } of this.waterLines) {
+      // valão: lâmina d'água rasa no fundo do canal (o leito de cascalho fica 10 cm abaixo)
+      const ys = ys0.map((y, i) => (val && val[i] ? y - 1.5 : y));
       for (let i = 0; i < pts.length - 1; i++) {
         if (this.masked((pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2)) continue;
-        const [n0x, n0z] = perp(pts, i), [n1x, n1z] = perp(pts, i + 1), w0 = half + 1.5, w1 = half + 1.5;
+        const V = val && (val[i] || val[i + 1]);
+        if (V) continue;   // valão: a água é desenhada junto com o leito (praca.js)
+        const [n0x, n0z] = perp(pts, i), [n1x, n1z] = perp(pts, i + 1), w0 = V ? half * 0.6 : half + 1.5, w1 = w0;
         const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
         b.quad([ax + n0x * w0, ys[i], az + n0z * w0], [bx + n1x * w1, ys[i + 1], bz + n1z * w1], [bx - n1x * w1, ys[i + 1], bz - n1z * w1], [ax - n0x * w0, ys[i], az - n0z * w0],
           [[0, 0], [1, 0], [1, 1], [0, 1]], col, 0, [0, 1, 0]);

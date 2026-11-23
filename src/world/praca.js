@@ -104,11 +104,36 @@ export function buildPraca(ctx) {
     if (inside(a[0], a[1]) || inside(b[0], b[1]) || Math.hypot((a[0] + b[0]) / 2 - cx, (a[1] + b[1]) / 2 - cz) < 45) stream.push([a, b]);
   }
   const nearStream = (x, z, d) => stream.some(([a, b]) => { const q = segClosest(x, z, a, b); return Math.hypot(q[0] - x, q[1] - z) < d; });
+  // valão (fotos TripAdvisor): paredes verticais de pedra e concreto ~2,2 m, leito de cascalho, margem plana no nível
+  // da rua. O terreno é escavado largo e plano (city.valaoZones); aqui o piso das margens fica na altura original.
+  const streamD = (x, z) => { let best = null; for (const [a, b] of stream) { const q = segClosest(x, z, a, b), d = Math.hypot(q[0] - x, q[1] - z); if (!best || d < best.d) best = { d, q }; } return best; };
+  const Yb = (x, z) => {   // altura da margem: amostra fora da escavação, do mesmo lado
+    const s2 = streamD(x, z); if (!s2 || s2.d > 9) return H(x, z);
+    const dx = x - s2.q[0], dz = z - s2.q[1], L = Math.hypot(dx, dz) || 1;
+    return H(s2.q[0] + dx / L * 9, s2.q[1] + dz / L * 9);
+  };
+  const WALL = 2.8, gravel = lambert(0x8c8478), conc = lambert(0x9a958b);
+  const waterM = new THREE.MeshPhongMaterial({ color: 0x5f6f62, specular: 0x9fb8c8, shininess: 70, transparent: true, opacity: 0.85 });
   for (const [a, b] of stream) {
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, ry = Math.atan2(-uz, ux);
-    for (const s of [-1, 1]) { const mx = (a[0] + b[0]) / 2 - uz * s * 2.6, mz = (a[1] + b[1]) / 2 + ux * s * 2.6; k.add(new THREE.BoxGeometry(L + 0.4, 2.4, 0.5), M.stone, mx, Y(mx, mz) - 1.1, mz, ry); }
+    const n = Math.max(1, Math.ceil(L / 4));
+    for (let j = 0; j < n; j++) {
+      const t = (j + 0.5) / n, cx2 = a[0] + (b[0] - a[0]) * t, cz2 = a[1] + (b[1] - a[1]) * t;
+      for (const s of [-1, 1]) {
+        const mx = cx2 - uz * s * (WALL + 0.25), mz = cz2 + ux * s * (WALL + 0.25), yb = Yb(mx - uz * s * 2, mz + ux * s * 2);
+        k.add(new THREE.BoxGeometry(L / n + 0.05, 2.6, 0.5), s > 0 ? M.stone : conc, mx, yb - 1.2, mz, ry);
+        // faixa de margem com vegetação baixa cobrindo a borda da escavação até o piso
+        const gx = cx2 - uz * s * (WALL + 2.0), gz = cz2 + ux * s * (WALL + 2.0);
+        k.add(new THREE.BoxGeometry(L / n + 0.05, 1.2, 3.1), M.grass, gx, yb - 0.55, gz, ry);
+        if ((j + (s > 0 ? 1 : 0)) % 2 === 0) k.add(new THREE.IcosahedronGeometry(0.5, 0), M.shrub2, gx, yb + 0.2, gz, j, 0, 0, 1.4, 0.6, 1.2);
+      }
+      const yb = Math.min(Yb(cx2 - uz * 5, cz2 + ux * 5), Yb(cx2 + uz * 5, cz2 - ux * 5));
+      k.add(new THREE.BoxGeometry(L / n + 0.05, 0.6, WALL * 2), gravel, cx2, yb - 2.2, cz2, ry);   // leito (topo 1,9 m abaixo)
+      k.add(new THREE.BoxGeometry(L / n + 0.05, 0.06, 2.2), waterM, cx2 + uz * 1.4, yb - 1.86, cz2 - ux * 1.4, ry);   // lâmina d'água rasa junto a uma parede
+      for (let r = 0; r < 1; r++) { const o = ((j * 7 + r * 3) % 9) / 9 - 0.5; k.add(new THREE.DodecahedronGeometry(0.18 + r * 0.06, 0), M.rock, cx2 + ux * o * 2 - uz * o * 3, yb - 1.85, cz2 + uz * o * 2 + ux * o * 3); }
+    }
   }
-  // passarelas de madeira sobre o arroio (fotos: três travessias na praça), arqueadas, com guarda-corpo em X
+  // passarela de madeira de troncos sobre o arroio (fotos TripAdvisor), levemente arqueada, guarda-corpo em X
   const footbridges = [];
   {
     const inner = stream.filter(([a, b]) => inside((a[0] + b[0]) / 2, (a[1] + b[1]) / 2));
@@ -118,19 +143,21 @@ export function buildPraca(ctx) {
       let d = f * tot, i = 0; while (i < lens.length - 1 && d > lens[i]) { d -= lens[i]; i++; }
       if (!inner[i]) continue;
       const [a, b] = inner[i], ux = (b[0] - a[0]) / lens[i], uz = (b[1] - a[1]) / lens[i], qx = a[0] + ux * d, qz = a[1] + uz * d;
-      const bg = new THREE.Group(); bg.position.set(qx, Y(qx, qz) + 0.25, qz); bg.rotation.y = Math.atan2(-uz, ux); g.add(bg);
+      const bg = new THREE.Group(); bg.position.set(qx, Math.min(Yb(qx - uz * 5, qz + ux * 5), Yb(qx + uz * 5, qz - ux * 5)) + 0.12, qz);   // apoiada nas margens
+      bg.rotation.y = Math.atan2(-uz, ux); g.add(bg);
       const bk = new Kit(), N = 6;
       for (let s2 = 0; s2 < N; s2++) {   // tabuleiro em arco
         const z0 = -BL / 2 + s2 * BL / N, z1 = z0 + BL / N, y0 = Math.sin((s2 / N) * PI) * 0.45, y1 = Math.sin(((s2 + 1) / N) * PI) * 0.45;
         bk.add(new THREE.BoxGeometry(1.8, 0.1, Math.hypot(BL / N, y1 - y0) + 0.02), plank, 0, (y0 + y1) / 2, (z0 + z1) / 2, 0, -Math.atan2(y1 - y0, BL / N));
         for (const sd of [-1, 1]) {
-          bk.add(new THREE.CylinderGeometry(0.06, 0.06, 1.0, 6), log, sd * 0.85, y0 + 0.5, z0);
-          bk.add(new THREE.BoxGeometry(0.08, 0.08, Math.hypot(BL / N, y1 - y0)), log, sd * 0.85, (y0 + y1) / 2 + 0.95, (z0 + z1) / 2, 0, -Math.atan2(y1 - y0, BL / N));
-          const xg = new THREE.BoxGeometry(0.04, 0.04, Math.hypot(BL / N, 0.8)); bk.add(xg, log, sd * 0.85, (y0 + y1) / 2 + 0.5, (z0 + z1) / 2, 0, 0.6);
-          bk.add(xg, log, sd * 0.85, (y0 + y1) / 2 + 0.5, (z0 + z1) / 2, 0, -0.6);
+          bk.add(new THREE.CylinderGeometry(0.1, 0.1, 1.1, 7), log, sd * 0.9, y0 + 0.5, z0);
+          bk.add(new THREE.CylinderGeometry(0.07, 0.07, Math.hypot(BL / N, y1 - y0), 6).rotateX(PI / 2), log, sd * 0.9, (y0 + y1) / 2 + 0.95, (z0 + z1) / 2, 0, -Math.atan2(y1 - y0, BL / N));
+          const xg = new THREE.CylinderGeometry(0.045, 0.045, Math.hypot(BL / N, 0.8), 5).rotateX(PI / 2); bk.add(xg, log, sd * 0.9, (y0 + y1) / 2 + 0.5, (z0 + z1) / 2, 0, 0.6);
+          bk.add(xg, log, sd * 0.9, (y0 + y1) / 2 + 0.5, (z0 + z1) / 2, 0, -0.6);
         }
       }
-      for (const sd of [-1, 1]) bk.add(new THREE.CylinderGeometry(0.06, 0.06, 1.0, 6), log, sd * 0.85, 0.5, BL / 2);
+      for (const sd of [-1, 1]) bk.add(new THREE.CylinderGeometry(0.1, 0.1, 1.1, 7), log, sd * 0.9, 0.5, BL / 2);
+      bk.add(new THREE.CylinderGeometry(0.12, 0.12, BL, 7).rotateX(PI / 2), log, 0, -0.12, 0);   // viga de tronco sob o tabuleiro
       bk.build(bg);
       footbridges.push([qx, qz]);
     }
@@ -294,13 +321,13 @@ export function buildPraca(ctx) {
     for (const [a, b] of stream) {
       const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L;
       for (const side of [-1, 1]) for (let t = 1; t < L; t += 2.2) {
-        const x = a[0] + ux * t - uz * side * 3.3, z = a[1] + uz * t + ux * side * 3.3; if (!inside(x, z)) continue;
+        const x = a[0] + ux * t - uz * side * 3.9, z = a[1] + uz * t + ux * side * 3.9; if (!inside(x, z)) continue;
         sd = (sd * 16807) % 2147483647; const r = sd / 2147483647;
-        if (r < 0.45) k.add(new THREE.DodecahedronGeometry(0.45 + r * 0.5, 0), M.rock, x, Y(x, z) + 0.25, z, r * 6, r * 3, 0, 1.3, 0.8, 1.1);
-        if (!footbridges.some(f => Math.hypot(f[0] - x, f[1] - z) < 4.5)) k.add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 4), M.black, x - uz * side * 0.6, Y(x, z) + 0.5, z + ux * side * 0.6);
+        if (r < 0.45) k.add(new THREE.DodecahedronGeometry(0.45 + r * 0.5, 0), M.rock, x - uz * side * 0.8, Yb(x, z) + 0.15, z + ux * side * 0.8, r * 6, r * 3, 0, 1.3, 0.8, 1.1);
+        if (!footbridges.some(f => Math.hypot(f[0] - x, f[1] - z) < 4.5)) k.add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 4), M.metal, x - uz * side * 0.6, Yb(x, z) + 0.5, z + ux * side * 0.6);
       }
       const nearBridge = footbridges.some(f => segClosest(f[0], f[1], a, b) && Math.hypot(segClosest(f[0], f[1], a, b)[0] - f[0], segClosest(f[0], f[1], a, b)[1] - f[1]) < 1 && Math.hypot((a[0] + b[0]) / 2 - f[0], (a[1] + b[1]) / 2 - f[1]) < L / 2 + 2);
-      for (const side of [-1, 1]) { const mx = (a[0] + b[0]) / 2 - uz * side * 3.9, mz = (a[1] + b[1]) / 2 + ux * side * 3.9; if (inside(mx, mz) && !nearBridge) for (const hy of [0.45, 0.95]) k.add(new THREE.BoxGeometry(L, 0.04, 0.04), M.black, mx, Y(mx, mz) + hy, mz, Math.atan2(-uz, ux)); }
+      for (const side of [-1, 1]) { const mx = (a[0] + b[0]) / 2 - uz * side * 3.3, mz = (a[1] + b[1]) / 2 + ux * side * 3.3; if (inside(mx, mz) && !nearBridge) for (const hy of [0.45, 0.95]) k.add(new THREE.BoxGeometry(L, 0.04, 0.04), M.metal, mx, Yb(mx, mz) + hy, mz, Math.atan2(-uz, ux)); }
     }
   }
   /* ---------- meio-fio pintado de amarelo em volta da praça ---------- */
@@ -322,12 +349,12 @@ export function buildPraca(ctx) {
   {
     const S = 2, pav = [], pavUV = [], grass = [], curb = [];
     const pushQ = (arr, uv, a, b, c, d) => { arr.push(...a, ...b, ...c, ...a, ...c, ...d); if (uv) uv.push(a[0] / 4, a[2] / 4, b[0] / 4, b[2] / 4, c[0] / 4, c[2] / 4, a[0] / 4, a[2] / 4, c[0] / 4, c[2] / 4, d[0] / 4, d[2] / 4); };
-    const cell = (i, j) => { const x = X0 + (i + 0.5) * S, z = Z0 + (j + 0.5) * S; if (!inside(x, z) || nearStream(x, z, 3.1)) return 0; return inBed(x, z) ? 2 : 1; };
+    const cell = (i, j) => { const x = X0 + (i + 0.5) * S, z = Z0 + (j + 0.5) * S; if (!inside(x, z) || nearStream(x, z, WALL + 0.6)) return 0; return inBed(x, z) ? 2 : 1; };
     const ni = Math.ceil((X1 - X0) / S), nj = Math.ceil((Z1 - Z0) / S);
     for (let i = 0; i < ni; i++) for (let j = 0; j < nj; j++) {
       const t = cell(i, j); if (!t) continue;
       const x0 = X0 + i * S, z0 = Z0 + j * S, x1 = x0 + S, z1 = z0 + S, lift = t === 2 ? 0.32 : 0.06;
-      const P = (x, z) => [x, Y(x, z) + lift, z];
+      const P = (x, z) => [x, (nearStream(x, z, 9) ? Yb(x, z) : Y(x, z)) + lift, z];
       if (t === 1) pushQ(pav, pavUV, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
       else {
         pushQ(grass, null, P(x0, z0), P(x0, z1), P(x1, z1), P(x1, z0));
@@ -366,7 +393,7 @@ export function buildPraca(ctx) {
   palms.forEach(([x, z, sc]) => treeList.push({ x, y: Y(x, z), z, s: sc, rot: x * 7 % 6.28, kind: 'palm', color: 0x5d9a3d }));
   const bambooG = new THREE.CylinderGeometry(0.07, 0.07, 9, 5).translate(0, 4.5, 0), bl = [];
   bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) bl.push([x + (rnd() - 0.5) * 2.4, z + (rnd() - 0.5) * 2.4, rnd()]); });
-  inst(bambooG, lambert(0x7fa04a), bl, (d, [x, z, r]) => { d.position.set(x, Y(x, z), z); d.rotation.set((r - 0.5) * 0.3, 0, (r - 0.4) * 0.3); d.scale.set(1, 0.8 + r * 0.4, 1); });
+  inst(bambooG, lambert(0x7fa04a), bl, (d, [x, z, r]) => { d.position.set(x, Yb(x, z), z); d.rotation.set((r - 0.5) * 0.3, 0, (r - 0.4) * 0.3); d.scale.set(1, 0.8 + r * 0.4, 1); });
   for (const [x, z] of trees) colliders.push({ circle: [x, z, 0.65] });
   for (const [x, z] of palms) colliders.push({ circle: [x, z, 0.3] });
 
@@ -495,5 +522,5 @@ export function buildPraca(ctx) {
   }
 
   k.build(g); kd.build(g, false);
-  return { pipoca, parking, trees: treeList, bounds: [X0, Z0, X1, Z1] };
+  return { footbridges, pipoca, parking, trees: treeList, bounds: [X0, Z0, X1, Z1] };
 }

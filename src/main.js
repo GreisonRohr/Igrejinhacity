@@ -82,6 +82,7 @@ const stage = async (label, from, to, fn) => {
 };
 const LM = placeLandmarks(world, terrain);
 const city = new City(world, terrain, Q, LM.exclusions);
+city.valaoZones = [{ x: 10, z: 22, r: 42 }];   // Arroio Koetz canalizado na Praça Dona Luísa (paredes retas)
 await stage('Escavando o Paranhana…', 0.05, 0.1, () => city.carveWater());
 const groundCanvas = await stage('Pintando o chão…', 0.1, 0.18, () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize)));
 terrain.material.map = groundTexture(groundCanvas, renderer);
