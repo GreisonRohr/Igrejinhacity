@@ -532,7 +532,9 @@ export class City {
   async buildBuildings(tick = null) {
     const t = this.t;
     let i = 0, n = 0;
+    let wi = -1;
     for (const b of this.world.buildings) {
+      wi++;
       if (tick && ++n % 2500 === 0) await tick(n / this.world.buildings.length);
       if (this.exclusions.length) {
         const cx = b.p.reduce((s2, q) => s2 + q[0], 0) / b.p.length, cz = b.p.reduce((s2, q) => s2 + q[1], 0) / b.p.length;
@@ -548,7 +550,9 @@ export class City {
       const k = b.kind || 'house';
       const ind = /industrial|warehouse|shed/.test(k), com = /commercial|retail|office|apartments|school|church/.test(k);
       const roof = !rect ? 'flat' : ind ? 'shed' : com ? 'flat' : rect.a * rect.b * 4 > 520 ? 'flat' : 'gable';
+      this._roofReal = this.roofColors && this.roofColors[wi] >= 0 ? this.roofColors[wi] : -1;   // cor da foto aérea
       this.addBuilding(p, b.h, roof, ind ? 'i' : com ? 'c' : k === 'annex' ? 'a' : 'h', rect, i++);
+      this._roofReal = -1;
     }
     for (const [x, z, , w, d, r, h, k] of this.world.gen) {
       const c = Math.cos(r), s = Math.sin(r);
@@ -559,6 +563,17 @@ export class City {
       this.addBuilding(p, h, k === 'h' ? 'gable' : k === 'i' ? 'shed' : 'flat', k, rect, i++);
     }
     void t;
+  }
+
+  /** Cor real do telhado (foto aérea 2016), com leve ganho: a foto vem mais escura que a luz do jogo. */
+  _realRoof() {
+    if (!(this._roofReal >= 0)) return null;
+    const c = this._rc || (this._rc = new THREE.Color());
+    c.setHex(this._roofReal).multiplyScalar(1.3);   // setHex já converte de sRGB
+    // a foto puxa para o magenta nos cinzas: telhados que não são de telha vermelha ficam neutros
+    const r = this._roofReal >> 16 & 255, g = this._roofReal >> 8 & 255;
+    if (r - g < 28) { const l = (c.r + c.g + c.b) / 3; c.r += (l - c.r) * 0.75; c.g += (l - c.g) * 0.75; c.b += (l - c.b) * 0.75; }
+    return c;
   }
 
   addBuilding(p, h, roof, kind, rect, id) {
@@ -580,7 +595,7 @@ export class City {
       if (floor - base > 0.05) ch.walls.quad([a[0], base, a[1]], [b[0], base, b[1]], [b[0], floor, b[1]], [a[0], floor, a[1]], [[0, 0.02], [bays, 0.02], [bays, 0.05], [0, 0.05]], wall, 0, out);
     }
     if (roof === 'flat' || !rect) {
-      const col = pick(FLAT), y = top + 0.05;
+      const col = this._realRoof() || pick(FLAT), y = top + 0.05;
       const tris = THREE.ShapeUtils.triangulateShape(p.map(([x, z]) => new THREE.Vector2(x, z)), []);
       for (const [i, j, k] of tris) ch.roofs.tri([p[i][0], y, p[i][1]], [p[j][0], y, p[j][1]], [p[k][0], y, p[k][1]], [[p[i][0] / 4, p[i][1] / 4], [p[j][0] / 4, p[j][1] / 4], [p[k][0] / 4, p[k][1] / 4]], col, 0, [0, 1, 0]);
       // platibanda
@@ -592,7 +607,7 @@ export class City {
     }
     // telhado de duas águas (ou meia-água nos galpões) sobre o retângulo orientado
     const { a, b, ua, ub } = rect, o = roof === 'shed' ? 0.4 : 0.55, pitch = roof === 'shed' ? 0.18 : 0.75;
-    const rh = b * pitch, col = roof === 'shed' ? pick(METAL) : pick(ROOFS);
+    const rh = b * pitch, col = this._realRoof() || (roof === 'shed' ? pick(METAL) : pick(ROOFS));
     const P = (sa, sb, y) => [rect.cx + ua[0] * sa + ub[0] * sb, y, rect.cz + ua[1] * sa + ub[1] * sb];
     const ye = top - o * pitch, yr = top + rh;
     for (const s of [1, -1]) {
