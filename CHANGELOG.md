@@ -6,6 +6,11 @@ Formato por data; o mais recente em cima. Detalhes técnicos nos commits do bran
 - Telhados: cor real de 17 mil prédios tirada da imagem aérea da Prefeitura (`scripts/build-roofs.py`).
 - Árvores: 9 mil copas reais detectadas na imagem aérea (`scripts/build-trees.py`) substituem as árvores sorteadas
   nas calçadas; tamanho pela copa medida.
+- Telhados: formato lido na imagem aérea (laje, duas águas, quatro águas — novo) para 11 mil prédios.
+- Chão: uso do solo real (GEO Igrejinha "Uso e Ocupação do Solo 2023": mata, campo, solo exposto, silvicultura);
+  a imagem aérea é combinada por cima, e as áreas sem foto (antes brancas, como "neve" no morro) mostram o uso do solo.
+- Ruas: o relevo simplificado à distância não passa mais por cima do asfalto (aparecia grama/foto na pista);
+  trechos de avenida de pista dupla sem a pista irmã agora são desenhados com a largura inteira.
 - Desempenho: árvores até 600 m e carros parados até 450 m, células de 400 m (2,36 mi triângulos).
 - Teste de navegação mede o percentil 95 do tempo de rota (o pior caso isolado varia com o carregamento).
 - Arroio da praça como valão de paredes retas; passarela de troncos; João Corrêa sem canteiro junto à praça.

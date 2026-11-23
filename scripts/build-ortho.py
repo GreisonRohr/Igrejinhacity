@@ -80,6 +80,12 @@ for cj in range(ncz):
         tx = np.clip(sx - ix, 0, 1)[..., None]; ty = np.clip(sy - iy, 0, 1)[..., None]
         out = (src[iy, ix] * (1 - tx) + src[iy, ix + 1] * tx) * (1 - ty) + (src[iy + 1, ix] * (1 - tx) + src[iy + 1, ix + 1] * tx) * ty
         out = np.clip(out, 0, 255).astype(np.uint8)
+        # borda branca da imagem = sem dado (senão vira 'neve' nos morros): só manchas brancas grandes e contínuas
+        from scipy import ndimage as _ndi
+        wm = (out[..., :3] >= 246).all(-1); lab, n = _ndi.label(wm)
+        if n:
+            sz = _ndi.sum(wm, lab, range(1, n + 1)); big = np.isin(lab, 1 + np.nonzero(sz > PX * PX * 0.01)[0])
+            out[big, 3] = 0
         cover = float((out[..., 3] > 200).mean())
         if cover < 0.05: continue
         name = f'{ci}_{cj}.webp'

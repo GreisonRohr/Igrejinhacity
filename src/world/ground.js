@@ -10,7 +10,7 @@ export const AREA_COLORS = {
   quarry: '#b8ab92', farmland: '#a7b56a', residential: null,
 };
 
-export function buildGroundCanvas(terrain, world, maxSize) {
+export function buildGroundCanvas(terrain, world, maxSize, landuse = null) {
   const t = terrain, aspect = t.W / t.H;
   const H = maxSize, W = Math.round(maxSize * aspect);
   const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -37,6 +37,8 @@ export function buildGroundCanvas(terrain, world, maxSize) {
     const r0 = rnd(); g.fillStyle = r0 < 0.45 ? 'rgba(50,80,35,0.12)' : r0 < 0.85 ? 'rgba(190,185,120,0.10)' : 'rgba(140,110,80,0.10)';
     g.beginPath(); g.ellipse(rnd() * W, rnd() * H, 4 + rnd() * 30, 4 + rnd() * 30, rnd() * 3, 0, 7); g.fill();
   }
+  // uso do solo real (GEO Igrejinha 2023): mata, campo, solo exposto, silvicultura — mesma extensão do terreno
+  if (landuse) { g.globalAlpha = 0.85; g.drawImage(landuse, 0, 0, W, H); g.globalAlpha = 1; }
 
   // 2. camadas do OSM em coordenadas do mundo
   const sx = W / t.W, sz = H / t.H;

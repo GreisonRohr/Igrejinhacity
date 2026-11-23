@@ -84,16 +84,26 @@ export class Terrain {
    * Foto aérea real (GEO Igrejinha 2016, public/ortho) nos blocos perto da câmera: cada bloco ganha um material
    * próprio com a textura do seu recorte (sem draw call a mais: o bloco já é uma malha). Longe, volta o material comum.
    */
-  setOrtho(index, base, { near = 900, far = 1300 } = {}) {
-    this.orthoNear = near; this.orthoFar = far;
-    const byKey = new Map(index.tiles.filter(t => t.cover >= 0.98).map(t => [Math.round((t.x0 - this.x0) / this.cell) + ',' + Math.round((t.z0 - this.z0) / this.cell), t]));
+  setOrtho(index, base, { near = 900, far = 1300 } = {}, groundCanvas = null) {
+    this.orthoNear = near; this.orthoFar = far; this.groundCanvas = groundCanvas;
+    const byKey = new Map(index.tiles.filter(t => t.cover >= (groundCanvas ? 0.05 : 0.98)).map(t => [Math.round((t.x0 - this.x0) / this.cell) + ',' + Math.round((t.z0 - this.z0) / this.cell), t]));
     for (const c of this.chunks) { const t = byKey.get(c.i0 + ',' + c.j0); if (t) c.ortho = { ...t, url: base + 'ortho/' + t.file, state: 0 }; }
   }
   updateOrtho(c, d) {
     const o = c.ortho;
     if (d < this.orthoNear && o.state === 0) {
       o.state = 1;
-      new THREE.TextureLoader().load(o.url, tex => {
+      new THREE.ImageLoader().load(o.url, img => {
+        // foto por cima do chão pintado (uso do solo): onde a imagem aérea não tem dado, aparece o chão
+        let src = img;
+        if (this.groundCanvas && o.cover < 0.98) {
+          const gc = this.groundCanvas, c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+          const g = c.getContext('2d'), sx = gc.width / this.W, sz = gc.height / this.H;
+          g.drawImage(gc, (o.x0 - this.x0) * sx, (o.z0 - this.z0) * sz, (o.x1 - o.x0) * sx, (o.z1 - o.z0) * sz, 0, 0, c.width, c.height);
+          g.drawImage(img, 0, 0);
+          src = c;
+        }
+        const tex = new THREE.Texture(src); tex.needsUpdate = true;
         tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
         // UV do terreno é global (mapa inteiro): reescala para o recorte deste bloco
         const Dx = o.x1 - o.x0, Dz = o.z1 - o.z0;

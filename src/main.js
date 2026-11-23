@@ -87,10 +87,11 @@ city.roofColors = await fetchPackedJSON(BASE + 'data/roofs.data.json').catch(() 
 city.roofShapes = await fetchPackedJSON(BASE + 'data/roofshape.data.json').catch(() => null);   // laje, duas ou quatro águas
 city.valaoZones = [{ x: 10, z: 22, r: 42 }];   // Arroio Koetz canalizado na Praça Dona Luísa (paredes retas)
 await stage('Escavando o Paranhana…', 0.05, 0.1, () => city.carveWater());
-const groundCanvas = await stage('Pintando o chão…', 0.1, 0.18, () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize)));
+const landuseImg = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = BASE + 'data/landuse.webp'; });
+const groundCanvas = await stage('Pintando o chão…', 0.1, 0.18, () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize), landuseImg));
 terrain.material.map = groundTexture(groundCanvas, renderer);
 // foto aérea da Prefeitura (GEO Igrejinha 2016) no chão perto da câmera
-fetch(BASE + 'ortho/index.json').then(r => r.ok ? r.json() : null).then(ix => { if (ix) terrain.setOrtho(ix, BASE, isTouch ? { near: 650, far: 1000 } : { near: 1000, far: 1400 }); }).catch(() => {});
+fetch(BASE + 'ortho/index.json').then(r => r.ok ? r.json() : null).then(ix => { if (ix) terrain.setOrtho(ix, BASE, isTouch ? { near: 650, far: 1000 } : { near: 1000, far: 1400 }, groundCanvas); }).catch(() => {});
 await stage('Erguendo a Serra…', 0.18, 0.22, () => scene.add(terrain.build()));
 await stage('Construindo a cidade…', 0.22, 0.7, async tick => scene.add(await city.build(tick)));
 const landmarks = await stage('Montando a Igreja, a praça e a Oktoberfest…', 0.7, 0.82, () => buildLandmarks(LM, world, terrain, scene, city));
