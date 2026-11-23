@@ -11,6 +11,11 @@ Formato por data; o mais recente em cima. Detalhes técnicos nos commits do bran
 - Fotos da Prefeitura (igrejinha.rs.gov.br, notícia 1188, 2026): Erni Engelmann com paredes de madeira cor de mel e o
   nome do oitão legível (estava espelhado); Feira do Produtor com base de tijolo, painéis de madeira com mãos-francesas
   em X e pérgola de metal preto com cobertura de vidro.
+- Feira do Produtor refeita pelas fotos do diretor (Street View abr/2026): prédio comprido de paredes brancas, pilares
+  e testeira de madeira clara, balcões de tijolo com as bancas abertas para a Rua Coberta, ponta leste branca com porta de
+  madeira; árvore grande entre a feira e o Erni; canteiro redondo elevado com árvore perto da esquina da Ernesto Dorneles.
+  (Os painéis em X e a pérgola preta da rodada anterior eram de outra foto e saíram.) Palmeiras e árvores sorteadas não
+  nascem mais na cabeceira da passarela.
 - Feira do Produtor movida para a esquerda do Erni Engelmann (de quem olha a fachada pela Rua Coberta; lado leste),
   como indicou o diretor; a ala baixa com o painel da bandeira passou para o outro lado.
 - `?keepgeo` mantém os vértices na memória (para testes que medem a geometria, como a varredura do piso da praça).

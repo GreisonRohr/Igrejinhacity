@@ -145,7 +145,7 @@ export function buildPraca(ctx) {
     }
   }
   // passarela de madeira de troncos sobre o arroio (fotos TripAdvisor), levemente arqueada, guarda-corpo em X
-  const footbridges = [], decks = [], porches = [];   // porches: [x0, z0, x1, z1, y] pisos elevados (varanda do Erni)
+  const footbridges = [], decks = [], porches = [], fixedTrees = [];   // fixedTrees: árvores vistas nas fotos [x, z, escala, rot]   // porches: [x0, z0, x1, z1, y] pisos elevados (varanda do Erni)
   {
     const inner = stream.filter(([a, b]) => inside((a[0] + b[0]) / 2, (a[1] + b[1]) / 2));
     const lens = inner.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1])), tot = lens.reduce((x, y) => x + y, 0);
@@ -240,28 +240,34 @@ export function buildPraca(ctx) {
     rectCol(x0, z0, x1, z1); occupy(x0 - 0.5, z0 - 3, x1, z1);
   }
 
-  /* ---------- feira do produtor: à esquerda do Erni Engelmann para quem olha a fachada (lado leste; diretor) ---------- */
+  /* ---------- feira do produtor: à esquerda do Erni Engelmann para quem olha da Rua Coberta (lado leste; diretor) ---------- */
   {
-    const x0 = 26, x1 = Math.min(34.5, X1 - 0.5), z0 = eN + 3.5, z1 = z0 + 6.5, y = Y((x0 + x1) / 2, (z0 + z1) / 2), W = x1 - x0, D = z1 - z0, mx = (x0 + x1) / 2;
-    k.box(W, 1.1, 0.3, M.brick, mx, y, z1); k.box(0.3, 1.1, D, M.brick, x0, y, (z0 + z1) / 2); k.box(0.3, 1.1, D, M.brick, x1, y, (z0 + z1) / 2);   // base de tijolo
-    k.box(W, 2.1, 0.25, M.xpanel, mx, y + 1.1, z1); k.box(0.25, 2.1, D, M.xpanel, x0, y + 1.1, (z0 + z1) / 2); k.box(0.25, 2.1, D, M.xpanel, x1, y + 1.1, (z0 + z1) / 2);   // painéis de madeira com X
-    // pérgola de metal preto com cobertura de vidro na frente (fotos 2026)
-    for (let i = 0; i <= 3; i++) k.box(0.12, 3.0, 0.12, M.black, x0 + 0.3 + i * (W - 0.6) / 3, y, z0 - 2.6);
-    k.box(W + 0.4, 0.14, 0.14, M.black, mx, y + 2.95, z0 - 2.6);
-    for (let i = 0; i <= 6; i++) k.add(new THREE.BoxGeometry(0.08, 0.1, 2.8), M.black, x0 + i * W / 6, y + 3.1, z0 - 1.2, 0, 0.12);
-    k.add(new THREE.BoxGeometry(W + 0.3, 0.04, 2.8), lambert(0xb9c8cf), mx, y + 3.17, z0 - 1.2, 0, 0.12);
+    // fotos do diretor (Street View abr/2026, R. Osvaldo Cruz 561 e R. Gen. Ernesto Dorneles 506): prédio comprido de
+    // paredes brancas, pilares e testeira de madeira clara, balcões de tijolo com as bancas abertas para a Rua Coberta;
+    // a ponta leste é parede branca lisa com uma porta de madeira, de frente para a R. Ernesto Dorneles
+    const x0 = 27.5, x1 = Math.min(35.5, X1 - 0.3), z0 = eN + 3.5, z1 = z0 + 6.5, y = Y((x0 + x1) / 2, (z0 + z1) / 2), W = x1 - x0, D = z1 - z0, mx = (x0 + x1) / 2;
+    k.box(W, 3.3, 0.25, M.white, mx, y, z1); k.box(0.25, 3.3, D, M.white, x0, y, (z0 + z1) / 2); k.box(0.25, 3.3, D, M.white, x1, y, (z0 + z1) / 2);
+    k.add(new THREE.BoxGeometry(0.06, 2.1, 0.95), M.wood, x1 + 0.14, y + 1.05, z1 - 1.6);                                   // porta de madeira (ponta leste)
+    for (const ex of [x0 + 0.5, x1 - 0.5]) k.box(1.0, 3.3, 0.25, M.white, ex, y, z0 + 0.1);                                 // pontas brancas da frente
     k.box(W, 1.0, 0.5, M.brick, mx, y, z0 + 0.4);                                             // balcão de tijolo
-    // pilares de madeira clara na frente (fotos: R. Osvaldo Cruz 561) e telhado de uma água revestido de madeira
-    for (let i = 0; i <= 4; i++) k.box(0.3, 3.4, 0.3, M.lightWood, x0 + 0.2 + i * (W - 0.4) / 4, y, z0 + 0.1);
+    for (let i = 0; i <= 4; i++) k.box(0.3, 3.4, 0.3, M.lightWood, x0 + 1.0 + i * (W - 2.0) / 4, y, z0 + 0.1);
     k.box(W + 0.6, 0.35, 0.3, M.lightWood, mx, y + 3.3, z0 + 0.05);
-    const rise = 1.6, sl = Math.hypot(D + 1.6, rise), sa = Math.atan2(rise, D + 1.6);
-    k.add(new THREE.BoxGeometry(W + 1.2, 0.18, sl), M.lightWood, mx, y + 3.6 + rise / 2, (z0 + z1) / 2 - 0.3, 0, -sa);
-    k.add(new THREE.BoxGeometry(W + 1.3, 0.55, 0.12), M.lightWood, mx, y + 3.75 + rise, z0 - 1.05);   // testeira alta na frente
-    k.box(W, rise, 0.25, M.honey, mx, y + 3.2, z1);
+    const rise = 1.2, sl = Math.hypot(D + 1.6, rise), sa = Math.atan2(rise, D + 1.6);
+    k.add(new THREE.BoxGeometry(W + 1.2, 0.18, sl), M.roofSlate, mx, y + 3.6 + rise / 2, (z0 + z1) / 2 - 0.3, 0, -sa);   // telhado cinza
+    k.add(new THREE.BoxGeometry(W + 1.3, 0.5, 0.12), M.lightWood, mx, y + 3.7 + rise, z0 - 1.05);                         // testeira de madeira clara
+    for (const ex of [x0 - 0.6, x1 + 0.6]) k.add(new THREE.BoxGeometry(0.12, 0.45, sl), M.lightWood, ex, y + 3.6 + rise / 2, (z0 + z1) / 2 - 0.3, 0, -sa);
+    k.box(W, rise, 0.25, M.white, mx, y + 3.3, z1);
     // frutas e verduras em caixotes sobre o balcão
     const fr = [M.fruitR, M.fruitG, M.fruitO, M.fruitY];
-    for (let i = 0; i < 8; i++) { const fx = x0 + 0.8 + i * (W - 1.6) / 7; k.box(0.9, 0.22, 0.45, M.wood, fx, y + 1.0, z0 + 0.4); for (let j = 0; j < 5; j++) k.add(new THREE.SphereGeometry(0.09, 5, 4), fr[(i + j) % 4], fx - 0.32 + j * 0.16, y + 1.3, z0 + 0.4 + ((j % 2) - 0.5) * 0.15); }
-    rectCol(x0, z0 + 0.2, x1, z1); occupy(x0 - 1, z0 - 3.4, x1 + 1, z1 + 0.5);   // inclui a pérgola (sem árvore atravessando)
+    for (let i = 0; i < 7; i++) { const fx = x0 + 1.6 + i * (W - 3.2) / 6; k.box(0.9, 0.22, 0.45, M.wood, fx, y + 1.0, z0 + 0.4); for (let j = 0; j < 5; j++) k.add(new THREE.SphereGeometry(0.09, 5, 4), fr[(i + j) % 4], fx - 0.32 + j * 0.16, y + 1.3, z0 + 0.4 + ((j % 2) - 0.5) * 0.15); }
+    rectCol(x0, z0 + 0.2, x1, z1); occupy(x0 - 0.8, z0 - 1.2, x1 + 0.5, z1 + 0.5);
+    // árvore grande entre a feira e o Erni Engelmann; canteiro redondo elevado com árvore perto da esquina da Ernesto Dorneles
+    fixedTrees.push([x0 - 1.3, z0 + 0.6, 1.15, 0.7]);
+    const [px, pz] = [x1 - 2.2, z0 - 5.2], py = Y(px, pz);
+    k.add(new THREE.CylinderGeometry(2.5, 2.5, 0.5, 20, 1, true), M.pedestal, px, py + 0.25, pz);
+    k.add(new THREE.TorusGeometry(2.42, 0.14, 4, 20).rotateX(PI / 2), M.pedestal, px, py + 0.5, pz);
+    k.add(new THREE.CircleGeometry(2.4, 20).rotateX(-PI / 2), M.grass, px, py + 0.42, pz);
+    fixedTrees.push([px, pz, 0.95, 2.1]); colliders.push({ circle: [px, pz, 2.6] }); occupy(px - 2.6, pz - 2.6, px + 2.6, pz + 2.6);
   }
 
   /* ---------- monumento: canteiro elevado revestido de madeira, pedestal de pedra e 4 mastros ---------- */
@@ -414,16 +420,17 @@ export function buildPraca(ctx) {
   /* ---------- árvores grandes, palmeiras e bambus (instanciados) ---------- */
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const trees = [], palms = [], bamboos = [];
+  trees.push(...fixedTrees);
   for (let i = 0; i < 900 && trees.length < 12; i++) {
     const x = X0 + rnd() * (X1 - X0), z = Z0 + rnd() * (Z1 - Z0);
     const bed = inBed(x, z);
-    if (!inside(x, z) || nearStream(x, z, 3.5) || occupied(x, z, 2) || (!bed && rnd() < 0.85)) continue;
+    if (!inside(x, z) || nearStream(x, z, 3.5) || occupied(x, z, 2) || decks.some(d => Math.hypot(x - d.qx, z - d.qz) < d.L / 2 + 4) || (!bed && rnd() < 0.85)) continue;
     if (trees.some(t => Math.hypot(t[0] - x, t[1] - z) < 11)) continue;
     trees.push([x, z, 0.8 + rnd() * 0.35, rnd() * 6.28]);
   }
   for (let i = 0; i < 300 && palms.length < 5; i++) {
     const x = X0 + rnd() * (X1 - X0), z = Z0 + rnd() * (Z1 - Z0);
-    if (!inside(x, z) || nearStream(x, z, 3) || occupied(x, z, 1.5) || [...trees, ...palms].some(t => Math.hypot(t[0] - x, t[1] - z) < 6)) continue;
+    if (!inside(x, z) || nearStream(x, z, 3) || occupied(x, z, 1.5) || decks.some(d => Math.hypot(x - d.qx, z - d.qz) < d.L / 2 + 4) || [...trees, ...palms].some(t => Math.hypot(t[0] - x, t[1] - z) < 6)) continue;
     palms.push([x, z, 0.9 + rnd() * 0.3]);
   }
   for (const [a, b] of stream) for (const t of [0.3, 0.8]) { const x = a[0] + (b[0] - a[0]) * t + (rnd() - 0.5) * 2, z = a[1] + (b[1] - a[1]) * t; if (Math.hypot(x - cx, z - cz) < 45) bamboos.push([x + 4, z, 1]); }
