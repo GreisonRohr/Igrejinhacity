@@ -249,6 +249,12 @@ export function buildPontosTur(T, terrain, root, colliders, updaters) {
     k.add(new THREE.BoxGeometry(0.18, ay - ey - 0.9, 0.18), brown, 0, (ey + 0.9 + ay) / 2, pz1 - 0.1);                    // pendural
     for (const s of [-1, 1]) k.add(new THREE.BoxGeometry(0.14, 1.4, 0.14), brown, s * 0.75, ey + 1.5, pz1 - 0.1, 0, 0, -s * 0.9);
     k.add(new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-ew + 0.6, 0), new THREE.Vector2(ew - 0.6, 0), new THREE.Vector2(0, ay - ey - 0.7)])), red, 0, ey + 0.4, pz0 + 0.06);   // empena vermelha sob a varanda
+    // calçada de lajotas em volta da casa (entre a igreja e o estacionamento) com meio-fio amarelo do lado da rua lateral
+    let ytop = -Infinity; for (const [a, p] of [[7, 9], [7, 21.5], [31, 9], [31, 21.5], [19, 15]]) { const [x, z] = W(a, p); ytop = Math.max(ytop, H(x, z)); }
+    const pave = lambert(0xcbc6bd), curbY = lambert(0xe8c32e), top = ytop - y + 0.12;
+    // eixos locais: x = lado (p, a partir do centro p=14), z = para a rua (a, a partir do centro a=15.5, invertido)
+    k.box(12.5, top + 0.6, 24, pave, sx * (15.25 - 14), -0.6, -(19 - 15.5));
+    k.box(0.25, top + 0.75, 24, curbY, sx * (21.6 - 14), -0.6, -(19 - 15.5));
     k.build(g2);
     const qx = (a, p) => W(a, p);
     colliders.push({ p: [qx(11, 10.5), qx(11, 17.5), qx(20, 17.5), qx(20, 19.5), qx(30, 19.5), qx(30, 10.5)] });

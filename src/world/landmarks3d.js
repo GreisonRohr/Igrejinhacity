@@ -396,9 +396,24 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
   if (city) buildCulverts(city, terrain, root, colliders);
   // junta as peças estáticas por material e região de 1 km (menos malhas); regiões distantes somem
   const cells = mergeStatic(root, 1000);
+  // grade de 50 m com os polígonos de colisão dos pontos: árvores e outros objetos não nascem dentro deles
+  const lgrid = new Map();
+  for (const c of colliders) {
+    if (!c.p) continue; let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const [x, z] of c.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+    for (let i = Math.floor((x0 - 4) / 50); i <= Math.floor((x1 + 4) / 50); i++) for (let j = Math.floor((z0 - 4) / 50); j <= Math.floor((z1 + 4) / 50); j++) { const k = i + ',' + j; if (!lgrid.has(k)) lgrid.set(k, []); lgrid.get(k).push(c.p); }
+  }
+  const blocked = (x, z, r = 0) => {
+    for (const p of lgrid.get(Math.floor(x / 50) + ',' + Math.floor(z / 50)) || []) {
+      if (inPoly(x, z, p)) return true;
+      if (r > 0) for (let i = 0; i < p.length; i++) { const q = segClosest(x, z, p[i], p[(i + 1) % p.length]); if (Math.hypot(q[0] - x, q[1] - z) < r) return true; }
+    }
+    return false;
+  };
 
   return {
     colliders, root, waldir: waldirNpc, cells, seats, footbridges: praca.footbridges || [], inPraca: (x, z) => (P.praca.poly && inPoly(x, z, P.praca.poly)) || (P.praca.erni && inPoly(x, z, P.praca.erni)), pipoca: praca.pipoca, parking: praca.parking || [], trees: praca.trees || [],
+    blocked,
     cull(px, pz, dist) { for (const c of cells) { const v = Math.hypot(px - c.cx, pz - c.cz) < dist; for (const m of c.meshes) m.visible = v; } },
     update(dt, state) { for (const u of updaters) u(dt, state); },
   };

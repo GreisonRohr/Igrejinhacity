@@ -6,6 +6,8 @@ Formato por data; o mais recente em cima. Detalhes técnicos nos commits do bran
 - Ao lado da Igreja Gabriel, do lado da R. Santos Dumont (fotos do diretor, Street View abr/2026 só como referência, e do
   site de turismo): casa branca de rodapé e molduras vermelhas, varanda em "A" de madeira escura com mãos-francesas,
   telhado de fibrocimento, ala comprida nos fundos, degraus vermelho e branco e a placa.
+- Calçada de lajotas em volta da casa com meio-fio amarelo; árvores (copas da imagem aérea) não nascem mais dentro de
+  nenhum ponto marcante (antes só eram tiradas dos prédios genéricos).
 
 ## 2026-11-23 — Desempenho: −95 chamadas de desenho na praça (744 → 649)
 - Sombras só onde aparecem: árvores e carros estacionados fazem sombra só nas células junto ao jogador; peças pequenas

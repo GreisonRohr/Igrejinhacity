@@ -111,7 +111,7 @@ await stage('Erguendo a Serra…', 0.18, 0.22, () => scene.add(terrain.build()))
 await stage('Construindo a cidade…', 0.22, 0.7, async tick => scene.add(await city.build(tick)));
 const landmarks = await stage('Montando a Igreja, a praça e a Oktoberfest…', 0.7, 0.82, () => buildLandmarks(LM, world, terrain, scene, city));
 const realTrees = await fetchPackedJSON(BASE + 'data/trees.data.json').catch(() => null);
-const street = await stage('Plantando árvores…', 0.82, 0.88, () => buildStreetLife(world, terrain, city, Q, landmarks.parking, realTrees, (x, z) => landmarks.inPraca && landmarks.inPraca(x, z)));
+const street = await stage('Plantando árvores…', 0.82, 0.88, () => buildStreetLife(world, terrain, city, Q, landmarks.parking, realTrees, (x, z) => (landmarks.inPraca && landmarks.inPraca(x, z)) || landmarks.blocked(x, z, 2.5)));   // sem árvore dentro dos pontos (copa ~2,5 m)
 // árvores detalhadas perto da câmera (cartões de folha, vento); longe ficam as copas simples
 const treeLOD = new TreeLOD(scene, { cap: isTouch ? { leafy: 70, big: 24, palm: 20 } : { leafy: 110, big: 30, palm: 30 }, radius: isTouch ? 90 : 110 });
 for (const t of street.trees) treeLOD.add(t);
