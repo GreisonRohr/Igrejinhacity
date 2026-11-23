@@ -15,6 +15,8 @@ Formato por data; o mais recente em cima. Detalhes técnicos nos commits do bran
 - Centro Administrativo Prefeito Lauri Auri Krause: 3 pavimentos com faixas de vidro, pórtico, nome e mastros.
 - Fábricas (Beira Rio, Usaflex, Piccadilly) com letreiro; pavilhões industriais com parede lisa e janelas altas no
   lugar de fileiras de janelas de apartamento.
+- Pórtico do Parque de Eventos Almiro Grings pela foto atual do site: torres amarelas em enxaimel com sacada, telhado
+  de dois níveis em telha alaranjada, portão de grade branca e o arco "Parque Municipal de Eventos / Almiro Grings".
 - Correção: telhados de duas águas do Heidelberg, Casa de Pedra e McBenett com a inclinação certa.
 
 ## 2026-11-23 — Pontos montados a partir de fotos livres (Wikimedia Commons)

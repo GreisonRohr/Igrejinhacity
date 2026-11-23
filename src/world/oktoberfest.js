@@ -94,16 +94,6 @@ const sign = (text, w = 512, h = 128, bg = '#7a4a26', fg = '#f6ead2', font = '90
   g.fillStyle = bg; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 8; g.strokeRect(4, 4, w - 8, h - 8);
   g.fillStyle = fg; g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 4);
 });
-const bannerTex = () => tex(1024, 400, (g, w, h) => {
-  g.fillStyle = '#b5161f'; g.fillRect(0, 0, w, h); g.fillStyle = '#f0b51d'; g.fillRect(w - 260, 0, 260, h);
-  g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = '900 120px Rubik, Arial Black, sans-serif'; g.fillText('Bem-vindos', 390, 150);
-  g.font = '700 52px Rubik, Arial, sans-serif'; g.fillText('»» WILLKOMMEN »»', 390, 235);
-  g.fillStyle = '#f0b51d'; g.font = '900 64px Georgia, serif'; g.fillText('37ª OKTOBERFEST', 390, 335);
-  // caneco de chope
-  g.fillStyle = '#ffd659'; g.fillRect(800, 120, 140, 200); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(870, 118, 85, 40, 0, 0, 7); g.fill();
-  g.strokeStyle = '#ffd659'; g.lineWidth = 22; g.beginPath(); g.arc(950, 215, 50, -PI / 2, PI / 2); g.stroke();
-});
-
 /** Caixa com UV em metros (textura repetida a cada tu × tv metros). */
 function boxUV(w, h, d, tu = 3, tv = 3) {
   const g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
@@ -263,27 +253,40 @@ export function buildOktober(O, world, terrain, root, colliders, updaters) {
     const y = floorY(r, 0.5), g = frame(r, y), k = new Kit();
     const front = -1;   // a rua fica do lado +o → z local negativo? (normal da fachada = (ox,oz) = -T)
     const oct = (rad, h) => new THREE.CylinderGeometry(rad, rad, h, 8, 1, false, PI / 8);
+    // cores da foto atual do pórtico (igrejinha.tur.br): reboco amarelo com madeira marrom, telhas alaranjadas
+    const yel = lambert(0xf3c860, { map: M.enx.map }), tileO = lambert(0xffc2a0, { map: M.tile.map }), brown = lambert(0x5a3a26), white = lambert(0xf4f4f2);
     for (const s of [-1, 1]) {
       const tx = s * 6.5;
       const tw = oct(2.6, 9); const uv = tw.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 5.5, uv.getY(i) * 3);
-      k.add(tw, M.enx, tx, 4.5 - 1, 0);
+      k.add(tw, yel, tx, 4.5 - 1, 0);
       k.add(new THREE.CylinderGeometry(3.2, 3.2, 0.25, 8, 1, false, PI / 8), M.darkWood, tx, 3.6, 0);
       const rail = new THREE.CylinderGeometry(3.15, 3.15, 1.0, 8, 1, true, PI / 8); k.add(rail, M.lattice, tx, 4.25, 0);
       k.add(oct(2.9, 0.4), M.darkWood, tx, 8.0, 0);
-      k.add(new THREE.ConeGeometry(3.4, 3.4, 8, 1, false, PI / 8), M.tile, tx, 9.9, 0);
+      k.add(new THREE.ConeGeometry(3.6, 1.0, 8, 1, true, PI / 8), tileO, tx, 8.6, 0);             // beiral
+      k.add(oct(2.5, 1.2), yel, tx, 9.6, 0); k.add(oct(2.75, 0.3), brown, tx, 10.25, 0);          // segundo nível
+      k.add(new THREE.ConeGeometry(3.2, 4.2, 8, 1, false, PI / 8), tileO, tx, 12.5, 0);
       for (let w = 0; w < 4; w++) { const a = PI / 8 + w * PI / 4 + PI; k.add(new THREE.PlaneGeometry(1.0, 1.3), M.glass, tx + Math.sin(a) * 2.62, 6.3, Math.cos(a) * 2.62, a); }
       colliders.push({ circle: [...toW(r, tx, 0), 2.8] });
     }
     // bloco central sobre a passagem
-    k.add(boxUV(8.5, 2.6, 3.5, 3, 3), M.enx, 0, 7.6, 0);
-    const tri = gable(k, 8.5, 4.4, 8.9, 2.2, M.tile, 0.4);
-    for (const s of [-1, 1]) k.add(tri, M.enx, s * 4.25, 8.9, 0, PI / 2);
+    k.add(boxUV(8.5, 1.2, 3.5, 3, 1.4), brown, 0, 7.0, 0);   // passarela coberta entre as torres
+    const tri = gable(k, 8.5, 4.4, 7.6, 1.6, tileO, 0.4);
+    for (const s of [-1, 1]) k.add(tri, yel, s * 4.25, 7.6, 0, PI / 2);
     // janela triangular de vidro na frente
     const gt = new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-1.2, 0), new THREE.Vector2(1.2, 0), new THREE.Vector2(0, 1.5)]));
-    k.add(gt, M.glass, 0, 9.0, front * 1.8, front > 0 ? 0 : PI);
+    k.add(gt, brown, 0, 7.7, front * 1.8, front > 0 ? 0 : PI);
     // faixa vermelha
-    const bm = lambert(0xffffff, { map: bannerTex() });
-    const ban = new THREE.Mesh(new THREE.PlaneGeometry(8.2, 3.2), bm); ban.position.set(0, 5.4, front * 1.8); ban.rotation.y = front > 0 ? 0 : PI; g.add(ban);
+    // portão de grade branca e o arco com o nome do parque (foto)
+    for (let i = 0; i <= 40; i++) k.add(boxUV(0.06, 2.4, 0.06, 1, 1), white, -3.9 + i * 0.195, 1.2, 0);
+    for (const yy of [0.25, 1.3, 2.35]) k.add(boxUV(7.9, 0.08, 0.08, 1, 1), white, 0, yy, 0);
+    const arcT = tex(512, 192, (c, w, h) => {
+      c.strokeStyle = '#1c1c1c'; c.lineWidth = 34; c.beginPath(); c.arc(w / 2, h + 150, 300, PI + 0.55, -0.55); c.stroke();
+      c.fillStyle = '#f2c94c'; c.font = 'bold 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      const t = 'PARQUE MUNICIPAL DE EVENTOS'; for (let i = 0; i < t.length; i++) { const a = -PI / 2 + (i - (t.length - 1) / 2) * 0.042; c.save(); c.translate(w / 2 + Math.cos(a) * 300, h + 150 + Math.sin(a) * 300); c.rotate(a + PI / 2); c.fillText(t[i], 0, 0); c.restore(); }
+      c.fillStyle = '#1c1c1c'; c.fillRect(w / 2 - 110, h - 46, 220, 36); c.fillStyle = '#f2c94c'; c.font = 'bold 26px sans-serif'; c.fillText('ALMIRO GRINGS', w / 2, h - 27);
+    });
+    const bm = lambert(0xffffff, { map: arcT, alphaTest: 0.5, side: THREE.DoubleSide });
+    const ban = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 2.4), bm); ban.position.set(0, 3.5, -0.05); ban.rotation.y = PI; g.add(ban);   // legível de quem chega pela rua
     // cercas de ferro dos lados
     for (const s of [-1, 1]) for (let i = 0; i < 12; i++) k.add(boxUV(0.06, 1.8, 0.06, 1, 1), M.black, s * (9.8 + i * 0.5), 0.9, 0);
     for (const s of [-1, 1]) k.add(boxUV(6, 0.08, 0.08, 1, 1), M.black, s * 12.5, 1.7, 0);
