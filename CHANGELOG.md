@@ -2,6 +2,14 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+## 2026-11-23 — Qualidade visual expandida para a Praça Dona Luísa inteira
+- O padrão validado junto à passarela vale agora para toda a praça (raio de 62 m): árvores com copa em lóbulos, galhos
+  curvos, sombra recortada e fade perto da câmera (16 árvores `bigP`); bambu fino; arbustos, tufos e pedras naturais;
+  lajota PBR; canteiros com grama/terra/meio-fio; margem com guia; muro de pedra e água do arroio.
+- Orçamento: copa com 230 cartões (era 300) e menos tufos nos canteiros para caber; 685 chamadas de desenho (−7),
+  2.588 mil triângulos (limite 2.600 mil), heap 146 MB, carga ~21 s.
+- Correção: assento de banco colado numa palmeira sorteada não é mais usado pelos pedestres (teste `pedestres`).
+
 ## 2026-11-23 — Piloto de vegetação junto ao arroio (3ª rodada): galhos e grama
 - Galhos das árvores do piloto: curvos em 3 trechos com afinamento contínuo e pequenos desvios, raminhos finos entrando
   nos cachos de folhas; casca com fissuras e líquen.

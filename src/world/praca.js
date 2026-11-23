@@ -22,7 +22,7 @@ const paverTex = () => tex(256, 256, (c, w, h) => {
 /* ---------- piloto de qualidade (margem do arroio junto à passarela): materiais com textura física ---------- */
 // lajota de concreto retangular em amarração (fotos e capturas do diretor), junta fina e pouco contrastada, tom por peça,
 // desgaste e sujeira; 512 px = 4 m. O mapa de normais sai da mesma imagem (juntas rebaixadas).
-const PIL = { x: 8.1, z: 17.5, r: 24 };                       // centro: passarela da praça (coordenadas do jogo, GEO)
+const PIL = { x: 0, z: 0, r: 62 };                            // praça inteira (validado no piloto junto à passarela; coordenadas do jogo, GEO)
 const inPil = (x, z) => Math.hypot(x - PIL.x, z - PIL.z) < PIL.r;
 function paverPilot() {
   const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'), h = document.createElement('canvas'); h.width = h.height = S; const gh = h.getContext('2d');
@@ -522,7 +522,7 @@ export function buildPraca(ctx) {
           pushQ(curbP, curbPUV, A0, B0, [bx, B0[1] + 0.3, bz], [ax, A0[1] + 0.3, az]);
           const yA = P(ax, az)[1] + 0.006, yB = P(bx, bz)[1] + 0.006, w = 0.25;
           pushQ(soil, soilUV, [ax, yA, az], [bx, yB, bz], [bx + nx * w, yB, bz + nz * w], [ax + nx * w, yA, az + nz * w]);
-          for (let q = 0; q < 3; q++) { const tq = (q + 0.3 + ((i * 7 + j * 3 + q) % 5) * 0.08) / 3, x = ax + (bx - ax) * tq + nx * (0.25 + (q % 2) * 0.12), z = az + (bz - az) * tq + nz * (0.25 + (q % 2) * 0.12); FL.tufts.push([x, P(x, z)[1], z, 0.6 + ((i + j + q) % 4) * 0.15, i * 3 + q]); }
+          for (let q = 0; q < 2; q++) { const tq = (q + 0.3 + ((i * 7 + j * 3 + q) % 5) * 0.08) / 3, x = ax + (bx - ax) * tq + nx * (0.25 + (q % 2) * 0.12), z = az + (bz - az) * tq + nz * (0.25 + (q % 2) * 0.12); FL.tufts.push([x, P(x, z)[1], z, 0.6 + ((i + j + q) % 4) * 0.15, i * 3 + q]); }
         };
         if (cell(i - 1, j) !== 2) edgeP(x0, z1, x0, z0, 1, 0); if (cell(i + 1, j) !== 2) edgeP(x1, z0, x1, z1, -1, 0);
         if (cell(i, j - 1) !== 2) edgeP(x0, z0, x1, z0, 0, 1); if (cell(i, j + 1) !== 2) edgeP(x1, z1, x0, z1, 0, -1);
@@ -738,6 +738,8 @@ export function buildPraca(ctx) {
     if (bank) return Yb(x, z) + 0.05;
     return null;
   };
+  // assento de banco colado numa palmeira/árvore sorteada: o pedestre não senta ali
+  for (let i = seats.length - 1; i >= 0; i--) { const q = seats[i]; if ([...palms, ...trees].some(t => Math.hypot(t[0] - q.x, t[1] - q.z) < (t.length > 3 ? 1.0 : 0.7))) seats.splice(i, 1); }
   // vegetação e pedras naturais do piloto (instanciadas; fora do mergeStatic)
   const fol = new THREE.Group(); fol.userData.dynamic = true; g.add(fol); buildFoliage(fol, FL);
   return { footbridges, pipoca, parking, trees: treeList, bounds: [X0, Z0, X1, Z1], surfaceAt, deckAt };

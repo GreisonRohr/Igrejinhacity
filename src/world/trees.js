@@ -198,7 +198,7 @@ const SPECIES = {
   leafy: () => broadleaf({ trunkH: 2.6, trunkR: 0.2, crownR: 3.3, crownH: 2.2, crownY: 5.0, branches: 5, cards: 46, seed: 3 }),
   big: () => broadleaf({ trunkH: 4.6, trunkR: 0.55, crownR: 8.0, crownH: 3.6, crownY: 10.2, branches: 7, cards: 120, seed: 7 }),
   // piloto (árvores da praça junto ao arroio): mais galhos, 2,5× cartões com metade do tamanho, copa em lóbulos
-  bigP: () => broadleaf({ trunkH: 4.2, trunkR: 0.5, crownR: 7.6, crownH: 4.0, crownY: 9.8, branches: 11, cards: 300, seed: 19, cardScale: 0.52, lobes: 1 }),
+  bigP: () => broadleaf({ trunkH: 4.2, trunkR: 0.5, crownR: 7.6, crownH: 4.0, crownY: 9.8, branches: 11, cards: 230, seed: 19, cardScale: 0.58, lobes: 1 }),
   palm,
 };
 
@@ -216,7 +216,7 @@ export class TreeLOD {
     const barkM = windMaterial({ map: barkTexture() }, false);
     this.pools = {};
     for (const [kind, make] of Object.entries(SPECIES)) {
-      const g = make(), n = cap[kind] ?? (kind === 'bigP' ? 8 : 10);
+      const g = make(), n = cap[kind] ?? (kind === 'bigP' ? 16 : 10);
       const wood = new THREE.InstancedMesh(g.wood, barkM, n), leaf = new THREE.InstancedMesh(g.leaf, kind === 'palm' ? frondM : kind === 'bigP' ? leafMP : leafM, n);
       if (kind === 'bigP') leaf.customDepthMaterial = depthP;
       for (const m of [wood, leaf]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; m.userData.dynamic = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
