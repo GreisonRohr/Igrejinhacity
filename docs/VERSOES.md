@@ -13,6 +13,7 @@ indicado e no tag local `etapa-N-*`).
 | Visual 3 · Carros reais | https://claude.ai/artifact/PeWkb3ghazynRuQxwBHbmu | a18cf1b | estável (12/12 testes) |
 | Personagens da Oktoberfest | https://claude.ai/artifact/FNyG7b5F3j6Wz4YnvbYixs | 7e7ac8e | estável (12/12 testes) |
 | Visual 4 · Chão e telhados reais | https://claude.ai/artifact/9odsEdHhFY4c79UNpk7xLy | bd54d14 | estável (12/12 testes) |
+| Centro 1 · Ruas, calçadas e fachadas | https://claude.ai/artifact/7H2tG2xK6d4koe4nCUR9zp | a8df1d4 | estável (12/12 testes) |
 
 ## O que testar
 
@@ -59,3 +60,10 @@ indicado e no tag local `etapa-N-*`).
 - Andar pelas ruas do centro: asfalto com trincas e relevo, calçada de bloquete, ruas de paralelepípedo de basalto.
 - Olhar os telhados de cima (câmera alta ou ponte): telha de barro com relevo; lajes lisas.
 - Comparar com o link anterior (Personagens da Oktoberfest); conferir no celular se a carga continua igual.
+
+### Centro 1 — ruas, calçadas e fachadas da região central
+- Andar pelas 4 ruas da praça (Castelo Branco, Dorneles, Oswaldo Cruz/Rua Coberta, João Corrêa): asfalto grafite,
+  calçada de lajota cinza, meio-fio amarelo nas esquinas, faixas que param antes da faixa de pedestre.
+- Térreos com letreiros legíveis (Banco do Brasil, Supermercado Dia, Casa do Artesão e tipos de comércio),
+  sacadas nos prédios altos, sobrados históricos coloridos; à noite, letreiros acesos.
+- Sair do centro: o resto da cidade fica como antes.
