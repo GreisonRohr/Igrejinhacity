@@ -16,7 +16,7 @@ Data: 24/11/2026 · Referência: https://bahcity.jogada.studio/game/ (Porto Aleg
   de personagem, andar, correr, pular, mapa (M), câmera de foto (C), montar no veículo próximo (F), rádio (Q), buzina
   (H), soco (E), troca de arma (X). 22 capturas + texto visível. Sem ler código, sem baixar assets.
 - **Limites honestos**: navegador sem GPU → ~1 quadro por segundo; não deu para dirigir carro, ver trânsito em
-  movimento, polícia, missões, lojas, celular, helicóptero/avião, noite, nem ouvir o áudio. Esc não abriu a pausa
+  movimento, polícia, missões, lojas, celular, helicóptero/avião, nem ouvir o áudio. Esc não abriu a pausa
   (o jogo provavelmente exige o mouse capturado). Esses itens abaixo estão marcados **"só no menu"** (o jogo descreve,
   eu não vi funcionando) ou **"não verificado"**.
 
@@ -73,6 +73,10 @@ Legenda: ✅ visto funcionando · 📄 descrito no menu/dicas do próprio jogo �
 - 📄 Polícia ("Brigada") com estrelas de procurado.
 - ✅ Dinheiro (P$); 📄 trabalhos de frete e de corrida; ❓ lojas físicas, casas, roupas.
 - 📄 Monetização real: "Plano Vitrine" — lojas reais pagam para aparecer na cidade do jogo.
+
+### Noite (verificado depois, pelo cheat "Noite" do menu)
+- ✅ A hora pula para 21:00: céu com estrelas, postes acesos com manchas de luz na calçada e no asfalto, janelas
+  acesas, pedestres continuam na rua; o HUD não muda.
 
 ### Mundo e dados
 - 📄 Créditos: OpenStreetMap, estabelecimentos do OSM + Overture Maps, **alturas por LiDAR**, **linhas de ônibus
