@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { GeoBuilder, litMaterial } from './geo-builder.js';
 import { editHeights } from './terrain.js';
 import { freeAfterUpload } from './merge.js';
-import { inCentro } from './centro.js';
+import { inCentro, CENTRO } from './centro.js';
+import { signAtlas, SOBRADO_CORES } from './fachadas.js';
 
 const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
 // Piloto do upgrade visual (centro): sombra de contato, lojas no térreo e muros/portões das casas até PILOT_R da praça
@@ -165,7 +166,7 @@ export class City {
     this.chunks = new Map();
     this.colGrid = new Map();
     const tex = windowTextures();
-    this.wallMat = litMaterial({ vertexColors: true, map: tex.map, emissive: 0xffffff, emissiveMap: tex.emissive, emissiveIntensity: 0 }, WIN_STYLES);
+    this.wallMat = litMaterial({ vertexColors: true, map: tex.map, emissive: 0xffffff, emissiveMap: tex.emissive, emissiveIntensity: 0 }, WIN_STYLES, CENTRO);
     const st = shopTextures();
     this.shopMat = litMaterial({ vertexColors: true, map: st.map, emissive: 0xffffff, emissiveMap: st.emissive, emissiveIntensity: 0 });
     this.aoMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42, alphaMap: aoTexture(), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 });
@@ -180,6 +181,12 @@ export class City {
     realSurface(this.roadMat, 'asfalto', 4, 3.0, { normal: 0.7 });
     realSurface(this.cobbleMat, 'paralelepipedo', 2.5, 2.4, { normal: 1.1 });
     realSurface(this.walkMat, 'bloquete', 1.2, 2.0, { normal: 0.9 });
+    // centro: letreiros (atlas com nomes reais do cadastro + tipos de comércio) e sobrados do patrimônio
+    const places = (this.world.places || []).filter(q => inCentro(q.x, q.z, 10));
+    this._shopsC = places.filter(q => /loja|banco|farmacia|mercado|restaurante|bar|cafe/.test(q.k) && q.n && q.n.length < 26);
+    this._heritage = places.filter(q => q.k === 'patrimonio' && !/pra[cç]a/i.test(q.n));
+    this.signs = signAtlas(this._shopsC.map(q => q.n.toUpperCase().replace(' %', '')));
+    this.signMat = new THREE.MeshLambertMaterial({ map: this.signs.tex, emissive: 0xffffff, emissiveMap: this.signs.tex, emissiveIntensity: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     // centro: lajota de concreto cinza em placas (como nas fotos da praça e do entorno)
     this.walkCMat = realSurface(new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }), 'lajota', 1.2, 1.8, { normal: 1.0 });
     realSurface(this.roofMat, 'telha', 1, 2.5, { normal: 1.0, repeat: [1.2 / 2.5, 0.4 / 2.5] });
@@ -192,7 +199,7 @@ export class City {
     const S = far && Math.hypot(x, z) > FAR_R ? FAR_CHUNK : CHUNK;
     const k = (S === CHUNK ? '' : 'F') + Math.floor(x / S) + ',' + Math.floor(z / S);
     let c = this.chunks.get(k);
-    if (!c) this.chunks.set(k, c = { walls: new GeoBuilder(), roofs: new GeoBuilder(), shops: new GeoBuilder(), ao: new GeoBuilder(), roads: new GeoBuilder(), cobble: new GeoBuilder(), walk: new GeoBuilder(), walkC: new GeoBuilder(), marks: new GeoBuilder(), bridge: new GeoBuilder(), cx: (Math.floor(x / S) + 0.5) * S, cz: (Math.floor(z / S) + 0.5) * S, size: S, meshes: [] });
+    if (!c) this.chunks.set(k, c = { walls: new GeoBuilder(), roofs: new GeoBuilder(), shops: new GeoBuilder(), ao: new GeoBuilder(), roads: new GeoBuilder(), cobble: new GeoBuilder(), walk: new GeoBuilder(), walkC: new GeoBuilder(), signs: new GeoBuilder(), marks: new GeoBuilder(), bridge: new GeoBuilder(), cx: (Math.floor(x / S) + 0.5) * S, cz: (Math.floor(z / S) + 0.5) * S, size: S, meshes: [] });
     return c;
   }
 
@@ -327,7 +334,7 @@ export class City {
     this.buildLamps();
     await tick(0.95);
     for (const c of this.chunks.values()) {
-      for (const [key, mat, shadow] of [['walls', this.wallMat, true], ['roofs', this.roofMat, true], ['shops', this.shopMat, false], ['ao', this.aoMat, false], ['roads', this.roadMat, false], ['cobble', this.cobbleMat, false], ['walk', this.walkMat, false], ['walkC', this.walkCMat, false], ['marks', this.markMat, false], ['bridge', this.bridgeMat, true]]) {
+      for (const [key, mat, shadow] of [['walls', this.wallMat, true], ['roofs', this.roofMat, true], ['shops', this.shopMat, false], ['ao', this.aoMat, false], ['roads', this.roadMat, false], ['cobble', this.cobbleMat, false], ['walk', this.walkMat, false], ['walkC', this.walkCMat, false], ['signs', this.signMat, false], ['marks', this.markMat, false], ['bridge', this.bridgeMat, true]]) {
         const g = c[key].build(); c[key] = null;
         if (!g) continue;
         freeAfterUpload(g);
@@ -732,12 +739,15 @@ export class City {
     const floor = ymax + 0.15, top = floor + h, base = ymin - 0.6;
     this._top = top + (roof === 'gable' && rect ? rect.b * 0.75 : roof === 'hip' && rect ? rect.b * 0.55 : 0.6);
     const ch = this.chunk(cx, cz, true);
-    const wall = kind === 'i' ? pick(IND_WALLS) : kind === 'c' ? pick(COM_WALLS) : pick(WALLS);
+    const centro = inCentro(cx, cz);
+    const sobrado = centro && kind !== 'i' && this._heritage?.some(q => Math.abs(q.x - cx) < 14 && Math.abs(q.z - cz) < 14 && Math.hypot(q.x - cx, q.z - cz) < 14);
+    let wall = kind === 'i' ? pick(IND_WALLS) : kind === 'c' ? pick(COM_WALLS) : pick(WALLS);
+    if (sobrado) wall = SOBRADO_CORES[Math.floor(hash(cx * 3.1, cz * 1.3) * SOBRADO_CORES.length)];
     const lit = kind === 'a' ? 0 : rand() < (kind === 'i' ? 0.15 : 0.6) ? 1 : 0;
     const floors = Math.max(1, Math.round(h / 3.1));
     // piloto: estilo de janela por prédio (residência: moldura, veneziana, arco; comércio: moldura, de correr, arco)
     const pilot = Math.hypot(cx, cz) < PILOT_R, hs = hash(cx * 1.7, cz * 0.9);
-    const style = !pilot || kind === 'i' ? 0 : kind === 'c' ? [0, 3, 3, 2, 0][Math.floor(hs * 5)] : [0, 1, 1, 2, 0, 1][Math.floor(hs * 6)];
+    const style = sobrado ? 2 : !pilot || kind === 'i' ? 0 : kind === 'c' ? [0, 3, 3, 2, 0][Math.floor(hs * 5)] : [0, 1, 1, 2, 0, 1][Math.floor(hs * 6)];
     const litS = lit + 2 * style;
     for (let i = 0; i < p.length; i++) {
       const a = p[i], b = p[(i + 1) % p.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -761,7 +771,7 @@ export class City {
         const gy = (x, z) => H.heightAt(x, z) + this.surfOffset(x + ox * 0.6, z + oz * 0.6) + 0.03;
         const A1 = [a[0] + ox * 1.3, a[1] + oz * 1.3], B1 = [b[0] + ox * 1.3, b[1] + oz * 1.3];
         ch.ao.quad([a[0], gy(a[0], a[1]), a[1]], [b[0], gy(b[0], b[1]), b[1]], [B1[0], gy(B1[0], B1[1]), B1[1]], [A1[0], gy(A1[0], A1[1]), A1[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.plain, 0, [0, 1, 0]);
-        if (kind !== 'c' || len < 4 || h < 4) continue;
+        if (centro ? (kind === 'i' || len < 3.5 || h < 3.2) : (kind !== 'c' || len < 4 || h < 4)) continue;
         // loja no térreo quando a parede dá para a rua (sonda 2–6 m para fora: calçada ou pista)
         const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
         let street = false; for (let k = 2; k <= 6 && !street; k += 2) street = this.surfOffset(mx + ox * k, mz + oz * k) > 0;
@@ -770,6 +780,7 @@ export class City {
         const o2 = 0.04, P0 = [a[0] + ox * o2, floor, a[1] + oz * o2], P1 = [b[0] + ox * o2, floor, b[1] + oz * o2];
         ch.shops.quad(P0, P1, [P1[0], floor + 3.0, P1[2]], [P0[0], floor + 3.0, P0[2]], [[0, 0], [bays, 0], [bays, 1], [0, 1]], tint, 1, [ox, 0, oz]);
         // toldo/marquise sobre a calçada (1,2 m), na cor da loja; por baixo, cinza
+        if (centro) this._signAndBalconies(ch, a, b, len, ox, oz, floor, top, h, kind, mx, mz, hv, sobrado);
         if (hv < 0.75) {
           const aw = new THREE.Color(SHOP_TINTS[Math.floor(hash(mz, mx) * SHOP_TINTS.length)]).multiplyScalar(0.85), y0 = floor + 3.05, y1 = floor + 2.75, d = 1.2;
           const Q = (q, k, y) => [q[0] + ox * k, y, q[1] + oz * k];
@@ -827,6 +838,36 @@ export class City {
     ch.roofs.quad(P(a + o, b + o, ye), P(-a - o, b + o, ye), P(-a - o, -b - o, ye), P(a + o, -b - o, ye), [[0, 0], [1, 0], [1, 1], [0, 1]], col, 0, [0, -1, 0]);
     if (pilot && roof !== 'shed') this._roofTrim(ch, P, ua, a, b, o, ye, yr, a + o, 'gable', cx, cz, floor, col);
     this.addCollider(p, cx, cz, id);
+  }
+
+  /** Centro: letreiro legível acima da loja (nome real do cadastro a até 25 m, senão tipo de comércio) e sacadas. */
+  _signAndBalconies(ch, a, b, len, ox, oz, floor, top, h, kind, mx, mz, hv, sobrado) {
+    const S = this.signs; if (!S) return;
+    const real = this._shopsC.find(q => Math.hypot(q.x - mx, q.z - mz) < 25 && !this._usedSign?.has(q));
+    let txt; if (real) { (this._usedSign ||= new Set()).add(real); txt = real.n.toUpperCase().replace(' %', ''); } else txt = S.pick(hash(mx * 0.7, mz * 1.3));
+    const inf = S.info.get(txt);
+    if (inf) {
+      const sh = 0.95, sw = Math.min(len - 0.4, sh * inf.aspect * 1.2), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len;
+      const cxs = (a[0] + b[0]) / 2 + ux * (hash(mz, mx * 2) - 0.5) * Math.max(0, len - sw - 1), czs = (a[1] + b[1]) / 2 + uz * (hash(mz, mx * 2) - 0.5) * Math.max(0, len - sw - 1);
+      const y0 = floor + 3.14, y1 = y0 + sh, o = 0.1;
+      const P = (s, y) => [cxs + ux * s * sw / 2 + ox * o, y, czs + uz * s * sw / 2 + oz * o];
+      ch.signs.quad(P(-1, y0), P(1, y0), P(1, y1), P(-1, y1), [[0, inf.v0], [inf.u1, inf.v0], [inf.u1, inf.v1], [0, inf.v1]], C.plain, 0, [ox, 0, oz]);
+      // caixa do letreiro (espessura) na cor escura, para não parecer adesivo
+      ch.walls.quad([cxs - ux * sw / 2, y0 - 0.04, czs - uz * sw / 2], [cxs + ux * sw / 2, y0 - 0.04, czs + uz * sw / 2], P(1, y0 - 0.04), P(-1, y0 - 0.04), [[0, 0.1], [1, 0.1], [1, 0.2], [0, 0.2]], C.concreteDark, 0, [0, -1, 0]);
+    }
+    // sacadas: prédios de 3+ andares (residenciais e comerciais), do 2º andar para cima, em parte das baias
+    const floors = Math.max(1, Math.round(h / 3.1));
+    if (floors < 3 || sobrado || len < 5) return;
+    const nb = Math.max(1, Math.floor(len / 4.2)), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len, glass = hash(mx + 3, mz) < 0.5;
+    const slab = C.concrete, rail = glass ? new THREE.Color(0x9fb4bf) : new THREE.Color(0x3a3d42);
+    for (let f = 1; f < floors; f++) for (let k = 0; k < nb; k++) {
+      if (hash(mx + k * 1.7, mz + f) < 0.25) continue;
+      const s0 = (k + 0.5) * len / nb, w = Math.min(3.2, len / nb - 0.6), y = floor + f * (h / floors) + 0.02;
+      const qx = a[0] + ux * s0 + ox * 0.55, qz = a[1] + uz * s0 + oz * 0.55, ry = Math.atan2(ux, uz);
+      ch.walls.box(qx, y - 0.14, qz, w, 0.14, 1.1, ux, uz, slab, 0.0001);   // laje
+      const fx = qx + ox * 0.52, fz = qz + oz * 0.52;
+      ch.walls.box(fx, y, fz, w, 1.0, 0.05, ux, uz, rail, 0.0001);            // guarda-corpo
+    }
   }
 
   /** Acabamento do telhado (piloto): testeira/beiral com espessura, cumeeira, calha e condutor. Vai para as malhas de
@@ -959,7 +1000,7 @@ export class City {
     }
   }
 
-  setNight(n) { this.wallMat.emissiveIntensity = n * 0.95; this.shopMat.emissiveIntensity = n * 0.8; if (this.lampMat) this.lampMat.emissiveIntensity = n * 1.6; if (this.poolMat) { this.poolMat.opacity = n * 0.55; this.pools.visible = n > 0.05; } }
+  setNight(n) { this.wallMat.emissiveIntensity = n * 0.95; this.shopMat.emissiveIntensity = n * 0.8; if (this.signMat) this.signMat.emissiveIntensity = n * 0.7; if (this.lampMat) this.lampMat.emissiveIntensity = n * 1.6; if (this.poolMat) { this.poolMat.opacity = n * 0.55; this.pools.visible = n > 0.05; } }
 }
 
 /** Marca na máscara as células da grade do terreno dentro do polígono (varredura por linha). */

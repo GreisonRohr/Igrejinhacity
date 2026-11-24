@@ -3,6 +3,18 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Centro 1: ruas, calçadas e fachadas da região central
+- Nova estratégia: uma região por vez. Região central delimitada em `src/world/centro.js` (praça, Rua Coberta e uma
+  quadra em volta); levantamento e plano em `docs/centro-plano.md` (117 fotos de referência comparadas com o jogo).
+- C1 (só no centro): asfalto cinza-grafite; calçada de lajota de concreto cinza (Poly Haven `concrete_pavement`, CC0);
+  meio-fio amarelo nas esquinas; faixas pintadas param antes da faixa de pedestre (sem o "V" no cruzamento).
+- C2 (só no centro): térreo comercial em toda parede voltada para a rua (exceto galpões); letreiros legíveis acima
+  do toldo, com nome real do cadastro quando há (Banco do Brasil, Supermercado Dia, Casa do Artesão) e tipo de
+  comércio nos demais (sem marcas inventadas), acesos à noite; sacadas com laje e guarda-corpo nos prédios de 3+
+  andares; 21 sobrados do patrimônio em cores pastel com janelas em arco; reboco com grão, manchas e base suja.
+- Desempenho: os ~5.300 postes da cidade eram todos desenhados sempre; agora só até 380 m da câmera
+  (praça: 2596k → 2250k triângulos). Orçamento: 707 draw calls, heap 111 MB. 12/12 suítes.
+
 ## 2026-11-24 — Auditoria visual do Bah City + Visual 4: chão e telhados reais
 - `docs/auditoria-visual-bahcity.md`: comparação elemento por elemento (carros, pessoas, árvores, prédios, telhados,
   praças, calçadas, ruas, mobiliário, chão, luz, sombra, câmera, HUD, densidade, estilo), o que pode vir das fontes do

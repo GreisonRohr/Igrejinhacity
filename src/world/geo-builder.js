@@ -62,7 +62,7 @@ function normal(a, b, c) {
 }
 
 /** Material Lambert com emissivo multiplicado por um atributo por vértice ("lit": janela acesa ou não). */
-export function litMaterial(opts, styles = 1) {
+export function litMaterial(opts, styles = 1, region = null) {
   // atributo "lit": parte inteira/2 = estilo de janela (coluna do atlas, quando styles > 1); resto = janela acesa à noite
   const m = new THREE.MeshLambertMaterial(opts);
   m.onBeforeCompile = sh => {
@@ -72,6 +72,24 @@ export function litMaterial(opts, styles = 1) {
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vLit;\nvarying float vStyle;')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vLit;');
+    if (region) {
+      // região de detalhe (centro): reboco com grão e manchas, base da parede mais suja (respingo da chuva)
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      const R = region, f = v => v.toFixed(1);
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vWP;
+float hR(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float nR(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hR(i), hR(i + vec2(1, 0)), f.x), mix(hR(i + vec2(0, 1)), hR(i + vec2(1, 1)), f.x), f.y); }`)
+        .replace('#include <color_fragment>', `#include <color_fragment>
+if (vWP.x > ${f(R.x0)} && vWP.x < ${f(R.x1)} && vWP.z > ${f(R.z0)} && vWP.z < ${f(R.z1)}) {
+  vec2 q = vec2(vWP.x + vWP.z, vWP.y);
+  float grain = 0.94 + 0.06 * hR(floor(q * 60.0)) + 0.07 * (nR(q * 0.9) - 0.5) + 0.05 * (nR(q * 4.0) - 0.5);
+  float streak = 1.0 - 0.06 * smoothstep(0.55, 1.0, nR(vec2(q.x * 3.0, q.y * 0.25)));
+  float base = mix(0.8, 1.0, smoothstep(0.0, 0.32, vMapUv.y));
+  diffuseColor.rgb *= grain * streak * base;
+}`);
+    }
     if (styles > 1) {
       const N = styles.toFixed(1);
       // amostra a coluna do estilo; textureGrad com as derivadas do UV contínuo evita linha na emenda das baias
@@ -81,6 +99,6 @@ export function litMaterial(opts, styles = 1) {
         .replace('#include <emissivemap_fragment>', `#ifdef USE_EMISSIVEMAP\n totalEmissiveRadiance *= ${S('emissiveMap', 'vEmissiveMapUv')}.rgb;\n#endif`);
     }
   };
-  if (styles > 1) m.customProgramCacheKey = () => 'lit-styles-' + styles;
+  if (styles > 1 || region) m.customProgramCacheKey = () => 'lit-styles-' + styles + (region ? '-r' : '');
   return m;
 }
