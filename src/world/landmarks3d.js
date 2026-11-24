@@ -295,6 +295,23 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
       c.fillStyle = 'rgba(90,75,55,0.35)'; c.fillRect(0, 0, w, 1); c.fillStyle = 'rgba(80,70,50,0.12)'; for (let i = 0; i < 6; i++) c.fillRect((i * 23) % w, (i * 37) % h, 9, 5); }, true);
     const uvs = []; for (let i = 0; i <= N; i++) for (let j = 0; j <= cols; j++) uvs.push(i * 3, j * 1.5);
     rg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    // luminárias penduradas no alto de cada arco (foto 115) e, à noite, luz quente no asfalto e nas vagas
+    const lampM = new THREE.MeshLambertMaterial({ color: 0xf2efe6, emissive: 0xffd9a0, emissiveIntensity: 0 });
+    const lampG = new THREE.CylinderGeometry(0.32, 0.22, 0.28, 10), rod = new THREE.CylinderGeometry(0.02, 0.02, 0.8, 4);
+    const pools = [];
+    for (let i = 0; i < N; i++) { const lx = -o.hl + (i + 0.5) * (o.hl * 2 / N), y = (ys[i] + ys[i + 1]) / 2;
+      for (const s of [-0.45, 0.45]) { k.add(rod, white, lx, y + colH + rise * 0.86 - 0.35, s * half * 0.55); k.add(lampG, lampM, lx, y + colH + rise * 0.86 - 0.9, s * half * 0.55);
+        const [wx, wz] = toWorld(o, lx, s * half * 0.55); pools.push([wx, H(wx, wz) + 0.16, wz]); } }
+    {
+      const c = document.createElement('canvas'); c.width = c.height = 64; const g2 = c.getContext('2d');
+      const gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,220,160,1)'); gr.addColorStop(0.5, 'rgba(255,196,130,.4)'); gr.addColorStop(1, 'rgba(255,170,100,0)');
+      g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64); const pt = new THREE.CanvasTexture(c); pt.colorSpace = THREE.SRGBColorSpace;
+      const pm = new THREE.MeshBasicMaterial({ map: pt, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -16 });
+      const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(10, 10).rotateX(-PI / 2), pm, pools.length), d = new THREE.Object3D();
+      pools.forEach(([x, y, z], i) => { d.position.set(x, y, z); d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
+      im.renderOrder = 3; im.visible = false; im.userData.dynamic = true; root.add(im);
+      updaters.push((dt, s) => { lampM.emissiveIntensity = s.night * 1.6; pm.opacity = s.night * 0.7; im.visible = s.night > 0.05; });
+    }
     const roofM = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ map: ribT, color: 0xf4ecdc, emissive: 0x6a5e48, side: THREE.DoubleSide }));
     roofM.castShadow = true; roofM.receiveShadow = true; k.extra.push(roofM);
     k.build(g);

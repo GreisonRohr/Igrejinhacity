@@ -16,7 +16,8 @@ export function signAtlas(extra = []) {
   const W = 1024, RH = 64, c = document.createElement('canvas'); c.width = W; c.height = RH * textos.length;
   const g = c.getContext('2d'), info = new Map();
   textos.forEach((t, i) => {
-    const [bg, fg] = CORES[i % CORES.length], font = FONTES[(i * 7) % FONTES.length];
+    let [bg, fg] = CORES[i % CORES.length], font = FONTES[(i * 7) % FONTES.length];
+    if (t === 'PICCADILLY') { bg = '#ecebe6'; fg = '#6d7175'; font = '700 44px Georgia, serif'; }   // letras cinza na parede clara (foto)
     g.font = font; const tw = Math.min(W - 40, g.measureText(t).width), w = Math.min(W, Math.max(tw + 48, 220)), y = i * RH;
     g.fillStyle = bg; g.fillRect(0, y + 2, w, RH - 4);
     g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, y + RH - 8, w, 6);                    // sombra da borda de baixo

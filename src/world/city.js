@@ -185,7 +185,7 @@ export class City {
     const places = (this.world.places || []).filter(q => inCentro(q.x, q.z, 10));
     this._shopsC = places.filter(q => /loja|banco|farmacia|mercado|restaurante|bar|cafe/.test(q.k) && q.n && q.n.length < 26);
     this._heritage = places.filter(q => q.k === 'patrimonio' && !/pra[cç]a/i.test(q.n));
-    this.signs = signAtlas(this._shopsC.map(q => q.n.toUpperCase().replace(' %', '')));
+    this.signs = signAtlas(['PICCADILLY', ...this._shopsC.map(q => q.n.toUpperCase().replace(' %', ''))]);
     this.signMat = new THREE.MeshLambertMaterial({ map: this.signs.tex, emissive: 0xffffff, emissiveMap: this.signs.tex, emissiveIntensity: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     // centro: lajota de concreto cinza em placas (como nas fotos da praça e do entorno)
     this.walkCMat = realSurface(new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }), 'lajota', 1.2, 1.8, { normal: 1.0 });
@@ -753,6 +753,12 @@ export class City {
       const a = p[i], b = p[(i + 1) % p.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
       const out = [-(b[1] - a[1]), 0, b[0] - a[0]];   // polígono com área negativa → normal à esquerda é para fora
       const bays = Math.max(1, Math.round(len / (kind === 'i' ? 6 : 3.5)));
+      if (centro && kind === 'i' && h > 5 && len > 6) {
+        // centro: pavilhão de fábrica como a Piccadilly (fotos abr/2026): base de pedra, por andar faixa ocre, faixa de
+        // janelas basculantes e faixa creme, marquise branca contínua entre os andares
+        this._factoryWall(ch, a, b, len, out, floor, top, base, lit);
+        continue;
+      }
       if (kind === 'i' && h > 5) {
         // pavilhão: parede lisa (faixa sem janela da textura) e uma fileira de janelas altas no topo
         const ys = top - 2.4;
@@ -838,6 +844,35 @@ export class City {
     ch.roofs.quad(P(a + o, b + o, ye), P(-a - o, b + o, ye), P(-a - o, -b - o, ye), P(a + o, -b - o, ye), [[0, 0], [1, 0], [1, 1], [0, 1]], col, 0, [0, -1, 0]);
     if (pilot && roof !== 'shed') this._roofTrim(ch, P, ua, a, b, o, ye, yr, a + o, 'gable', cx, cz, floor, col);
     this.addCollider(p, cx, cz, id);
+  }
+
+  /** Fachada de fábrica do centro (uma parede a→b). */
+  _factoryWall(ch, a, b, len, out, floor, top, base, lit) {
+    const F = this._fc || (this._fc = { stone: new THREE.Color(0xb6ab98), ocre: new THREE.Color(0xd9c59a), cream: new THREE.Color(0xf0ebde), white: new THREE.Color(0xf6f6f2) });
+    const nf = Math.max(1, Math.round((top - floor) / 4.4)), fh = (top - floor) / nf, bays = Math.max(1, Math.round(len / 3.2));
+    const Q = (y0, y1, col, uv, l = 0) => ch.walls.quad([a[0], y0, a[1]], [b[0], y0, b[1]], [b[0], y1, b[1]], [a[0], y1, a[1]], uv, col, l, out);
+    const flat = [[0, 0.02], [1, 0.02], [1, 0.05], [0, 0.05]];   // faixa sem janela do atlas (cor lisa)
+    Q(base, floor + 0.7, F.stone, flat);
+    // letreiro da fábrica na fachada voltada para a R. Gen. Ernesto Dorneles (leste), no alto, perto da esquina
+    const on = Math.hypot(out[0], out[2]), ex = out[0] / on, ez = out[2] / on;
+    if (!this._picSign && ex > 0.9 && len > 12 && this.signs) {
+      this._picSign = true; const inf = this.signs.info.get('PICCADILLY');
+      if (inf) { const sh = 1.3, sw = sh * inf.aspect, ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len, y0 = top - sh - 0.6, s0 = Math.max(sw / 2 + 2, len * 0.2);
+        const P = (sd, y) => [a[0] + ux * (s0 + sd * sw / 2) + ex * 0.08, y, a[1] + uz * (s0 + sd * sw / 2) + ez * 0.08];
+        ch.signs.quad(P(-1, y0), P(1, y0), P(1, y0 + sh), P(-1, y0 + sh), [[0, inf.v0], [inf.u1, inf.v0], [inf.u1, inf.v1], [0, inf.v1]], C.plain, 0, [ex, 0, ez]); }
+    }
+    for (let k = 0; k < nf; k++) {
+      const y0 = floor + k * fh, w0 = y0 + 1.15, w1 = Math.min(y0 + fh - 0.9, w0 + 1.8);
+      Q(k ? y0 : floor + 0.7, w0, F.ocre, flat);
+      Q(w0, w1, F.cream, [[0, 0.28], [bays, 0.28], [bays, 0.78], [0, 0.78]], lit);   // janelas (atlas, estilo 0)
+      Q(w1, y0 + fh, F.cream, flat);
+      if (k < nf - 1 || nf === 1) {   // marquise: laje branca saindo 1 m da parede
+        const ox = out[0] / Math.hypot(out[0], out[2]), oz = out[2] / Math.hypot(out[0], out[2]), yM = y0 + fh - 0.55;
+        ch.walls.quad([a[0], yM, a[1]], [b[0], yM, b[1]], [b[0] + ox, yM, b[1] + oz], [a[0] + ox, yM, a[1] + oz], flat, F.white, 0, [0, 1, 0]);
+        ch.walls.quad([a[0] + ox, yM - 0.18, a[1] + oz], [b[0] + ox, yM - 0.18, b[1] + oz], [b[0] + ox, yM, b[1] + oz], [a[0] + ox, yM, a[1] + oz], flat, F.white, 0, [ox, 0, oz]);
+        ch.walls.quad([a[0] + ox, yM - 0.18, a[1] + oz], [b[0] + ox, yM - 0.18, b[1] + oz], [b[0], yM - 0.18, b[1]], [a[0], yM - 0.18, a[1]], flat, F.cream, 0, [0, -1, 0]);
+      }
+    }
   }
 
   /** Centro: letreiro legível acima da loja (nome real do cadastro a até 25 m, senão tipo de comércio) e sacadas. */
