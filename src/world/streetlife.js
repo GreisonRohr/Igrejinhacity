@@ -130,6 +130,6 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
   return {
     group, trees, cars, carMatrix: (c, m) => { carPlace(d, c); d.updateMatrix(); return m.copy(d.matrix); }, counts: { arvores: trees.length, carros: cars.length, celulas: cells.size },
     // árvores até ~600 m e carros até ~450 m da câmera (as árvores reais são muitas e concentradas no centro)
-    update(px, pz) { for (const c of cells.values()) { const d = Math.hypot(px - c.cx, pz - c.cz) - CELL * 0.7; for (const m of c.meshes) { m.visible = d < (m.userData.kind === 'car' ? Math.min(dist, 300) : Math.min(dist, 600)); m.castShadow = m.userData.shadow !== false && d < 90; } } },   // sombra só nas células junto ao jogador (a sombra cobre ~60 m)
+    update(px, pz) { for (const c of cells.values()) { const d = Math.hypot(px - c.cx, pz - c.cz) - CELL * 0.7; for (const m of c.meshes) { m.visible = d < (m.userData.kind === 'car' ? Math.min(dist, 220) : Math.min(dist, 600)); m.castShadow = m.userData.shadow !== false && d < 90; } } },   // sombra só nas células junto ao jogador (a sombra cobre ~60 m)
   };
 }

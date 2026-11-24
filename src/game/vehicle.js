@@ -22,6 +22,66 @@ export async function loadCarModels(base) {
   await Promise.all(Object.keys(CAR_MODELS).map(async n => { try { out[n] = (await L.parseAsync(await bytes(dir + n + '.glb'), dir)).scene; } catch (e) { console.warn('carro', n, e.message); } }));
   return out;
 }
+/* ---------- carros reais (Sketchfab, CC BY 4.0 — public/models/cars3d/CREDITOS.txt) ----------
+ * Convertidos por scripts/convert-car.mjs: frente em +z, medidas reais, rodas "wheel_*" com pivô no centro, pintura
+ * no material "paint" (branca: a cor vem por carro), e um nível leve "lod1" no mesmo arquivo para os estacionados. */
+export const REAL_CARS = {
+  honda_city: { nome: 'Honda City', head: [0.6, 0.77, 2.12], tail: [0.62, 0.93, -2.16] },
+  peugeot_206: { nome: 'Peugeot 206', head: [0.56, 0.72, 1.78], tail: [0.62, 0.86, -1.86] },
+};
+// cores comuns da frota brasileira (branco, prata e preto dominam)
+export const REAL_PAINT = [0xeeeeee, 0xe4e4e2, 0xa7abb0, 0x8e9297, 0x2b2e33, 0x161719, 0x7d1d1d, 0x23406e, 0x5a5f63, 0xc9c2ae];
+/** Carrega os modelos reais (uma vez; as instâncias dividem geometria e materiais). */
+let _real = null;
+export function loadRealCars(base) {
+  return _real ||= (async () => {
+    const L = new GLTFLoader(), dir = base + 'models/cars3d/', out = {};
+    await Promise.all(Object.keys(REAL_CARS).map(async n => {
+      try {
+        const sc = (await L.parseAsync(await bytes(dir + n + '.glb'), dir)).scene;
+        sc.userData.real = n;
+        sc.traverse(o => { if (o.isMesh) { const m = o.material; if (m.map) m.map.anisotropy = 4; o.castShadow = true; o.receiveShadow = true; } });
+        out[n] = sc;
+      } catch (e) { console.warn('carro', n, e.message); }
+    }));
+    return out;
+  })();
+}
+const _paints = new Map();
+function paintFor(src, color) {   // um material de pintura por cor (os outros materiais são os do arquivo)
+  const k = color; if (_paints.has(k)) return _paints.get(k);
+  let base = null; src.traverse(o => { if (o.isMesh && o.material.name === 'paint') base = o.material; });
+  const m = base.clone(); m.color.setHex(color); _paints.set(k, m); return m;
+}
+/** Brilho de farol/lanterna por cima das lâmpadas do modelo: Vehicle mexe em emissiveIntensity, aqui vira opacidade. */
+function glowMat(color, i0, span) {
+  const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  let I = i0; Object.defineProperty(m, 'emissiveIntensity', { get: () => I, set: v => { I = v; m.opacity = Math.max(0, Math.min(1, (v - i0) / span)); m.visible = m.opacity > 0.01; } });
+  m.emissiveIntensity = i0; return m;
+}
+function realCarMesh(src, name, color) {
+  const cfg = REAL_CARS[name], g = src.clone(true), wheels = [];
+  g.getObjectByName('lod1')?.removeFromParent();
+  const paint = paintFor(src, color);
+  g.traverse(o => { if (o.isMesh && o.material.name === 'paint') o.material = paint; });
+  for (const n of ['wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr']) {
+    const w = g.getObjectByName(n); if (!w) continue;
+    const piv = new THREE.Group(); piv.position.copy(w.position); w.position.set(0, 0, 0); w.parent.add(piv); piv.add(w);
+    wheels.push({ rotation: { set: (a, b) => { piv.rotation.y = b; w.rotation.x = a; } } });
+    if (!g.userData.wheelR) { const bb = new THREE.Box3().setFromObject(w); g.userData.wheelR = (bb.max.y - bb.min.y) / 2; }
+  }
+  const box = new THREE.Box3().setFromObject(g), size = box.getSize(new THREE.Vector3());
+  const lightM = glowMat(0xfff1c8, 0.2, 2.5), tailM = glowMat(0xff2410, 0.3, 1.3);
+  const quad = new THREE.PlaneGeometry(0.34, 0.13);
+  for (const s of [-1, 1]) {
+    const h = new THREE.Mesh(quad, lightM); h.position.set(s * cfg.head[0], cfg.head[1], cfg.head[2] + 0.04); g.add(h);
+    const t = new THREE.Mesh(quad, tailM); t.position.set(s * cfg.tail[0], cfg.tail[1], cfg.tail[2] - 0.04); t.rotation.y = Math.PI; g.add(t);
+  }
+  const beam = new THREE.SpotLight(0xfff2d0, 0, 45, 0.5, 0.6, 1.2); beam.position.set(0, cfg.head[1], cfg.head[2]); beam.target.position.set(0, 0, cfg.head[2] + 12); g.add(beam, beam.target);
+  g.userData = { wheels, lightM, tailM, beam, len: size.z, w: size.x, model: name, nome: cfg.nome, wheelR: g.userData.wheelR || 0.31 };
+  return g;
+}
+
 /** Instância pronta de um modelo, nas medidas reais; devolve { group, wheels[4] (frente esq/dir primeiro), len, w, hl }. */
 export function buildModelCar(src, name, tint = null) {
   const [L, W, H] = CAR_MODELS[name], g = new THREE.Group(), s = src.clone(true);
@@ -67,6 +127,7 @@ export function carGeometries(type = 'hatch', segs = 7) {
 /** Carro do jogador (mais detalhe: rodas com aro que giram, faróis e lanternas que acendem). */
 export function makeCarMesh(type, color, models = null) {
   const mname = models && (models[type] ? type : Object.keys(models).find(n => models[n]));
+  if (mname && models[mname].userData.real) return realCarMesh(models[mname], mname, color);
   if (mname) return modelCarMesh(models[mname], mname);
   const G = carGeometries(type, 14), g = new THREE.Group();
   const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.25 });
@@ -148,7 +209,7 @@ export class Vehicle {
     this.y = (yF + yB + yR + yL) / 4;
     this.pitch += (Math.atan2(yF - yB, L * 1.4) - this.pitch) * Math.min(1, h * 10);
     this.roll += (Math.atan2(yR - yL, W * 2) + this.steer * this.v * 0.004 - this.roll) * Math.min(1, h * 10);
-    this.spin += this.v * h / 0.33; this.hit *= 1 - Math.min(1, h * 4);
+    this.spin += this.v * h / (this.mesh.userData.wheelR || 0.33); this.hit *= 1 - Math.min(1, h * 4);
   }
   /** Desenho interpolado. */
   present(alpha, night = 0) {

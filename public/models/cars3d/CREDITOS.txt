@@ -1,0 +1,14 @@
+Carros 3D do Igrejinha City (adaptados: escala real, rodas separadas, simplificação para celular, texturas 512 px)
+por scripts/convert-car.mjs a partir dos arquivos originais dos autores no Sketchfab.
+
+honda_city.glb  — "Honda City 2017" por dewa
+                  https://sketchfab.com/3d-models/honda-city-2017-75671276d4da476294202a5dc050a99e
+                  Licença: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+peugeot_206.glb — "2002 Peugeot 206 GTI" por DisneyCars (supercarmodels)
+                  https://sketchfab.com/3d-models/2002-peugeot-206-gti-01499004a07b46b586637149e9c16b29
+                  Licença: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+
+Alterações: transformações aplicadas, chão de estúdio removido, frente em +z, medidas reais (4,44 m / 3,83 m), rodas
+separadas com pivô, materiais escuros unidos, pintura neutra (cor por carro no jogo), malha simplificada e nível leve
+("lod1") para carros estacionados, texturas reduzidas para WebP 512 px.
+Nomes e formas de veículos reais aparecem apenas como representação da frota da cidade; as marcas pertencem aos donos.

@@ -24,7 +24,7 @@ import { Interactions } from './interact/interact.js';
 import { TreeLOD } from './world/trees.js';
 import { buildUrbano } from './world/urbano.js';
 import { BigMap } from './ui/bigmap.js';
-import { Vehicle, CAR_TYPES, CAR_MODELS, loadCarModels } from './game/vehicle.js';
+import { Vehicle, CAR_TYPES, loadRealCars } from './game/vehicle.js';
 import { ParkedLOD } from './game/parkedlod.js';
 import { buildForest } from './world/forest.js';
 import { loadHumans } from './player/humans.js';
@@ -33,7 +33,7 @@ import { MAP_MALE_CASUAL } from './player/retarget.js';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
-export const VERSAO = 'Visual 2 · Personagens';
+export const VERSAO = 'Visual 3 · Carros reais (2 modelos)';
 if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */
@@ -367,13 +367,14 @@ $('map').addEventListener('click', () => { if (running) bigmap.toggle(true, wher
 /* ---------- Etapa 2: dirigir — src/game/vehicle.js ---------- */
 const CAR_PAINT = [0xf2f2f2, 0xd9d9d9, 0x8c8f94, 0x2b2d31, 0x1d1f22, 0xb02a2a, 0x2a4f8a, 0xc9c1b0, 0x5a6b5a];
 const drive = { car: null, parked: null, front: false, hb: false };
-const carModels = await loadCarModels(BASE).catch(() => ({}));   // Kenney Car Kit (CC0)
-const MODEL_NAMES = Object.keys(CAR_MODELS).filter(n => carModels[n] && n !== 'delivery');
+// carros reais (Sketchfab, CC BY 4.0): Honda City 2017 (dewa) e Peugeot 206 (DisneyCars) — public/models/cars3d
+const carModels = await loadRealCars(BASE).catch(() => ({}));
+const MODEL_NAMES = Object.keys(carModels);
 const vctx = { models: carModels, groundAt: (x, z, cur) => player.groundAt(x, z, cur), blocked: (x, z, r) => spatial.blocked(x, z, r), surfOffset: (x, z) => city.surfOffset(x, z), terrain };
 function nearestParked(x, z, R = 3.2) { let best = null, bd = R; for (const c of street.cars) { const d = Math.hypot(c.x - x, c.z - z); if (d < bd) { bd = d; best = c; } } return best; }
 const _cm = new THREE.Matrix4();
 function parkedMesh(c, on) { const M = on ? street.carMatrix(c, _cm) : ZERO_M; for (let k = 0; k < c.inst.length; k += 2) { c.inst[k].setMatrixAt(c.inst[k + 1], M); c.inst[k].instanceMatrix.needsUpdate = true; } }
-const parkedLOD = MODEL_NAMES.length ? new ParkedLOD(scene, carModels, MODEL_NAMES, street, isTouch ? { cap: 12, radius: 40 } : { cap: 14, radius: 50 }) : null;
+const parkedLOD = MODEL_NAMES.length ? new ParkedLOD(scene, carModels, MODEL_NAMES, street, isTouch ? { cap: 8, radius: 35 } : { cap: 10, radius: 42 }) : null;
 if (parkedLOD) parkedLOD.hide = (c, hidden) => parkedMesh(c, !hidden);
 function setParkedVisible(c, on) {
   if (parkedLOD) { if (on) parkedLOD.skip.delete(c); else { parkedLOD.skip.add(c); if (parkedLOD.shown.delete(c)) parkedLOD.t = 0; } }
@@ -385,7 +386,7 @@ function enterCar(c) {
   // o carro que o jogador deixou em outro lugar volta para a vaga de onde saiu
   if (drive.left) { scene.remove(drive.left.car.mesh); setParkedVisible(drive.left.parked, true); drive.left = null; }
   setParkedVisible(c, false);
-  drive.car = new Vehicle(scene, { type: parkedLOD ? parkedLOD.modelOf(c).name : MODEL_NAMES.length ? MODEL_NAMES[Math.floor(c.c * 7 % 1 * MODEL_NAMES.length)] : CAR_TYPES[Math.floor(c.c * 3 % 1 * 3)], color: CAR_PAINT[Math.floor(c.c * CAR_PAINT.length)], x: c.x, z: c.z, yaw: c.yaw }, vctx);
+  drive.car = new Vehicle(scene, { type: parkedLOD ? parkedLOD.modelOf(c).name : MODEL_NAMES.length ? MODEL_NAMES[Math.floor(c.c * 7 % 1 * MODEL_NAMES.length)] : CAR_TYPES[Math.floor(c.c * 3 % 1 * 3)], color: parkedLOD ? parkedLOD.colorOf(c) : CAR_PAINT[Math.floor(c.c * CAR_PAINT.length)], x: c.x, z: c.z, yaw: c.yaw }, vctx);
   drive.parked = c; player.mesh.visible = false; player.blob.visible = false; bigmap.mode = 'car'; if (bigmap.dest) bigmap.recalc();
   $('speedo').hidden = false; toast('', isTouch ? 'Joystick: acelerar/frear e virar · CARRO para sair' : 'W/S acelera e freia · A/D vira · Espaço freio de mão · H buzina · C câmera · F sai', 4);
 }

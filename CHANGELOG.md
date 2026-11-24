@@ -3,6 +3,19 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Visual 3: carros reais (2 modelos dos créditos do Bah City)
+- Modelos originais dos autores no Sketchfab (CC BY 4.0, atribuição na tela inicial e em
+  `public/models/cars3d/CREDITOS.txt`): **Honda City 2017** (dewa) e **2002 Peugeot 206 GTI** (DisneyCars).
+  Substituem os carros da Kenney (removidos do jogo) no carro dirigível e nos estacionados próximos.
+- `scripts/convert-car.mjs`: frente em +z, medidas reais (4,44 / 3,83 m), rodas separadas com pivô (giram e esterçam),
+  pintura neutra (10 cores da frota por carro, sem duplicar arquivo), simplificação por material e nível leve "lod1"
+  no mesmo arquivo para os estacionados; texturas WebP 512 px. Honda: 16,6 mil triângulos (leve 3,0 mil), 0,8 MB.
+  Peugeot: 35 mil (leve 5,2 mil), 2,0 MB. Originais: 1,9 MB / 4,6 MB, 27 mil / 88 mil triângulos.
+- Carregamento único por modelo; estacionados com uma InstancedMesh por material (cor por instância), sombra só da
+  lataria. Próximos com modelo 3D: 10 no computador (42 m), 8 no celular (35 m); carros simplificados distantes até
+  220 m (era 300). Faróis/lanternas: brilho sobre as lâmpadas do modelo (noite, freio, ré).
+- Orçamento: 693 draw calls, 2595k triângulos, heap 109 MB. 12/12 suítes.
+
 ## 2026-11-24 — Visual 2: personagens (frente gráfica)
 - **Memória antes de novos assets: 154 → 110 MB** (heap medido no teste de orçamento). A malha do rio (14 MB) e os
   bairros além do relevo (≈18 MB, nunca enviados à GPU porque ficavam fora do enquadramento da carga) agora soltam a
