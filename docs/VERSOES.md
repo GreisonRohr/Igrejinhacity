@@ -8,6 +8,7 @@ indicado e no tag local `etapa-N-*`).
 |---|---|---|---|
 | 1 · Mapa com GPS | https://claude.ai/artifact/DRwE91z3PLaSP5Edb8QgM5 | f8100f7 | estável (testes ok) |
 | 2 · Veículos e direção | https://claude.ai/artifact/SMCCawX2FLJ8JdeFD61RPX | 6d0775f | estável (11/11 testes) |
+| Visual 1 · Carros 3D | https://claude.ai/artifact/N8TYCwn3UiPPMnD6uewzaY | f5ab102 | estável (11/11 testes) |
 
 ## O que testar
 
@@ -24,3 +25,9 @@ indicado e no tag local `etapa-N-*`).
 - Bater num prédio (repica), subir ladeira, sair da rua (fica mais lento).
 - Sair (F / CARRO) parado; voltar ao carro deixado e entrar de novo; com o GPS ligado, a rota passa a ser de carro.
 - No celular: os botões de pedal ainda não existem (usa o joystick) — ver problemas conhecidos.
+
+### Visual 1 — Carros 3D (Kenney Car Kit, CC0)
+- Entrar num carro (F): o carro dirigido é um modelo 3D (sedã, hatch, SUV, táxi, van, picape…); rodas giram e esterçam.
+- Andar pela rua: os carros estacionados perto (até ~50 m) são os mesmos modelos 3D; longe, os simplificados.
+- Comparar com o link da Etapa 2. No celular: ver se a carga e o FPS ficaram iguais.
+- Conhecido: a troca do carro simplificado para o 3D aparece ao se aproximar (≈50 m); a cor vem da textura do pacote.
