@@ -6,7 +6,8 @@ Formato por data; o mais recente em cima. Detalhes técnicos nos commits do bran
 ## 2026-11-24 — Centro 4 (C5): ambientação pelas fotos de 24/11
 - Floreira redonda da rotatória da Av. Pres. Castelo Branco × R. João Corrêa: base de pedra em cone, anel amarelo,
   flores (com colisão). Posição corrigida pelo grafo de ruas (no jogo a João Corrêa passa em z ≈ 48).
-- Praçinha da calçada da R. João Corrêa (697): floreiras de concreto com folhagem roxa e bancos de madeira.
+- (Removida em seguida, por correção do diretor: na R. João Corrêa 697 não há praça — é o estacionamento das
+  Farmácias São João.)
 - Letreiro PICCADILLY vertical (lido de baixo para cima, como na foto) e agora no pavilhão certo, ao norte da Rua
   Coberta (antes caía no primeiro pavilhão do centro, em outra quadra).
 - Orçamento: 712 draw calls, 2278k triângulos, heap 112 MB. 12/12 suítes.

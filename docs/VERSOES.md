@@ -84,5 +84,5 @@ indicado e no tag local `etapa-N-*`).
 
 ### Centro 4 — ambientação (fotos de 24/11)
 - Esquina Castelo Branco × João Corrêa: floreira redonda (pedra, anel amarelo, flores).
-- Calçada sul da João Corrêa perto da Castelo Branco: floreiras roxas e bancos.
+- (Correção posterior no link principal: removidas as floreiras/bancos da João Corrêa — lá é o estacionamento da São João.)
 - R. Gen. Ernesto Dorneles, lado da Rua Coberta: letreiro PICCADILLY vertical no pavilhão.
