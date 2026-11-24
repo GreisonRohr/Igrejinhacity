@@ -12,6 +12,7 @@ indicado e no tag local `etapa-N-*`).
 | Visual 2 · Personagens | https://claude.ai/artifact/PgvJTL1rzVxBTMr9UfZXs3 | 41ad70f | estável (12/12 testes) |
 | Visual 3 · Carros reais | https://claude.ai/artifact/PeWkb3ghazynRuQxwBHbmu | a18cf1b | estável (12/12 testes) |
 | Personagens da Oktoberfest | https://claude.ai/artifact/FNyG7b5F3j6Wz4YnvbYixs | 7e7ac8e | estável (12/12 testes) |
+| Visual 4 · Chão e telhados reais | https://claude.ai/artifact/9odsEdHhFY4c79UNpk7xLy | bd54d14 | estável (12/12 testes) |
 
 ## O que testar
 
@@ -53,3 +54,8 @@ indicado e no tag local `etapa-N-*`).
 - Tela inicial: escolher Lukas (lederhosen) ou Anna (dirndl), girar arrastando, Jogar.
 - Andar, correr, pular, entrar no carro com cada um; câmera perto para ver o traje.
 - Esc ou ☰: menu → Trocar personagem (troca na hora). Fechar e reabrir o jogo: a escolha vem marcada.
+
+### Visual 4 — Chão e telhados reais (Poly Haven CC0)
+- Andar pelas ruas do centro: asfalto com trincas e relevo, calçada de bloquete, ruas de paralelepípedo de basalto.
+- Olhar os telhados de cima (câmera alta ou ponte): telha de barro com relevo; lajes lisas.
+- Comparar com o link anterior (Personagens da Oktoberfest); conferir no celular se a carga continua igual.
