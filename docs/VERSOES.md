@@ -16,6 +16,7 @@ indicado e no tag local `etapa-N-*`).
 | Centro 1 · Ruas, calçadas e fachadas | https://claude.ai/artifact/7H2tG2xK6d4koe4nCUR9zp | a8df1d4 | estável (12/12 testes) |
 | Centro 2 · Praça Dona Luiza | https://claude.ai/artifact/DW2bhXro7T11fTsLFVTueG | 99d0167 | estável (12/12 testes) |
 | Centro 3 · Rua Coberta | https://claude.ai/artifact/AJuFpoPFNtGZj1EjVJ5Qam | 4d54a2b | estável (12/12 testes) |
+| Centro 4 · Ambientação | https://claude.ai/artifact/4Keok1dgnzp8W5CWiEr1KS | 16bdd00 | estável (12/12 testes) |
 
 ## O que testar
 
@@ -80,3 +81,8 @@ indicado e no tag local `etapa-N-*`).
 ### Centro 3 — Rua Coberta e lojas da Dorneles
 - Rua Coberta de dia e à noite: luminárias sob os arcos, luz no asfalto; fábrica Piccadilly ao lado com faixas e marquises.
 - R. Gen. Ernesto Dorneles: Farmácias São João, Kosmus, Trilegal, Hashtag Presentes com letreiro e cores próprias.
+
+### Centro 4 — ambientação (fotos de 24/11)
+- Esquina Castelo Branco × João Corrêa: floreira redonda (pedra, anel amarelo, flores).
+- Calçada sul da João Corrêa perto da Castelo Branco: floreiras roxas e bancos.
+- R. Gen. Ernesto Dorneles, lado da Rua Coberta: letreiro PICCADILLY vertical no pavilhão.
