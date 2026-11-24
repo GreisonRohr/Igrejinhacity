@@ -30,6 +30,7 @@ Bah City como referência de acabamento.
    Desempenho: postes de iluminação só até 380 m (−361 mil triângulos) — folga para o detalhe do centro.
 3. **C3 — Praça Dona Luísa** ✅ figueiras nas posições da ortofoto (espécie de copa fechada), palmeiras na pérgola,
    trepadeira de folhas, gramado à sombra, luz dos lampiões no piso à noite.
-4. **C4 — Rua Coberta**: fachadas laterais (Feira do Produtor, Erni Engelmann, lojas), luminárias sob a cobertura, noite.
+4. **C4 — Rua Coberta** ✅ fábrica Piccadilly com fachada em faixas e marquises, luminárias e luz noturna; lojas reais
+   da Dorneles (fotos de 24/11).
 5. **C5 — Ambientação**: árvores de rua, floreiras, placas (PARE, sentido), bancos de rua, pastilha nos prédios altos,
    revisão de noite e desempenho no celular.

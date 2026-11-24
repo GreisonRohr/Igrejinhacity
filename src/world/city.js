@@ -5,7 +5,7 @@ import { GeoBuilder, litMaterial } from './geo-builder.js';
 import { editHeights } from './terrain.js';
 import { freeAfterUpload } from './merge.js';
 import { inCentro, CENTRO } from './centro.js';
-import { signAtlas, SOBRADO_CORES } from './fachadas.js';
+import { signAtlas, SOBRADO_CORES, LOJAS_FOTOS } from './fachadas.js';
 
 const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
 // Piloto do upgrade visual (centro): sombra de contato, lojas no térreo e muros/portões das casas até PILOT_R da praça
@@ -183,7 +183,7 @@ export class City {
     realSurface(this.walkMat, 'bloquete', 1.2, 2.0, { normal: 0.9 });
     // centro: letreiros (atlas com nomes reais do cadastro + tipos de comércio) e sobrados do patrimônio
     const places = (this.world.places || []).filter(q => inCentro(q.x, q.z, 10));
-    this._shopsC = places.filter(q => /loja|banco|farmacia|mercado|restaurante|bar|cafe/.test(q.k) && q.n && q.n.length < 26);
+    this._shopsC = [...LOJAS_FOTOS.map(l => ({ ...l, k: 'loja' })), ...places.filter(q => /loja|banco|farmacia|mercado|restaurante|bar|cafe/.test(q.k) && q.n && q.n.length < 26)];
     this._heritage = places.filter(q => q.k === 'patrimonio' && !/pra[cç]a/i.test(q.n));
     this.signs = signAtlas(['PICCADILLY', ...this._shopsC.map(q => q.n.toUpperCase().replace(' %', ''))]);
     this.signMat = new THREE.MeshLambertMaterial({ map: this.signs.tex, emissive: 0xffffff, emissiveMap: this.signs.tex, emissiveIntensity: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
@@ -878,7 +878,7 @@ export class City {
   /** Centro: letreiro legível acima da loja (nome real do cadastro a até 25 m, senão tipo de comércio) e sacadas. */
   _signAndBalconies(ch, a, b, len, ox, oz, floor, top, h, kind, mx, mz, hv, sobrado) {
     const S = this.signs; if (!S) return;
-    const real = this._shopsC.find(q => Math.hypot(q.x - mx, q.z - mz) < 25 && !this._usedSign?.has(q));
+    const real = this._shopsC.filter(q => Math.hypot(q.x - mx, q.z - mz) < 25 && !this._usedSign?.has(q)).sort((p1, p2) => Math.hypot(p1.x - mx, p1.z - mz) - Math.hypot(p2.x - mx, p2.z - mz))[0];
     let txt; if (real) { (this._usedSign ||= new Set()).add(real); txt = real.n.toUpperCase().replace(' %', ''); } else txt = S.pick(hash(mx * 0.7, mz * 1.3));
     const inf = S.info.get(txt);
     if (inf) {

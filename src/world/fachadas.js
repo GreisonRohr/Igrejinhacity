@@ -10,6 +10,16 @@ const CORES = [['#c62828', '#fff'], ['#1565c0', '#fff'], ['#f9a825', '#1a1a1a'],
   ['#263238', '#ffd54f'], ['#6a1b9a', '#fff'], ['#ef6c00', '#fff'], ['#f5f0e1', '#1b5e20'], ['#00838f', '#fff']];
 const FONTES = ['900 40px Rubik, sans-serif', 'italic 800 40px Rubik, sans-serif', '700 38px Georgia, serif', '800 40px Arial Narrow, Arial, sans-serif'];
 
+// lojas vistas nas fotos do diretor (Street View abr/2026), posição pela vista aérea — R. Gen. Ernesto Dorneles
+export const LOJAS_FOTOS = [
+  { n: 'FARMÁCIAS SÃO JOÃO', x: 30, z: 80, cor: ['#f4f6fb', '#1d4fa3'] },
+  { n: 'KOSMUS', x: 40, z: 86, cor: ['#3a3a3c', '#f2efe8'] },
+  { n: 'TRILEGAL', x: 46, z: 66, cor: ['#7cc242', '#14331a'] },
+  { n: 'HASHTAG PRESENTES', x: 46, z: 40, cor: ['#5b2a8c', '#ffffff'] },
+  { n: 'PANVEL', x: 46, z: -22, cor: ['#1f2f8f', '#ffffff'] },
+];
+const COR_FIXA = Object.fromEntries(LOJAS_FOTOS.map(l => [l.n, l.cor]));
+
 /** Atlas de letreiros: uma faixa de 64 px por letreiro; devolve { tex, get(texto, i) → {v0, v1, u1, aspect} }. */
 export function signAtlas(extra = []) {
   const textos = [...new Set([...extra, ...TIPOS])].slice(0, 63);
@@ -17,6 +27,7 @@ export function signAtlas(extra = []) {
   const g = c.getContext('2d'), info = new Map();
   textos.forEach((t, i) => {
     let [bg, fg] = CORES[i % CORES.length], font = FONTES[(i * 7) % FONTES.length];
+    if (COR_FIXA[t]) [bg, fg] = COR_FIXA[t];
     if (t === 'PICCADILLY') { bg = '#ecebe6'; fg = '#6d7175'; font = '700 44px Georgia, serif'; }   // letras cinza na parede clara (foto)
     g.font = font; const tw = Math.min(W - 40, g.measureText(t).width), w = Math.min(W, Math.max(tw + 48, 220)), y = i * RH;
     g.fillStyle = bg; g.fillRect(0, y + 2, w, RH - 4);

@@ -3,6 +3,15 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Centro 3 (C4): Rua Coberta e lojas reais da Dorneles
+- Pavilhões de fábrica do centro (lado norte da Rua Coberta — Piccadilly) com a fachada das fotos: base de pedra,
+  faixas ocre/creme por andar, faixa de janelas basculantes e marquise branca contínua; letreiro PICCADILLY na
+  fachada da R. Gen. Ernesto Dorneles.
+- Rua Coberta: luminárias penduradas no alto de cada arco e, à noite, luz quente no asfalto e nas vagas.
+- Lojas das novas fotos do diretor com letreiro e cores próprias: Farmácias São João, Kosmus, Trilegal, Hashtag
+  Presentes (Panvel ainda sem prédio comercial nos dados naquele ponto).
+- Orçamento: 711 draw calls, 2277k triângulos, heap 112 MB. 12/12 suítes.
+
 ## 2026-11-24 — Centro 2 (C3): Praça Dona Luiza
 - Árvores pela ortofoto (GEO Igrejinha 2016): copas reais detectadas na imagem (53% da quadra é copa) viram ~17
   figueiras/tipuanas nas posições e raios medidos; o tronco procura o ponto livre mais perto (fora de caminho, arroio e
