@@ -24,6 +24,7 @@ import { Interactions } from './interact/interact.js';
 import { TreeLOD } from './world/trees.js';
 import { buildUrbano } from './world/urbano.js';
 import { BigMap } from './ui/bigmap.js';
+import { Vehicle, CAR_TYPES } from './game/vehicle.js';
 import { buildForest } from './world/forest.js';
 import { loadHumans } from './player/humans.js';
 import { MAP_MALE_CASUAL } from './player/retarget.js';
@@ -31,6 +32,7 @@ import { MAP_MALE_CASUAL } from './player/retarget.js';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
+export const VERSAO = 'Etapa 2 · Veículos e direção';
 if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */
@@ -231,7 +233,7 @@ if (landmarks.waldir) {
   const wb = makeContactShadow(0.6); wb.position.set(w.x, w.y + 0.03, w.z); scene.add(wb);
   const tag = makeLabel('Waldir', 3); tag.position.set(w.x, w.y + 2.9, w.z); tag.userData.maxDist = 40; scene.add(tag); labels.push(tag);
 }
-input.on('jump', () => { if (running) player.jump(); });
+input.on('jump', () => { if (running && !drive.car) player.jump(); });
 const interact = new Interactions();
 if (waldir) interact.add((px, pz) => {
   const d = Math.hypot(px - waldir.position.x, pz - waldir.position.z);
@@ -354,6 +356,52 @@ gpsBeam.visible = false; gpsBeam.renderOrder = 3; scene.add(gpsBeam);
 input.on('map', () => { if (running) bigmap.toggle(undefined, whereAmI(player.x, player.z)); });
 addEventListener('keydown', e => { if (e.code === 'Escape' && bigmap.open) bigmap.toggle(false); });
 $('map').addEventListener('click', () => { if (running) bigmap.toggle(true, whereAmI(player.x, player.z)); });   // toque no radar abre o mapa
+/* ---------- Etapa 2: dirigir — src/game/vehicle.js ---------- */
+const CAR_PAINT = [0xf2f2f2, 0xd9d9d9, 0x8c8f94, 0x2b2d31, 0x1d1f22, 0xb02a2a, 0x2a4f8a, 0xc9c1b0, 0x5a6b5a];
+const drive = { car: null, parked: null, front: false, hb: false };
+const vctx = { groundAt: (x, z, cur) => player.groundAt(x, z, cur), blocked: (x, z, r) => spatial.blocked(x, z, r), surfOffset: (x, z) => city.surfOffset(x, z), terrain };
+function nearestParked(x, z, R = 3.2) { let best = null, bd = R; for (const c of street.cars) { const d = Math.hypot(c.x - x, c.z - z); if (d < bd) { bd = d; best = c; } } return best; }
+const _cm = new THREE.Matrix4();
+function setParkedVisible(c, on) { const M = on ? street.carMatrix(c, _cm) : ZERO_M; for (let k = 0; k < c.inst.length; k += 2) { c.inst[k].setMatrixAt(c.inst[k + 1], M); c.inst[k].instanceMatrix.needsUpdate = true; } spatial.setPropsOff(c.x, c.z, !on); }
+const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
+function enterCar(c) {
+  if (drive.car) return;
+  // o carro que o jogador deixou em outro lugar volta para a vaga de onde saiu
+  if (drive.left) { scene.remove(drive.left.car.mesh); setParkedVisible(drive.left.parked, true); drive.left = null; }
+  setParkedVisible(c, false);
+  drive.car = new Vehicle(scene, { type: CAR_TYPES[Math.floor(c.c * 3 % 1 * 3)], color: CAR_PAINT[Math.floor(c.c * CAR_PAINT.length)], x: c.x, z: c.z, yaw: c.yaw }, vctx);
+  drive.parked = c; player.mesh.visible = false; player.blob.visible = false; bigmap.mode = 'car'; if (bigmap.dest) bigmap.recalc();
+  $('speedo').hidden = false; toast('', isTouch ? 'Joystick: acelerar/frear e virar · CARRO para sair' : 'W/S acelera e freia · A/D vira · Espaço freio de mão · H buzina · C câmera · F sai', 4);
+}
+function exitCar() {
+  const v = drive.car; if (!v) return;
+  if (v.kmh > 12) { toast('', 'Pare o carro para descer.', 2); return; }
+  // desce pelo lado do motorista; se estiver bloqueado, procura um lugar livre em volta
+  const sx = Math.sin(v.yaw), sz = Math.cos(v.yaw); let x = v.x + sz * 1.6, z = v.z - sx * 1.6;
+  if (spatial.blocked(x, z, 0.4)) [x, z] = freeSpotNear(v.x, v.z);
+  player.x = player.prev.x = x; player.z = player.prev.z = z; player.surf = player.prev.y = player.groundAt(x, z, v.y + 0.5); player.speed = 0; player.ang = v.yaw;
+  player.mesh.visible = true; player.blob.visible = true; bigmap.mode = 'ped'; if (bigmap.dest) bigmap.recalc();
+  drive.left = { car: v, parked: drive.parked }; drive.car = null; $('speedo').hidden = true; drive.front = false;
+}
+input.on('fly', () => { if (!running || bigmap.open) return; if (drive.car) exitCar(); else { const c = nearestParked(player.x, player.z); if (c) enterCar(c); else if (drive.left && Math.hypot(drive.left.car.x - player.x, drive.left.car.z - player.z) < 3.5) { const L = drive.left; drive.left = null; drive.car = L.car; drive.parked = L.parked; player.mesh.visible = false; player.blob.visible = false; bigmap.mode = 'car'; $('speedo').hidden = false; } } });
+interact.add((px, pz) => {
+  if (drive.car) return null;
+  const c = nearestParked(px, pz) || (drive.left && Math.hypot(drive.left.car.x - px, drive.left.car.z - pz) < 3.5 ? drive.left.car : null);
+  return c ? { dist: Math.hypot(c.x - px, c.z - pz) - 0.8, label: 'F · entrar no carro', touchLabel: 'Toque em CARRO para dirigir', button: 'Carro', run: () => input.emit('fly') } : null;
+});
+addEventListener('keydown', e => {
+  if (!drive.car || !running || bigmap.open) return;
+  if (e.code === 'KeyH') honk();
+  if (e.code === 'KeyC') drive.front = !drive.front;
+  if (e.code === 'KeyR') { const v = drive.car; v.pitch = v.roll = 0; v.v = 0; const [x, z] = freeSpotNear(v.x, v.z); v.x = v.prev.x = x; v.z = v.prev.z = z; }
+});
+let audioCtx = null;
+function honk() {
+  try { audioCtx ||= new AudioContext(); const o = audioCtx.createOscillator(), o2 = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = o2.type = 'square'; o.frequency.value = 415; o2.frequency.value = 523; g.gain.setValueAtTime(0.12, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+    o.connect(g); o2.connect(g); g.connect(audioCtx.destination); o.start(); o2.start(); o.stop(audioCtx.currentTime + 0.45); o2.stop(audioCtx.currentTime + 0.45); } catch (e) { /* sem áudio */ }
+  peds.honk?.(drive.car.x, drive.car.z);
+}
 input.on('act', () => { if (!running || bigmap.open) return; const c = interact.best(player.x, player.z); if (c) c.run(); else openUber(); });   // longe de tudo: chama o Uber
 
 /* ---------- onde estou: rua, número e bairro (cadastro e bairros do GEO Igrejinha) ---------- */
@@ -381,8 +429,11 @@ let frameNo = 0, frameAx = { f: 0, t: 0, run: false };
 // núcleo: passo fixo (lógica igual a 30, 60 ou 144 fps) — ver src/core/loop.js
 const sim = new FixedLoop(h => {
   const x0 = player.x, z0 = player.z;
-  player.step(h, frameAx, cam.yaw);
-  Object.assign(peds.player, { x: player.x, z: player.z, vx: (player.x - x0) / h, vz: (player.z - z0) / h, sprint: player.mode === 'sprint' || player.mode === 'run' });
+  if (drive.car) {
+    const v = drive.car; v._braking = frameAx.f < -0.05 && v.v > 0.5; v.step(h, frameAx, !!input.keys.Space || drive.hb);
+    player.x = player.prev.x = v.x; player.z = player.prev.z = v.z; player.surf = player.prev.y = v.y; player.ang = v.yaw; player.mode = 'drive';
+  } else player.step(h, frameAx, cam.yaw);
+  Object.assign(peds.player, { x: player.x, z: player.z, vx: (player.x - x0) / h, vz: (player.z - z0) / h, sprint: player.mode === 'sprint' || player.mode === 'run' || (drive.car && drive.car.kmh > 8) });
   peds.camDir.x = Math.sin(cam.yaw); peds.camDir.z = Math.cos(cam.yaw);
   peds.step(h);
   events.emit('step', h);
@@ -398,10 +449,20 @@ function frame(now) {
   for (const a of peds.agents) { const d = Math.hypot(a.x - player.x, a.z - player.z); if (d < ld) { ld = d; la = a; } }
   if (waldir) { const d = Math.hypot(waldir.position.x - player.x, waldir.position.z - player.z); if (d < ld) { ld = d; la = waldir.position; } }
   player.lookAt = la;
-  const pv = player.present(alpha, dt);             // desenho interpolado
+  let pv;
+  if (drive.car) { const c = drive.car.present(alpha, sky.night); pv = { x: c.x, y: c.y, z: c.z, ground: c.y, y0: 0, ang: c.yaw }; }
+  else pv = player.present(alpha, dt);             // desenho interpolado
   peds.present(alpha, dt, camera);
   const moving = Math.hypot(ax.f, ax.t) > 0.1;
-  cam.update(dt, pv, running ? look : { dx: dt * 6, dy: 0, zoom: 0 },
+  if (drive.car && drive.front) {
+    // câmera do capô
+    const v = drive.car, sx = Math.sin(pv.ang), sz = Math.cos(pv.ang);
+    camera.position.set(pv.x + sx * 0.4, pv.y + 1.25, pv.z + sz * 0.4); camera.lookAt(pv.x + sx * 20, pv.y + 1.0, pv.z + sz * 20);
+  } else if (drive.car) {
+    // perseguição: mais longe e mais alto, volta para trás do carro rápido (o jogador ainda pode girar)
+    cam.dist = Math.max(cam.dist, 6.5); cam.idle = Math.max(cam.idle, 2.1);
+    cam.update(dt, pv, running ? look : { dx: 0, dy: 0, zoom: 0 }, { followYaw: Math.abs(drive.car.v) > 1 ? (drive.car.v > 0 ? pv.ang : pv.ang + Math.PI) : null, height: 1.5 });
+  } else cam.update(dt, pv, running ? look : { dx: dt * 6, dy: 0, zoom: 0 },
     { followYaw: moving && ax.f > 0.5 ? player.ang : null, height: 1.6 });
   sky.update(running ? dt : 0, pv, camera.position);
   landmarks.update(dt, sky);
@@ -426,7 +487,8 @@ function frame(now) {
   if (running) {
     const h = Math.floor(sky.hours), m = Math.floor((sky.hours - h) * 60);
     if (m !== lastMin) { lastMin = m; $('clockT').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; }
-    $('spd').textContent = `${{ idle: 'Parado', walk: 'Andando', run: 'Correndo', sprint: 'Sprint!' }[player.mode] || 'A pé'} · ${whereAmI(player.x, player.z)}`;
+    $('spd').textContent = `${drive.car ? 'Dirigindo' : { idle: 'Parado', walk: 'Andando', run: 'Correndo', sprint: 'Sprint!' }[player.mode] || 'A pé'} · ${whereAmI(player.x, player.z)}`;
+    if (drive.car) { $('spdN').textContent = Math.round(drive.car.kmh); $('spdNeedle').style.transform = `rotate(${-120 + Math.min(240, drive.car.kmh * 2.4)}deg)`; }
     const it = interact.best(player.x, player.z);
     $('prompt').style.display = it ? 'block' : 'none';
     if (it) $('prompt').textContent = isTouch ? it.touchLabel : it.label;
@@ -434,7 +496,7 @@ function frame(now) {
     const gps = bigmap.update(dt);
     if (gps?.arrived) toast('GPS', `: você chegou — ${gps.arrived}.`, 4);
     minimap.draw(player.x, player.z, cam.yaw, player.ang, places, { route: bigmap.route, dest: bigmap.dest });
-    if (bigmap.open) { bigmap.draw(); $('bmClock').textContent = $('clockT').textContent; }
+    if (bigmap.open) { bigmap.tick(dt); $('bmClock').textContent = $('clockT').textContent; }
     // ponto mais próximo
     let near = null, nd = 1e9;
     for (const l of LANDMARKS) { const d = Math.hypot(l.x - player.x, l.z - player.z); if (d < nd) { nd = d; near = l; } }
@@ -462,6 +524,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+// mapa em tela cheia: desenho montado em fatias durante a carga (sem travar), depois solta os dados brutos
+await stage('Desenhando o mapa…', 0.87, 0.88, async tick => { let n = 0; while (!bigmap.buildStep(250)) await tick(Math.min(1, ++n / 2)); });
 // libera os dados brutos do mapa já transformados em malhas (mantém pontes e o centro, usados pelos testes)
 world.buildings = world.buildings.filter(b => Math.hypot(b.p[0][0], b.p[0][1]) < 800);
 world.roads = world.roads.filter(r => r.br);
@@ -491,15 +555,15 @@ await stage('Preparando a placa de vídeo…', 0.88, 1, async tick => {
   for (const [o, v] of all) o.visible = v;
 });
 $('loading').hidden = true;
+$('versao').textContent = 'Versão de teste: ' + VERSAO;
 $('play').disabled = false; $('play').textContent = 'Jogar';
 window.__readyAt = performance.now();   // fim do carregamento (testes medem travamentos até aqui)
 $('play').addEventListener('click', () => {
   $('start').hidden = true; $('hud').hidden = false; running = true;
   toast('Bem-vindo a Igrejinha!', isTouch ? ' Use o joystick para andar e arraste a tela para olhar.' : ' WASD para andar, Shift corre, arraste o mouse para olhar.', 6);
 });
-(function mapIdle() { if (!bigmap.buildStep(4)) setTimeout(mapIdle, 30); })();   // desenho do mapa montado aos poucos
 if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { bigmap, peds, interact, nav, spatial, sim, events, waldir, street, urbano, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { bigmap, drive, enterCar, exitCar, peds, interact, nav, spatial, sim, events, waldir, street, urbano, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

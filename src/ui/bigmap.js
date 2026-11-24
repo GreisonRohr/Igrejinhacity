@@ -43,9 +43,17 @@ export class BigMap {
     if (this.layers?.done) return true;
     const t0 = performance.now();
     if (!this.layers) { this._buildLayers({ roads: this._raw.roads, areas: this._raw.areas, water: this._raw.water, buildings: [] }); this._bi = 0; }
-    const B = this._raw.buildings || [], P = this.layers.bld;
-    while (this._bi < B.length && performance.now() - t0 < budgetMs) for (let k = 0; k < 400 && this._bi < B.length; k++, this._bi++) { const p = B[this._bi].p; if (!p || p.length < 3) continue; P.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) P.lineTo(p[i][0], p[i][1]); P.closePath(); }
-    if (this._bi >= B.length) { this.layers.done = true; this._raw = null; }   // solta os dados brutos
+    // prédios em arrays compactos (x,z em Float32) com grade de 200 m: desenha só o que está na tela
+    const B = this._raw.buildings || [];
+    let n = 0; for (const b of B) n += b.p ? b.p.length : 0;
+    const xy = new Float32Array(n * 2), off = new Uint32Array(B.length + 1), grid = new Map(); let k = 0, m = 0;
+    for (const b of B) {
+      const p = b.p; if (!p || p.length < 3) continue; off[m] = k;
+      for (const q of p) { xy[k * 2] = q[0]; xy[k * 2 + 1] = q[1]; k++; }
+      const key = Math.floor(p[0][0] / 200) + ',' + Math.floor(p[0][1] / 200); let L = grid.get(key); if (!L) grid.set(key, L = []); L.push(m); m++;
+    }
+    off[m] = k; this.bldg = { xy, off, grid, n: m };
+    this.layers.done = true; this._raw = null;   // solta os dados brutos
     return this.layers.done;
   }
   _buildLayers(world) {
@@ -71,7 +79,7 @@ export class BigMap {
     for (const l of LANDMARKS) I.push({ t: 'ponto', n: l.nome, k: norm(l.nome), x: l.x, z: l.z, icon: l.icon, cor: l.cor });
     for (const p of places || []) if (p.n && p.k !== 'onibus') I.push({ t: p.k, n: p.n, k: norm(p.n), x: p.x, z: p.z });
     this.addr = new Map();   // rua normalizada → [[número, x, z]]
-    for (const a of geoX?.addr || []) { const k = norm(a[2]); if (!this.addr.has(k)) { const l = []; l.title = fixStreet(a[2], this._streetPts); this.addr.set(k, l); } this.addr.get(k).push([parseInt(a[3], 10) || 0, a[0], a[1], a[3]]); }
+    for (const a of geoX?.addr || []) { const k = norm(a[2]); if (!this.addr.has(k)) { const l = []; l.title = fixStreet(a[2], this._streetPts); this.addr.set(k, l); } this.addr.get(k).push(a); }   // mesmo array do geoX (sem cópia: memória)
   }
   search(q) {
     const s = norm(q); if (s.length < 2) return [];
@@ -84,8 +92,8 @@ export class BigMap {
       const res = [];
       for (const [k, list] of this.addr) {
         if (score(k) < 0) continue;
-        let best = null; for (const a of list) if (!best || Math.abs(a[0] - num) < Math.abs(best[0] - num)) best = a;
-        if (best) res.push({ t: 'endereço', n: `${list.title}, ${best[3]}`, x: best[1], z: best[2], exact: best[0] === num, sc: 10 + score(k) + (best[0] === num ? 5 : 0) });
+        let best = null, bn = 0; for (const a of list) { const n = parseInt(a[3], 10) || 0; if (!best || Math.abs(n - num) < Math.abs(bn - num)) { best = a; bn = n; } }
+        if (best) res.push({ t: 'endereço', n: `${list.title}, ${best[3]}`, x: best[0], z: best[1], exact: bn === num, sc: 10 + score(k) + (bn === num ? 5 : 0) });
       }
       res.sort((a, b) => b.sc - a.sc); return [...res.slice(0, 5), ...out.slice(0, 3)];
     }
@@ -179,6 +187,8 @@ export class BigMap {
   }
 
   /* ---------- desenho ---------- */
+  /** Chamado a cada quadro com o mapa aberto: redesenha se algo mudou ou a cada 0,5 s. */
+  tick(dt) { this._dt = (this._dt || 0) + dt; if (this.dirty || this._dt > 0.5) { this._dt = 0; this.dirty = false; this.draw(); } }
   draw() {
     if (!this.open) return;
     const cv = this.cv, dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
@@ -193,7 +203,13 @@ export class BigMap {
     g.fillStyle = '#3b6fa8'; g.fill(L.water);
     g.strokeStyle = '#3b6fa8'; g.lineCap = 'round'; g.lineJoin = 'round';
     for (const w of this.waterLines) { g.lineWidth = Math.max(w.w, 1.5 / s); g.beginPath(); g.moveTo(w.p[0][0], w.p[0][1]); for (let i = 1; i < w.p.length; i++) g.lineTo(w.p[i][0], w.p[i][1]); g.stroke(); }
-    if (s > 0.22) { g.fillStyle = s > 0.6 ? '#4a4f57' : '#3a4048'; g.fill(L.bld); }
+    if (s > 0.22 && this.bldg) {
+      const { xy, off, grid } = this.bldg, hw = W / 2 / s + 200, hh = H / 2 / s + 200;
+      g.fillStyle = s > 0.6 ? '#4a4f57' : '#3a4048'; g.beginPath();
+      for (let i = Math.floor((v.x - hw) / 200); i <= Math.floor((v.x + hw) / 200); i++) for (let j = Math.floor((v.z - hh) / 200); j <= Math.floor((v.z + hh) / 200); j++)
+        for (const b of grid.get(i + ',' + j) || []) { const a = off[b], e = off[b + 1]; g.moveTo(xy[a * 2], xy[a * 2 + 1]); for (let q = a + 1; q < e; q++) g.lineTo(xy[q * 2], xy[q * 2 + 1]); g.closePath(); }
+      g.fill();
+    }
     for (const k of ['cam', 'cic', 'rua', 'av', 'exp']) { const R = L.roads[k]; if ((k === 'cam' || k === 'cic') && s < 0.15) continue; g.strokeStyle = STYLE[k][0]; g.lineWidth = Math.max(R.w * 0.85, STYLE[k][1] / s); g.stroke(R.path); }
     // rota do GPS
     if (this.route && this.route.length > 1) {

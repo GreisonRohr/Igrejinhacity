@@ -86,3 +86,8 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 #bigmap .bmScale i{display:block;height:4px;border:2px solid #fff;border-top:0}
 #bigmap .bmClose{position:absolute;right:16px;bottom:16px;padding:12px 18px;border-radius:12px;border:0;background:linear-gradient(90deg,#ffb36b,#ff5f6d);color:#1a0b1f;font-weight:800;cursor:pointer}
 @media (max-width:700px){#bigmap .bmLegend{display:none}#bigmap .bmHelp{font-size:10px;white-space:normal;width:80%;text-align:center}#bigmap .bmTitle b{font-size:20px}}
+/* velocímetro */
+#speedo{position:fixed;right:18px;bottom:18px;width:118px;height:118px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;background:radial-gradient(#0a0d12ee,#160d1ecc);border:3px solid #ffffff30}
+#speedo b{font:900 34px Rubik,sans-serif;line-height:1;position:relative;z-index:1;text-shadow:0 0 6px #000}#speedo small{font-size:11px;opacity:.7}
+#speedo i{position:absolute;left:50%;bottom:50%;width:3px;height:44px;opacity:.85;margin-left:-1.5px;background:#ff5f6d;transform-origin:50% 100%;border-radius:2px}
+@media (pointer:coarse){#speedo{bottom:170px;width:96px;height:96px}#speedo b{font-size:26px}}

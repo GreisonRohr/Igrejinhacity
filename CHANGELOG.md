@@ -3,6 +3,21 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+
+## 2026-11-24 — Etapa 2: veículos e direção (referência: Bah City)
+- F (ou botão CARRO) entra no carro estacionado mais perto e sai dele; o carro deixado fica onde parou (voltar e F de
+  novo retoma); pegar outro carro devolve o anterior à vaga.
+- Física arcade sobre o relevo real: aceleração, freio, ré, direção que fecha com a velocidade, freio de mão (Espaço),
+  ladeira, fora da estrada mais lento, batida em prédio/obstáculo com repique, inclinação e rolagem pelo chão, rodas
+  girando e esterçando, faróis e lanternas (acendem à noite, luz de freio/ré).
+- Câmera de perseguição (volta para trás do carro) e câmera do capô (C); buzina (H); R desvira/desatola; velocímetro;
+  GPS passa a calcular rota de carro (mão das ruas) enquanto dirige; pedestres reagem a carro rápido.
+- Carros estacionados com carroceria nova (perfil com capô, para-brisa e porta-malas; compacto/sedã/utilitário pela
+  escala), mesmo número de chamadas de desenho.
+- Mapa: prédios guardados em arrays compactos e desenhados só na área visível; desenho montado durante a carga.
+- Tela inicial mostra a versão. Teste novo `dirigir`. Pacote de carros CC0 da Quaternius: download bloqueado
+  ("cota do Google Drive excedida"); modelos feitos em código.
+
 ## 2026-11-24 — Etapa 1: mapa em tela cheia com GPS (referência: Bah City)
 - `M` (ou toque no radar) abre o mapa vetorial de Igrejinha: rodovias, avenidas, ruas, caminhos e ciclovias reais
   (largura real), prédios, rio/arroios, parques, nomes das ruas ao longo delas, pontos marcantes e lugares; zoom (roda,

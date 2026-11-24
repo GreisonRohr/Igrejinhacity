@@ -290,6 +290,30 @@ await suite('mapa', async () => {
   return `${r.ruas} ruas, ${r.enderecos} endereços; "${r.busca}" → rota de ${r.dist} m; chegada ok`;
 });
 
+await suite('dirigir', async () => {
+  const p = await page();
+  const r = await p.evaluate(async () => {
+    const g = __game, out = {}, wait = ms => new Promise(res => setTimeout(res, ms)), key = (code, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code }));
+    // carro estacionado mais perto da praça com rua livre à frente
+    let c = null, bd = 1e9; for (const q of g.street.cars) { const d = Math.hypot(q.x, q.z); if (d < bd && g.city.surfOffset(q.x + Math.sin(q.yaw) * 8, q.z + Math.cos(q.yaw) * 8) > 0) { bd = d; c = q; } }
+    g.player.x = c.x + 1.5; g.player.z = c.z; await wait(200);
+    key('KeyF', true); key('KeyF', false); await wait(300);
+    out.dentro = !!g.drive.car; const v = g.drive.car; if (!v) return out;
+    const x0 = v.x, z0 = v.z; key('KeyW', true); await wait(4000); key('KeyW', false);
+    out.kmh = Math.round(v.kmh);                                   // o teclado acelera (o navegador de teste roda poucos passos por segundo)
+    for (let i = 0; i < 240; i++) v.step(1 / 60, { f: 1, t: 0 }, false);   // 4 s de simulação
+    out.andou = Math.round(Math.hypot(v.x - x0, v.z - z0));
+    out.noChao = Math.abs(v.y - g.player.groundAt(v.x, v.z, v.y + 0.5)) < 0.6;
+    const v0 = v.v; for (let i = 0; i < 60; i++) v.step(1 / 60, { f: -1, t: 0 }, false); out.freou = v.v < v0 * 0.3; for (let i = 0; i < 240; i++) v.step(1 / 60, { f: -1, t: 0 }, false); out.re = v.v < -1; v.v = 0;
+    key('KeyF', true); key('KeyF', false); await wait(300); out.saiu = !g.drive.car && g.player.mesh.visible;
+    out.erros = 0; return out;
+  });
+  assert(!p.errors.length, 'erros: ' + p.errors[0]);
+  assert(r.dentro && r.kmh > 1 && r.andou > 10 && r.noChao && r.freou && r.re && r.saiu, JSON.stringify(r));
+  await p.close();
+  return `entrou, andou ${r.andou} m em 4 s, freou, deu ré e saiu`;
+});
+
 await suite('waldir', async () => {
   const p = await page();
   const ok = await p.evaluate(async () => {

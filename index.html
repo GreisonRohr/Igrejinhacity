@@ -17,9 +17,10 @@
   <div id="prompt" class="card"></div>
   <div id="toast" class="card"></div>
   <div id="uber" class="card" hidden><b>Uber · para onde?</b><div id="uberList"></div><button id="uberClose">Fechar</button></div>
+  <div id="speedo" class="card" hidden><i id="spdNeedle"></i><b id="spdN">0</b><small>km/h</small></div>
   <div id="fade"></div>
   <div id="joy"><div id="knob"></div></div>
-  <div id="btns"><button id="bFly">Voar</button><button id="bJump">Pular</button><button id="bAct">Carro</button></div>
+  <div id="btns"><button id="bFly">Carro</button><button id="bJump">Pular</button><button id="bAct">Carro</button></div>
 </div>
 <div id="start">
   <div class="panel card">
@@ -31,9 +32,13 @@
       <kbd>Shift</kbd><span>correr (segure para sprint)</span>
       <kbd>Espaço</kbd><span>pular</span>
       <kbd>Arrastar o mouse</kbd><span>girar a câmera</span>
+      <kbd>M</kbd><span>mapa e GPS</span>
+      <kbd>F</kbd><span>entrar / sair do carro</span>
+      <kbd>E</kbd><span>conversar / interagir · U: Uber</span>
     </div>
     <div id="loading"><div id="loadtrack"><div id="loadbar"></div></div><div id="loadtxt">Baixando o mapa…</div></div>
     <button class="big" id="play" disabled>Carregando…</button>
+    <p class="note" id="versao"></p>
     <p class="note">Igrejinha real: © OpenStreetMap contributors · GEO Igrejinha (Prefeitura) · Google Open Buildings · AWS Terrain Tiles</p>
   </div>
 </div>

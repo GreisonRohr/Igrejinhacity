@@ -23,12 +23,17 @@ export class Spatial {
     this.count++;
   }
 
+  /** Desliga (ou religa) os colisores pequenos ('prop') centrados perto de (x, z): carro parado que o jogador pegou. */
+  setPropsOff(x, z, off, r = 1) {
+    const a = this.cells.get(key(Math.floor(x / CELL), Math.floor(z / CELL))) || [];
+    for (const it of a) if (it.tag === 'prop' && it.r < 3.5 && Math.hypot(it.cx - x, it.cz - z) < r) it.off = off;
+  }
   /** Há obstáculo estático num círculo de raio r em (x, z)? */
   blocked(x, z, r = 0, camOnly = false) {
     const a = this.cells.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
     if (!a) return false;
     for (const it of a) {
-      if (camOnly && !it.cam) continue;
+      if ((camOnly && !it.cam) || it.off) continue;
       const d = Math.hypot(x - it.cx, z - it.cz);
       if (d > it.r + r) continue;
       if (it.circle) return true;

@@ -1,6 +1,7 @@
 // Vida nas ruas: árvores nas calçadas (sibipirunas, ipês floridos, jerivás) e carros estacionados junto ao meio-fio.
 // Tudo instanciado por célula de 800 m (poucas draw calls, corte por distância) e com colisão.
 import * as THREE from 'three';
+import { carGeometries } from '../game/vehicle.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const CELL = 400;   // células menores: corte por distância mais justo (árvores reais densas)
@@ -84,10 +85,9 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
   const frond = new THREE.ConeGeometry(0.45, 3.6, 4).rotateX(Math.PI / 2).translate(0, 0, 1.8);
   const palmCrown = mergeGeometries(Array.from({ length: 8 }, (_, i) => { const f = frond.clone(); f.rotateX(0.55); f.rotateY(i / 8 * Math.PI * 2); f.scale(1, 0.35, 1); f.translate(0, 7.4, 0); return f; }));
   // carro: carroceria (cor por instância), vidros e rodas
-  const body = mergeAt([[new THREE.BoxGeometry(1.75, 0.6, 4.1), 0, 0.62, 0], [new THREE.BoxGeometry(1.7, 0.18, 1.0), 0, 0.98, 1.45], [new THREE.BoxGeometry(1.7, 0.18, 0.8), 0, 0.98, -1.55]]);
-  const glass = mergeAt([[new THREE.BoxGeometry(1.55, 0.55, 2.1), 0, 1.2, -0.15]]);
-  const wheels = mergeAt([[new THREE.CylinderGeometry(0.33, 0.33, 0.24, 7).rotateZ(Math.PI / 2), 0.82, 0.33, 1.3], [new THREE.CylinderGeometry(0.33, 0.33, 0.24, 7).rotateZ(Math.PI / 2), -0.82, 0.33, 1.3],
-    [new THREE.CylinderGeometry(0.33, 0.33, 0.24, 7).rotateZ(Math.PI / 2), 0.82, 0.33, -1.3], [new THREE.CylinderGeometry(0.33, 0.33, 0.24, 7).rotateZ(Math.PI / 2), -0.82, 0.33, -1.3]]);
+  // carro: perfil lateral extrudado (capô, para-brisa, teto, porta-malas — src/game/vehicle.js); a variedade de tipo
+  // vem da escala por instância (compacto/sedã/utilitário), mantendo 3 malhas por célula
+  const CG = carGeometries('sedan', 7), body = CG.body, glass = CG.glass, wheels = CG.wheels;
   const M = {
     bark: new THREE.MeshLambertMaterial({ color: 0x6a5040 }), leaf: new THREE.MeshLambertMaterial({ color: 0xffffff }),
     paint: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0.05 }), glass: new THREE.MeshStandardMaterial({ color: 0x2a3540, roughness: 0.2, metalness: 0 }),
@@ -99,11 +99,12 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
   const cells = new Map();
   const cellOf = (x, z) => { const k = Math.floor(x / CELL) + ',' + Math.floor(z / CELL); let c = cells.get(k); if (!c) cells.set(k, c = { cx: (Math.floor(x / CELL) + 0.5) * CELL, cz: (Math.floor(z / CELL) + 0.5) * CELL, trees: [], cars: [], meshes: [] }); return c; };
   for (const t of trees) { cellOf(t.x, t.z).trees.push(t); t.far = []; const a = LEAF[t.kind]; t.color = a[Math.floor((t.rot * 10) % a.length)]; }
-  for (const c of cars) cellOf(c.x, c.z).cars.push(c);
+  for (const c of cars) { cellOf(c.x, c.z).cars.push(c); c.inst = []; }
+  const carPlace = (d, c) => { const k = c.c * 3 % 1; d.position.set(c.x, c.y, c.z); d.rotation.set(0, c.yaw, 0); d.scale.set(0.97 + k * 0.08, k > 0.66 ? 1.12 : 1, k < 0.33 ? 0.86 : 1); };
   const inst = (cell, geo, mat, list, place, color, shadow = true) => {
     if (!list.length) return;
     const im = new THREE.InstancedMesh(geo, mat, list.length);
-    list.forEach((o, i) => { place(d, o); d.updateMatrix(); im.setMatrixAt(i, d.matrix); if (color) im.setColorAt(i, col.set(color(o))); if (o.far) o.far.push([im, i]); });
+    list.forEach((o, i) => { place(d, o); d.updateMatrix(); im.setMatrixAt(i, d.matrix); if (color) im.setColorAt(i, col.set(color(o))); if (o.far) o.far.push([im, i]); if (o.inst) o.inst.push(im, i); });
     im.computeBoundingSphere(); im.castShadow = shadow; im.receiveShadow = true; im.userData.shadow = shadow;
     im.userData.kind = geo === body || geo === glass || geo === wheels ? 'car' : 'tree';
     group.add(im); cell.meshes.push(im);
@@ -114,7 +115,7 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
     inst(cell, crownLeafy, M.leaf, round, (d, t) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0, t.rot, 0); d.scale.setScalar(t.s); }, t => t.color);
     inst(cell, palmTrunk, M.bark, palms, (d, t) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0.04, t.rot, 0); d.scale.setScalar(t.s); });
     inst(cell, palmCrown, M.leaf, palms, (d, t) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0.04, t.rot, 0); d.scale.setScalar(t.s); }, () => LEAF.palm[0]);
-    const place = (d, c) => { d.position.set(c.x, c.y, c.z); d.rotation.set(0, c.yaw, 0); d.scale.setScalar(1); };
+    const place = carPlace;
     inst(cell, body, M.paint, cell.cars, place, c => PAINT[Math.floor(c.c * PAINT.length)]);
     inst(cell, glass, M.glass, cell.cars, place, null, false);
     inst(cell, wheels, M.tyre, cell.cars, place, null, false);
@@ -127,7 +128,7 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
   }
   const dist = Math.min(1100, Q.buildDist * 0.4);
   return {
-    group, trees, counts: { arvores: trees.length, carros: cars.length, celulas: cells.size },
+    group, trees, cars, carMatrix: (c, m) => { carPlace(d, c); d.updateMatrix(); return m.copy(d.matrix); }, counts: { arvores: trees.length, carros: cars.length, celulas: cells.size },
     // árvores até ~600 m e carros até ~450 m da câmera (as árvores reais são muitas e concentradas no centro)
     update(px, pz) { for (const c of cells.values()) { const d = Math.hypot(px - c.cx, pz - c.cz) - CELL * 0.7; for (const m of c.meshes) { m.visible = d < (m.userData.kind === 'car' ? Math.min(dist, 450) : Math.min(dist, 600)); m.castShadow = m.userData.shadow !== false && d < 90; } } },   // sombra só nas células junto ao jogador (a sombra cobre ~60 m)
   };
