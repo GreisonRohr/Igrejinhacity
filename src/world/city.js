@@ -9,6 +9,7 @@ import { inCentro } from './centro.js';
 const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
 // Piloto do upgrade visual (centro): sombra de contato, lojas no térreo e muros/portões das casas até PILOT_R da praça
 export const PILOT_R = 650;
+const LAMP_R = 380;   // postes desenhados só até esta distância da câmera
 const WIN_STYLES = 4;
 const DOORS = [0x5a3d2b, 0x7a4e2e, 0xf2f0ea, 0x2f5d3a, 0x2b2e33, 0x8c5a3c].map(c => new THREE.Color(c));
 const TRIM = { white: new THREE.Color(0xf2f0ea), wood: new THREE.Color(0x5a4030), gutter: new THREE.Color(0xa9adb0), tank: new THREE.Color(0x5f9ccf) };
@@ -629,11 +630,11 @@ export class City {
     const head = new THREE.BoxGeometry(0.32, 0.12, 0.6).translate(0, 7.85, 1.55);
     const mPole = new THREE.MeshLambertMaterial({ color: 0x8d9196 });
     this.lampMat = new THREE.MeshLambertMaterial({ color: 0xf4f1e6, emissive: 0xffd9a0, emissiveIntensity: 0 });
-    const d = new THREE.Object3D();
+    const d = new THREE.Object3D(); this._lampIMs = [];
     for (const [geo, mat] of [[pole, mPole], [arm, mPole], [head, this.lampMat]]) {
       const im = new THREE.InstancedMesh(geo, mat, N);
       this.lampPos.forEach(([x, y, z, yaw], i) => { d.position.set(x, y, z); d.rotation.set(0, yaw, 0); d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
-      im.castShadow = geo === pole; this.group.add(im);
+      im.castShadow = geo === pole; this.group.add(im); this._lampIMs.push(im);
     }
     // mancha de luz no chão sob cada poste (aditiva, só à noite): ilusão barata de luz real
     const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
@@ -643,7 +644,25 @@ export class City {
     this.poolMat = new THREE.MeshBasicMaterial({ map: pt, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -16, fog: true });
     const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(14, 14).rotateX(-Math.PI / 2), this.poolMat, N);
     this.lampPos.forEach(([x, y, z, yaw], i) => { d.position.set(x + Math.sin(yaw) * 1.5, this.t.heightAt(x + Math.sin(yaw) * 1.5, z + Math.cos(yaw) * 1.5) + 0.2, z + Math.cos(yaw) * 1.5); d.rotation.set(0, 0, 0); d.updateMatrix(); pool.setMatrixAt(i, d.matrix); });
-    pool.renderOrder = 3; this.pools = pool; this.group.add(pool);
+    pool.renderOrder = 3; this.pools = pool; this.group.add(pool); this._lampIMs.push(pool);
+    // só os postes perto da câmera são desenhados (eram ~5.300 sempre: ~400 mil triângulos com a sombra)
+    this._lampAll = this._lampIMs.map(im => im.instanceMatrix.array.slice());
+    for (const im of this._lampIMs) { im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false; im.count = 0; }
+    this._lampAt = null;
+  }
+
+  /** Postes visíveis: até LAMP_R da câmera (refeito quando a câmera anda 25 m). */
+  _updateLamps(px, pz) {
+    if (!this._lampIMs || (this._lampAt && Math.hypot(px - this._lampAt[0], pz - this._lampAt[1]) < 25)) return;
+    this._lampAt = [px, pz];
+    const R2 = LAMP_R * LAMP_R, P = this.lampPos; let k = 0;
+    const sel = this._lampSel || (this._lampSel = new Int32Array(P.length));
+    for (let i = 0; i < P.length; i++) { const dx = P[i][0] - px, dz = P[i][2] - pz; if (dx * dx + dz * dz < R2) sel[k++] = i; }
+    this._lampIMs.forEach((im, j) => {
+      const src = this._lampAll[j], dst = im.instanceMatrix.array;
+      for (let q = 0; q < k; q++) dst.set(src.subarray(sel[q] * 16, sel[q] * 16 + 16), q * 16);
+      im.count = k; im.instanceMatrix.needsUpdate = true;
+    });
   }
 
   async buildBuildings(tick = null) {
@@ -930,6 +949,7 @@ export class City {
 
   /** Mostra/esconde regiões pela distância da câmera. */
   update(px, pz) {
+    this._updateLamps(px, pz);
     for (const c of this.chunks.values()) {
       const d = Math.max(0, Math.hypot(px - c.cx, pz - c.cz) - c.size * 0.7);
       for (const m of c.meshes) {
