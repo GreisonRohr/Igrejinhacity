@@ -855,11 +855,13 @@ export class City {
     Q(base, floor + 0.7, F.stone, flat);
     // letreiro da fábrica na fachada voltada para a R. Gen. Ernesto Dorneles (leste), no alto, perto da esquina
     const on = Math.hypot(out[0], out[2]), ex = out[0] / on, ez = out[2] / on;
-    if (!this._picSign && ex > 0.9 && len > 12 && this.signs) {
+    const mxp = (a[0] + b[0]) / 2, mzp = (a[1] + b[1]) / 2;   // só no pavilhão ao norte da Rua Coberta (Piccadilly)
+    if (!this._picSign && ex > 0.9 && len > 12 && this.signs && mxp > 20 && mxp < 60 && mzp > -115 && mzp < -50) {
       this._picSign = true; const inf = this.signs.info.get('PICCADILLY');
-      if (inf) { const sh = 1.3, sw = sh * inf.aspect, ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len, y0 = top - sh - 0.6, s0 = Math.max(sw / 2 + 2, len * 0.2);
+      // na foto o letreiro é vertical, lido de baixo para cima, numa faixa clara perto da esquina
+      if (inf) { const sw = 1.3, sh = Math.min(top - floor - 2.5, sw * inf.aspect), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len, y0 = top - sh - 1.0, s0 = Math.min(len - 2, Math.max(3, len * 0.2));
         const P = (sd, y) => [a[0] + ux * (s0 + sd * sw / 2) + ex * 0.08, y, a[1] + uz * (s0 + sd * sw / 2) + ez * 0.08];
-        ch.signs.quad(P(-1, y0), P(1, y0), P(1, y0 + sh), P(-1, y0 + sh), [[0, inf.v0], [inf.u1, inf.v0], [inf.u1, inf.v1], [0, inf.v1]], C.plain, 0, [ex, 0, ez]); }
+        ch.signs.quad(P(-1, y0), P(1, y0), P(1, y0 + sh), P(-1, y0 + sh), [[0, inf.v1], [0, inf.v0], [inf.u1, inf.v0], [inf.u1, inf.v1]], C.plain, 0, [ex, 0, ez]); }
     }
     for (let k = 0; k < nf; k++) {
       const y0 = floor + k * fh, w0 = y0 + 1.15, w1 = Math.min(y0 + fh - 0.9, w0 + 1.8);

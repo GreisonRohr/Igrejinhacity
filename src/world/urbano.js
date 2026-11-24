@@ -126,5 +126,38 @@ export function buildUrbano({ world, terrain, city, scene }) {
     const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex })); m.castShadow = false; group.add(m);
     for (const sg of signs) city.addCollider([[sg.x - 0.08, sg.z - 0.08], [sg.x + 0.08, sg.z - 0.08], [sg.x + 0.08, sg.z + 0.08], [sg.x - 0.08, sg.z + 0.08]], sg.x, sg.z, -1);
   }
-  return { group, stops: stops.length, wires: pos.length / 6, bins: bins.length, streetSigns: signs.length, streetNames: names.length };
+  /* ---------- centro (C5, fotos Street View abr/2026) ---------- */
+  let centroItens = 0;
+  {
+    const k = new Kit(), stone = lambert(0x8f8577), yellow = lambert(0xe9b828), soil = lambert(0x5a4632), conc = lambert(0xb9b6ae), wood = lambert(0x9a6b3f), metal = lambert(0x3a3d42);
+    const green = lambert(0x4f7d34), purple = lambert(0x6b2a5a), pink = lambert(0xd9569b), red = lambert(0xc8322b), white = lambert(0xf2eee6);
+    const col = (x, z, r) => { const p = []; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; p.push([x + Math.cos(a) * r, z + Math.sin(a) * r]); } city.addCollider(p, x, z, -1); };
+    // rotatória da Av. Pres. Castelo Branco × R. João Corrêa: base de pedra em cone, anel amarelo e floreira
+    const R = [-55.0, 47.0], y0 = H(R[0], R[1]) + 0.08;
+    k.add(new THREE.CylinderGeometry(1.25, 1.85, 0.4, 20), stone, R[0], y0 + 0.2, R[1]);
+    k.add(new THREE.CylinderGeometry(1.05, 1.0, 0.42, 20), yellow, R[0], y0 + 0.6, R[1]);
+    k.add(new THREE.CylinderGeometry(0.98, 0.98, 0.06, 20), soil, R[0], y0 + 0.8, R[1]);
+    for (let i = 0; i < 14; i++) { const a = i * 2.39, r = 0.25 + (i % 4) * 0.18, x = R[0] + Math.cos(a) * r, z = R[1] + Math.sin(a) * r;
+      k.add(new THREE.IcosahedronGeometry(0.24, 0), i % 3 === 0 ? pink : i % 3 === 1 ? green : red, x, y0 + 0.95, z, a, 0, 0, 1, 0.7, 1); }
+    col(R[0], R[1], 1.7); centroItens++;
+    // praçinha da calçada da R. João Corrêa (697): floreiras de concreto com folhagem roxa e bancos de madeira
+    const r = nearestRoad(city, -28, 62);
+    if (r && r.d < 20) {
+      let nx = -r.uz, nz = r.ux; if ((-28 - r.qx) * nx + (62 - r.qz) * nz < 0) { nx = -nx; nz = -nz; }
+      const off = r.half + Math.min(r.side, 3) - 0.7, ry = Math.atan2(r.ux, r.uz);
+      for (let i = -1; i <= 1; i++) {
+        const x = r.qx + nx * off + r.ux * i * 5.5, z = r.qz + nz * off + r.uz * i * 5.5, y = H(x, z) + city.surfOffset(x, z);
+        if (city.blocked(x, z, 0.25)) continue;
+        k.add(new THREE.BoxGeometry(2.2, 0.6, 0.75), conc, x, y + 0.3, z, ry);
+        for (let j = 0; j < 6; j++) { const t = (j - 2.5) / 2.5 * 0.85; k.add(new THREE.IcosahedronGeometry(0.32, 0), j % 2 ? purple : lambert(0x7d3468), x + r.ux * t, y + 0.72, z + r.uz * t, j, 0, 0, 1, 0.6, 0.9); }
+        const p = []; for (const [a, b] of [[-1.1, -0.4], [1.1, -0.4], [1.1, 0.4], [-1.1, 0.4]]) p.push([x + r.ux * a + nx * b, z + r.uz * a + nz * b]); city.addCollider(p, x, z, -1);
+        if (i < 1) { const bx = x + r.ux * 2.75, bz = z + r.uz * 2.75;   // banco entre as floreiras
+          k.add(new THREE.BoxGeometry(1.6, 0.06, 0.45), wood, bx, y + 0.45, bz, ry); k.add(new THREE.BoxGeometry(1.6, 0.35, 0.05), wood, bx - nx * 0.22, y + 0.68, bz - nz * 0.22, ry);
+          for (const s of [-0.65, 0.65]) k.add(new THREE.BoxGeometry(0.06, 0.45, 0.42), metal, bx + r.ux * s, y + 0.22, bz + r.uz * s, ry); }
+        centroItens++;
+      }
+    }
+    k.build(group);
+  }
+  return { group, centroItens, stops: stops.length, wires: pos.length / 6, bins: bins.length, streetSigns: signs.length, streetNames: names.length };
 }

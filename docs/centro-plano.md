@@ -32,5 +32,5 @@ Bah City como referência de acabamento.
    trepadeira de folhas, gramado à sombra, luz dos lampiões no piso à noite.
 4. **C4 — Rua Coberta** ✅ fábrica Piccadilly com fachada em faixas e marquises, luminárias e luz noturna; lojas reais
    da Dorneles (fotos de 24/11).
-5. **C5 — Ambientação**: árvores de rua, floreiras, placas (PARE, sentido), bancos de rua, pastilha nos prédios altos,
+5. **C5 — Ambientação** (1ª parte ✅ rotatória, praçinha da João Corrêa, letreiro vertical da Piccadilly). Restante: árvores de rua, floreiras, placas (PARE, sentido), bancos de rua, pastilha nos prédios altos,
    revisão de noite e desempenho no celular.

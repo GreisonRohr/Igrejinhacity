@@ -35,7 +35,7 @@ import { MAP_MALE_CASUAL } from './player/retarget.js';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
-export const VERSAO = 'Centro 3 · Rua Coberta';
+export const VERSAO = 'Centro 4 · Ambientação';
 if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */

@@ -3,6 +3,14 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Centro 4 (C5): ambientação pelas fotos de 24/11
+- Floreira redonda da rotatória da Av. Pres. Castelo Branco × R. João Corrêa: base de pedra em cone, anel amarelo,
+  flores (com colisão). Posição corrigida pelo grafo de ruas (no jogo a João Corrêa passa em z ≈ 48).
+- Praçinha da calçada da R. João Corrêa (697): floreiras de concreto com folhagem roxa e bancos de madeira.
+- Letreiro PICCADILLY vertical (lido de baixo para cima, como na foto) e agora no pavilhão certo, ao norte da Rua
+  Coberta (antes caía no primeiro pavilhão do centro, em outra quadra).
+- Orçamento: 712 draw calls, 2278k triângulos, heap 112 MB. 12/12 suítes.
+
 ## 2026-11-24 — Centro 3 (C4): Rua Coberta e lojas reais da Dorneles
 - Pavilhões de fábrica do centro (lado norte da Rua Coberta — Piccadilly) com a fachada das fotos: base de pedra,
   faixas ocre/creme por andar, faixa de janelas basculantes e marquise branca contínua; letreiro PICCADILLY na
