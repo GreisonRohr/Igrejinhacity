@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GeoBuilder, litMaterial } from './geo-builder.js';
 import { editHeights } from './terrain.js';
 import { freeAfterUpload } from './merge.js';
+import { inCentro } from './centro.js';
 
 const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
 // Piloto do upgrade visual (centro): sombra de contato, lojas no térreo e muros/portões das casas até PILOT_R da praça
@@ -33,7 +34,7 @@ const FLAT = [0x9d9a92, 0xb0aca4, 0x8c8a86].map(c => new THREE.Color(c));
 const METAL = [0x8e98a4, 0xa9b2bb, 0x6f8fa8].map(c => new THREE.Color(c));
 const C = {
   asphalt: new THREE.Color(0x55585c), dirt: new THREE.Color(0xa08660), path: new THREE.Color(0xc2ad86),
-  side: new THREE.Color(0xd4d0c8), curb: new THREE.Color(0xdcd8cf), line: new THREE.Color(0xf0f0ea), yellow: new THREE.Color(0xf2d24b),
+  side: new THREE.Color(0xd4d0c8), sideC: new THREE.Color(0xa9a6a0), curb: new THREE.Color(0xdcd8cf), line: new THREE.Color(0xf0f0ea), yellow: new THREE.Color(0xf2d24b),
   concrete: new THREE.Color(0xb9b6ae), plain: new THREE.Color(0xffffff), pool: new THREE.Color(0x7fd6ff),
   pedra: new THREE.Color(0x8a8378), metal: new THREE.Color(0x9aa0a6), concreteDark: new THREE.Color(0x8f8c85), bloco: new THREE.Color(0xa29d94), median: new THREE.Color(0x6f9e4c),
 };
@@ -178,6 +179,8 @@ export class City {
     realSurface(this.roadMat, 'asfalto', 4, 3.0, { normal: 0.7 });
     realSurface(this.cobbleMat, 'paralelepipedo', 2.5, 2.4, { normal: 1.1 });
     realSurface(this.walkMat, 'bloquete', 1.2, 2.0, { normal: 0.9 });
+    // centro: lajota de concreto cinza em placas (como nas fotos da praça e do entorno)
+    this.walkCMat = realSurface(new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }), 'lajota', 1.2, 1.8, { normal: 1.0 });
     realSurface(this.roofMat, 'telha', 1, 2.5, { normal: 1.0, repeat: [1.2 / 2.5, 0.4 / 2.5] });
     this.waterMat = new THREE.MeshPhongMaterial({ vertexColors: true, color: 0x3f7fb0, specular: 0x9fc6e8, shininess: 60, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
   }
@@ -188,7 +191,7 @@ export class City {
     const S = far && Math.hypot(x, z) > FAR_R ? FAR_CHUNK : CHUNK;
     const k = (S === CHUNK ? '' : 'F') + Math.floor(x / S) + ',' + Math.floor(z / S);
     let c = this.chunks.get(k);
-    if (!c) this.chunks.set(k, c = { walls: new GeoBuilder(), roofs: new GeoBuilder(), shops: new GeoBuilder(), ao: new GeoBuilder(), roads: new GeoBuilder(), cobble: new GeoBuilder(), walk: new GeoBuilder(), marks: new GeoBuilder(), bridge: new GeoBuilder(), cx: (Math.floor(x / S) + 0.5) * S, cz: (Math.floor(z / S) + 0.5) * S, size: S, meshes: [] });
+    if (!c) this.chunks.set(k, c = { walls: new GeoBuilder(), roofs: new GeoBuilder(), shops: new GeoBuilder(), ao: new GeoBuilder(), roads: new GeoBuilder(), cobble: new GeoBuilder(), walk: new GeoBuilder(), walkC: new GeoBuilder(), marks: new GeoBuilder(), bridge: new GeoBuilder(), cx: (Math.floor(x / S) + 0.5) * S, cz: (Math.floor(z / S) + 0.5) * S, size: S, meshes: [] });
     return c;
   }
 
@@ -323,7 +326,7 @@ export class City {
     this.buildLamps();
     await tick(0.95);
     for (const c of this.chunks.values()) {
-      for (const [key, mat, shadow] of [['walls', this.wallMat, true], ['roofs', this.roofMat, true], ['shops', this.shopMat, false], ['ao', this.aoMat, false], ['roads', this.roadMat, false], ['cobble', this.cobbleMat, false], ['walk', this.walkMat, false], ['marks', this.markMat, false], ['bridge', this.bridgeMat, true]]) {
+      for (const [key, mat, shadow] of [['walls', this.wallMat, true], ['roofs', this.roofMat, true], ['shops', this.shopMat, false], ['ao', this.aoMat, false], ['roads', this.roadMat, false], ['cobble', this.cobbleMat, false], ['walk', this.walkMat, false], ['walkC', this.walkCMat, false], ['marks', this.markMat, false], ['bridge', this.bridgeMat, true]]) {
         const g = c[key].build(); c[key] = null;
         if (!g) continue;
         freeAfterUpload(g);
@@ -385,6 +388,10 @@ export class City {
     const duals = this.world.roads.filter(q => q.ow && q.med && !q.br);
     // distância do ponto até a outra pista da mesma avenida (largura real do canteiro)
     const otherDist = (r, x, z) => { let best = Infinity; for (const q of duals) { if (q === r || q.n !== r.n) continue; for (let i = 0; i < q.p.length - 1; i++) { const a = q.p[i], b = q.p[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)); best = Math.min(best, Math.hypot(x - a[0] - dx * u, z - a[1] - dz * u)); } } return best; };
+    const cornerKey = q => Math.round(q[0] / 3) + ',' + Math.round(q[1] / 3), ends = new Map();
+    for (const r of this.world.roads) if (URBAN.has(r.k) && inCentro(r.p[0][0], r.p[0][1], 40)) for (const q of [r.p[0], r.p[r.p.length - 1]]) { const k = cornerKey(q); ends.set(k, (ends.get(k) || 0) + 1); }
+    const corners = []; for (const r of this.world.roads) if (URBAN.has(r.k)) for (const q of [r.p[0], r.p[r.p.length - 1]]) if ((ends.get(cornerKey(q)) || 0) >= 2 && inCentro(q[0], q[1], 20)) corners.push(q);
+    const nearCorner = (x, z, d) => corners.some(q => Math.abs(q[0] - x) < d && Math.abs(q[1] - z) < d && Math.hypot(q[0] - x, q[1] - z) < d);
     for (const r of this.world.roads) {
       const pts = resample(r.p, 4), n = pts.length;
       const unpaved = r.pav === 'terra' || (!r.pav && (r.k === 'track' || ['unpaved', 'gravel', 'dirt', 'ground', 'compacted'].includes(r.sf)));
@@ -439,19 +446,22 @@ export class City {
       const pieces = [];
       for (let i0 = 0; i0 < n - 1; i0 += 40) pieces.push([i0, Math.min(n - 1, i0 + 40)]);
       for (const [i0, i1] of pieces) {
-        const mid = pts[(i0 + i1) >> 1], ch = this.chunk(mid[0], mid[1]);
+        const mid = pts[(i0 + i1) >> 1], ch = this.chunk(mid[0], mid[1]), centro = inCentro(mid[0], mid[1]);
         const range = (s0) => s0 >= cum[i0] - 1e-6 && s0 < cum[i1] - 1e-6;
         const F = (f) => (a, b2) => range(a) && (!f || f(a, b2));
         // pista
-        strip(cobble ? ch.cobble : ch.roads, half, -half, 0, surfJ, cobble ? 2.5 : 4, F());
-        // calçadas (lajota) + meio-fio de concreto
-        const curbH = 0.15;
-        if (sideL) { strip(ch.walk, half + sideL, half, curbH, C.side, 1.2, F()); }
-        if (sideR) { strip(ch.walk, -half, -half - sideR, curbH, C.side, 1.2, F()); }
+        // centro: asfalto mais escuro (cinza-grafite das fotos) e calçada de lajota cinza
+        const surfC = centro && asphalt ? surfJ.clone().multiplyScalar(0.72) : surfJ;
+        strip(cobble ? ch.cobble : ch.roads, half, -half, 0, surfC, cobble ? 2.5 : 4, F());
+        // calçadas (lajota) + meio-fio de concreto (no centro, amarelo nas esquinas)
+        const curbH = 0.15, W = centro ? ch.walkC : ch.walk, sideCol = centro ? C.sideC.clone().multiplyScalar(0.94 + 0.12 * hash(r.p[0][1], r.p[0][0])) : C.side;
+        if (sideL) { strip(W, half + sideL, half, curbH, sideCol, 1.2, F()); }
+        if (sideR) { strip(W, -half, -half - sideR, curbH, sideCol, 1.2, F()); }
+        const curbCol = (a, b) => centro && nearCorner((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, half + side + 7) ? C.yellow : C.curb;
         if (sideL || r.br) for (let i = i0; i < i1; i++) { const a = off(i, half), b = off(i + 1, half), [nx, nz] = NRM[i];
-          ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.curb, 0, [-nx, 0, -nz]); }
+          ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [-nx, 0, -nz]); }
         if (sideR) for (let i = i0; i < i1; i++) { const a = off(i, -half), b = off(i + 1, -half), [nx, nz] = NRM[i];
-          ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.curb, 0, [nx, 0, nz]); }
+          ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [nx, 0, nz]); }
         // canteiro central (pista única com canteiro)
         // exceções conferidas em foto: o cadastro marca canteiro onde hoje é só asfalto
         const noMedian = /Jo.o Corr/.test(r.n || '') && Math.min(...r.p.map(q => Math.hypot(q[0], q[1] - 47))) < 60;
@@ -468,13 +478,16 @@ export class City {
         }
         // sinalização horizontal (padrão brasileiro: amarelo separa sentidos, branco separa faixas/bordas)
         if (asphalt && !foot && width >= 5.5) {
-          const M = ch.marks, lw = 0.12, dash = (a) => Math.floor(a / 4) % 2 === 0;
+          const M = ch.marks, lw = 0.12;
+          // centro: as faixas param antes da faixa de pedestre (não atravessam o cruzamento)
+          const xs = centro ? (crossings.get(r) || []).map(ci => cum[ci]) : [], clear = (a, b2) => xs.every(s0 => Math.abs((a + b2) / 2 - s0) > 9.5);
+          const dash = (a, b2) => Math.floor(a / 4) % 2 === 0 && clear(a, b2);
           const twoWay = !r.ow;
           if (twoWay) {
-            if (r.main || r.k === 'primary' || r.k === 'secondary') { strip(M, 0.2, 0.2 - lw, 0.03, C.yellow, 4, F()); strip(M, -0.2 + lw, -0.2, 0.03, C.yellow, 4, F()); }
+            if (r.main || r.k === 'primary' || r.k === 'secondary') { strip(M, 0.2, 0.2 - lw, 0.03, C.yellow, 4, F(clear)); strip(M, -0.2 + lw, -0.2, 0.03, C.yellow, 4, F(clear)); }
             else strip(M, lw / 2, -lw / 2, 0.03, C.yellow, 4, F(dash));
           } else if (width >= 6.5) strip(M, lw / 2, -lw / 2, 0.03, C.line, 4, F(dash));
-          if (MARKED.has(r.k) || r.br) { strip(M, half - 0.3, half - 0.3 - lw, 0.03, C.line, 4, F()); strip(M, -half + 0.3 + lw, -half + 0.3, 0.03, C.line, 4, F()); }
+          if (MARKED.has(r.k) || r.br) { strip(M, half - 0.3, half - 0.3 - lw, 0.03, C.line, 4, F(clear)); strip(M, -half + 0.3 + lw, -half + 0.3, 0.03, C.line, 4, F(clear)); }
         }
       }
       // faixas de pedestre perto dos cruzamentos (zebrado)

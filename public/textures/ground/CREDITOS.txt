@@ -4,3 +4,4 @@ asfalto        — asphalt_02 (Rob Tuytel)            https://polyhaven.com/a/as
 paralelepipedo — cobblestone_floor_03 (Rob Tuytel)  https://polyhaven.com/a/cobblestone_floor_03  2,4 m
 bloquete       — concrete_pavers_02 (Amal Kumar)    https://polyhaven.com/a/concrete_pavers_02    2,0 m
 telha          — clay_roof_tiles_02 (Amal Kumar)    https://polyhaven.com/a/clay_roof_tiles_02    2,5 m
+lajota         — concrete_pavement (Charlotte Baglioni) https://polyhaven.com/a/concrete_pavement     1,8 m
