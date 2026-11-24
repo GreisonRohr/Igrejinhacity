@@ -20,6 +20,7 @@
   <div id="speedo" class="card" hidden><i id="spdNeedle"></i><b id="spdN">0</b><small>km/h</small></div>
   <div id="fade"></div>
   <div id="joy"><div id="knob"></div></div>
+  <button id="bMenu" class="card" title="Menu (Esc)">☰</button>
   <div id="btns"><button id="bFly">Carro</button><button id="bJump">Pular</button><button id="bAct">Carro</button></div>
 </div>
 <div id="start">
@@ -37,10 +38,21 @@
       <kbd>E</kbd><span>conversar / interagir · U: Uber</span>
     </div>
     <div id="loading"><div id="loadtrack"><div id="loadbar"></div></div><div id="loadtxt">Baixando o mapa…</div></div>
+    <div id="selStart"></div>
     <button class="big" id="play" disabled>Carregando…</button>
     <p class="note" id="versao"></p>
     <p class="note">Igrejinha real: © OpenStreetMap contributors · GEO Igrejinha (Prefeitura) · Google Open Buildings · AWS Terrain Tiles<br>Carros 3D (Sketchfab, CC BY 4.0, adaptados): <a href="https://sketchfab.com/3d-models/honda-city-2017-75671276d4da476294202a5dc050a99e" target="_blank" rel="noopener">Honda City 2017</a> por dewa · <a href="https://sketchfab.com/3d-models/2002-peugeot-206-gti-01499004a07b46b586637149e9c16b29" target="_blank" rel="noopener">2002 Peugeot 206 GTI</a> por DisneyCars · Pessoas: Quaternius (CC0)</p>
   </div>
+</div>
+<div id="menu" class="modal" hidden>
+  <div class="panel card">
+    <h1>Igrejinha <span>City</span></h1>
+    <p class="sub">Jogo pausado</p>
+    <div class="menuBtns"><button class="big" id="mContinue">Continuar</button><button class="big alt" id="mChar">Trocar personagem</button></div>
+  </div>
+</div>
+<div id="selModal" class="modal" hidden>
+  <div class="panel card" id="selHost"><button class="big" id="selDone">Jogar</button></div>
 </div>
 <div id="fps" hidden></div>
 <script type="module" src="/src/main.js"></script>

@@ -24,16 +24,18 @@ import { Interactions } from './interact/interact.js';
 import { TreeLOD } from './world/trees.js';
 import { buildUrbano } from './world/urbano.js';
 import { BigMap } from './ui/bigmap.js';
+import { CharSelect } from './ui/charselect.js';
 import { Vehicle, CAR_TYPES, loadRealCars } from './game/vehicle.js';
 import { ParkedLOD } from './game/parkedlod.js';
 import { buildForest } from './world/forest.js';
 import { loadHumans } from './player/humans.js';
+import { PERSONAGENS } from './player/costumes.js';
 import { MAP_MALE_CASUAL } from './player/retarget.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
-export const VERSAO = 'Visual 3 · Carros reais (2 modelos)';
+export const VERSAO = 'Personagens da Oktoberfest';
 if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */
@@ -188,33 +190,42 @@ tryLoadGLB(BASE + 'models/protagonista.glb', 1.8).then(glb => {
 });
 /* ---------- pessoas realistas (Quaternius CC0, src/player/humans.js) ---------- */
 const humans = await loadHumans(BASE).catch(e => { console.warn('personagens realistas não carregados:', e.message); return null; });
-// Protagonista (Visual 2): mesmo corpo CC0 da Quaternius dos pedestres, vestido como o personagem de referência
-// (jaqueta grafite de manga comprida, calça cargo, tênis claro, cabelo curto, barba). O modelo "male_casual" enviado
-// pelo diretor (licença a confirmar, fora das versões publicadas) continua disponível com ?heroi=fbx.
-export const HERO_LOOK = { female: false, skin: 0xf7d2b6, top: 0x2b2f37, pants: 0x56606d, shoes: 0x2f3237, sleeve: 2, puff: 0.032, puffP: 0.024,
-  hair: 'buzzed', hairColor: 0x241811, beard: true, height: 1.80 };
-const hero = !humans ? null : params.get('heroi') === 'fbx'
-  ? await humans.makeFromFBX(BASE + 'models/hero/male_casual.fbx', MAP_MALE_CASUAL, { height: 1.80 }).catch(e => { console.warn('protagonista:', e.message); return null; })
-  : humans.make(HERO_LOOK);
-if (hero) {
+// Protagonista: o jogador escolhe na entrada entre Lukas (lederhosen) e Anna (dirndl) — trajes da Oktoberfest de
+// Igrejinha sobre o corpo CC0 da Quaternius (src/player/costumes.js). A escolha fica salva no aparelho e pode ser
+// trocada no menu (Esc / ☰). O modelo "male_casual" do diretor (licença a confirmar) só abre com ?heroi=fbx.
+const SAVE_PERS = 'igrejinha.personagem';
+const savedPers = (() => { try { return localStorage.getItem(SAVE_PERS); } catch { return null; } })();
+let persKey = PERSONAGENS[params.get('personagem')] ? params.get('personagem') : PERSONAGENS[savedPers] ? savedPers : 'm';
+const heroes = {};
+let hero = null;
+const _UP = new THREE.Vector3(0, 1, 0);
+function setHero(key) {
+  if (!humans) return;
+  const h = heroes[key] ||= humans.make(PERSONAGENS[key].look);
+  if (h === hero) return;
   const m = player.mesh;
+  if (hero) hero.root.removeFromParent();
   for (const c of [...m.children]) c.visible = false;
-  m.add(hero.root);
-  const hb = hero.bones, _UP = new THREE.Vector3(0, 1, 0);
-  hero.root.traverse(o => { if (o.isMesh) { o.castShadow = o.geometry.attributes.position.count > 3000; o.frustumCulled = false; } });   // sombra só do corpo
-  m.userData.animate = (dt, speed, run, air, ex) => {
-    hero.play(dt, { speed, mode: player.mode, air, vy: player.vy });
-    // por cima da animação: olhar para quem está perto e inclinar com o peso (arrancada, freada, ladeira)
-    if (ex) {
-      const ly = ex.lookYaw == null ? 0 : Math.max(-1, Math.min(1, ex.lookYaw));
-      hero.lookCur = (hero.lookCur || 0) + (ly - (hero.lookCur || 0)) * Math.min(1, dt * 5);
-      const head = hb.head || hb.Head, spine = hb.spine || hb.spine_02;
-      if (head) head.rotateOnWorldAxis(_UP, hero.lookCur * 0.6);
-      if (spine) spine.rotateX(ex.lean || 0);
-    }
-  };
-  window.__hero = hero;
+  m.add(h.root); h.root.visible = true;
+  h.root.traverse(o => { if (o.isMesh) { o.castShadow = o.isSkinnedMesh ? o.geometry.attributes.position.count > 3000 : true; o.frustumCulled = false; } });   // sombra: corpo e traje
+  hero = h; persKey = key; window.__hero = h;
 }
+if (humans && params.get('heroi') === 'fbx') {
+  hero = await humans.makeFromFBX(BASE + 'models/hero/male_casual.fbx', MAP_MALE_CASUAL, { height: 1.80 }).catch(e => { console.warn('protagonista:', e.message); return null; });
+  if (hero) { for (const c of [...player.mesh.children]) c.visible = false; player.mesh.add(hero.root); window.__hero = hero; }
+} else setHero(persKey);
+player.mesh.userData.animate = (dt, speed, run, air, ex) => {
+  if (!hero) return;
+  hero.play(dt, { speed, mode: player.mode, air, vy: player.vy });
+  // por cima da animação: olhar para quem está perto e inclinar com o peso (arrancada, freada, ladeira)
+  if (ex) {
+    const hb = hero.bones, ly = ex.lookYaw == null ? 0 : Math.max(-1, Math.min(1, ex.lookYaw));
+    hero.lookCur = (hero.lookCur || 0) + (ly - (hero.lookCur || 0)) * Math.min(1, dt * 5);
+    const head = hb.head || hb.Head, spine = hb.spine || hb.spine_02;
+    if (head) head.rotateOnWorldAxis(_UP, hero.lookCur * 0.6);
+    if (spine) spine.rotateX(ex.lean || 0);
+  }
+};
 const input = new Input(renderer.domElement);
 const cam = new FollowCam(camera, terrain);
 cam.blocked = (x, z, r) => spatial.blocked(x, z, r, true);
@@ -362,7 +373,13 @@ const bigmap = new BigMap({ world, geoX, nav, places, terrain, player, onTelepor
 const gpsBeam = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 160, 16, 1, true).translate(0, 80, 0), new THREE.MeshBasicMaterial({ color: 0xc13cff, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide }));
 gpsBeam.visible = false; gpsBeam.renderOrder = 3; scene.add(gpsBeam);
 input.on('map', () => { if (running) bigmap.toggle(undefined, whereAmI(player.x, player.z)); });
-addEventListener('keydown', e => { if (e.code === 'Escape' && bigmap.open) bigmap.toggle(false); });
+addEventListener('keydown', e => {
+  if (e.code !== 'Escape') return;
+  if (bigmap.open) bigmap.toggle(false);
+  else if (!$('selModal').hidden) closeCharModal();
+  else if (!$('menu').hidden) closeMenu();
+  else if (running) openMenu();
+});
 $('map').addEventListener('click', () => { if (running) bigmap.toggle(true, whereAmI(player.x, player.z)); });   // toque no radar abre o mapa
 /* ---------- Etapa 2: dirigir — src/game/vehicle.js ---------- */
 const CAR_PAINT = [0xf2f2f2, 0xd9d9d9, 0x8c8f94, 0x2b2d31, 0x1d1f22, 0xb02a2a, 0x2a4f8a, 0xc9c1b0, 0x5a6b5a];
@@ -578,10 +595,23 @@ await stage('Preparando a placa de vídeo…', 0.88, 1, async tick => {
   for (const [o, v] of all) o.visible = v;
 });
 $('loading').hidden = true;
+// seleção de personagem: na entrada (já vem marcado o salvo) e no menu
+const savePers = k => { try { localStorage.setItem(SAVE_PERS, k); } catch { /* modo privado */ } };
+const charSel = humans && params.get('heroi') !== 'fbx' ? new CharSelect(humans, { selected: persKey, onChange: k => { setHero(k); savePers(k); } }) : null;
+if (charSel && !params.has('autostart')) { $('start').classList.add('sel'); charSel.mount($('selStart')); }
+function openMenu() { running = false; $('menu').hidden = false; $('mContinue').focus(); }
+function closeMenu() { $('menu').hidden = true; running = true; }
+function openCharModal() { if (!charSel) return; $('menu').hidden = true; $('selModal').hidden = false; charSel.sel = persKey; charSel._mark(); charSel.mount($('selHost')); $('selHost').appendChild($('selDone')); }
+function closeCharModal() { charSel?.unmount(); $('selModal').hidden = true; running = true; }
+$('bMenu').addEventListener('click', () => { if (running) openMenu(); });
+$('mContinue').addEventListener('click', closeMenu);
+$('mChar').addEventListener('click', openCharModal);
+$('selDone').addEventListener('click', closeCharModal);
 $('versao').textContent = 'Versão de teste: ' + VERSAO;
 $('play').disabled = false; $('play').textContent = 'Jogar';
 window.__readyAt = performance.now();   // fim do carregamento (testes medem travamentos até aqui)
 $('play').addEventListener('click', () => {
+  charSel?.unmount(); savePers(persKey);
   $('start').hidden = true; $('hud').hidden = false; running = true;
   toast('Bem-vindo a Igrejinha!', isTouch ? ' Use o joystick para andar e arraste a tela para olhar.' : ' WASD para andar, Shift corre, arraste o mouse para olhar.', 6);
 });
@@ -589,4 +619,4 @@ if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { bigmap, drive, parkedLOD, enterCar, exitCar, peds, interact, nav, spatial, sim, events, waldir, street, urbano, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { bigmap, drive, parkedLOD, setHero, get persKey() { return persKey; }, enterCar, exitCar, peds, interact, nav, spatial, sim, events, waldir, street, urbano, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

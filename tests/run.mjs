@@ -343,7 +343,16 @@ await suite('personagem', async () => {
     const fase = Math.abs(wj.time / wj.getClip().duration - jg.time / jg.getClip().duration);
     // giro gradual: virar 180° parado leva mais de um passo e menos de 1 s; correndo, a virada é mais aberta
     pl.speed = 0; pl.ang = 0; let n0 = 0; while (Math.abs(Math.atan2(Math.sin(pl.ang - Math.PI), Math.cos(pl.ang - Math.PI))) > 0.05 && n0 < 300) { pl.step(1 / 60, { f: -1, t: 0, run: false }, 0); n0++; }
-    return { out, fase, n0 };
+    // seleção: Anna (dirndl, saia presa à pelve) e volta ao Lukas (lederhosen, chapéu na cabeça), com animação
+    const tr = {};
+    for (const k of ['f', 'm']) {
+      g.setHero(k); const H = window.__hero; H.play(1 / 60, { speed: 1.35, air: 0 });
+      let saia = false, chapeu = false; H.root.traverse(o => { if (o.name === 'traje_dirndl') saia = true; });
+      H.bones.pelvis?.traverse(o => { if (o.isMesh && o.parent && o.parent.parent?.parent === H.bones.pelvis) saia = saia || o.visible; });
+      H.bones.Head?.traverse(o => { if (o.isMesh && o.visible) chapeu = true; });
+      tr[k] = { fem: !!H.look.female, traje: H.cloth.uCostume.value, chapeu, noJogador: H.root.parent === pl.mesh };
+    }
+    return { out, fase, n0, tr };
   });
   assert(!r.erro, r.erro);
   assert(!p.errors.length, 'erros: ' + p.errors[0]);
@@ -351,8 +360,10 @@ await suite('personagem', async () => {
   assert(Object.keys(r.out['2.2'].o).length === 2, 'a 2,2 m/s deveria misturar andar e trote: ' + JSON.stringify(r.out['2.2'].o));
   assert(r.fase < 0.01, 'ciclos fora de fase: ' + r.fase);
   assert(r.n0 > 3 && r.n0 < 60, `meia-volta em ${r.n0} passos`);
+  assert(r.tr.f.fem && r.tr.f.traje === 2 && r.tr.f.noJogador, 'Anna (dirndl) não ficou no jogador: ' + JSON.stringify(r.tr.f));
+  assert(!r.tr.m.fem && r.tr.m.traje === 1 && r.tr.m.chapeu && r.tr.m.noJogador, 'Lukas (lederhosen + chapéu) não ficou no jogador: ' + JSON.stringify(r.tr.m));
   await p.close();
-  return `CC0; mistura ${JSON.stringify(r.out['2.2'].o)} a 2,2 m/s, fase comum; meia-volta em ${(r.n0 / 60).toFixed(2)} s`;
+  return `Lukas e Anna (trajes da Oktoberfest); mistura ${JSON.stringify(r.out['2.2'].o)} a 2,2 m/s, fase comum; meia-volta em ${(r.n0 / 60).toFixed(2)} s`;
 });
 
 await suite('capturas', async () => {

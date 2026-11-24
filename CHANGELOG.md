@@ -3,6 +3,21 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Personagens da Oktoberfest e seleção de personagem
+- Dois protagonistas com traje típico, sobre o corpo CC0 da Quaternius (mesmo esqueleto e animações dos pedestres):
+  **Lukas** — camisa xadrez azul, lederhosen de couro com suspensórios, peitilho e bordado verde, meião de lã com
+  faixa, sapato de couro, chapéu tirolês de feltro com cordão e pena, barba; **Anna** — blusa branca com decote
+  quadrado e manga bufante, corpete verde com amarração e ilhoses, saia rodada bordô com pregas, avental rosa com
+  laço, sapato preto, cabelo preso. Busca por assets: no Sketchfab não há personagem de traje típico rigado com
+  licença utilizável (só fan-art de jogos de terceiros, bonecos fotogramétricos e vestidos soltos de 130–230 mil faces).
+- `src/player/costumes.js`: peças com volume presas aos ossos pela pose de ligação (chapéu na cabeça, saia/avental/laço
+  na pelve); o resto é pintado pelo shader de roupa (`uCostume`: xadrez, couro com grão, meião canelado, corpete).
+- Tela de seleção na entrada (`src/ui/charselect.js`): os dois lado a lado em 3D, girar arrastando, "Escolher
+  personagem", destaque do escolhido, "Jogar"; responsiva. Um renderizador pequeno só enquanto a tela está aberta
+  (descartado ao jogar). Escolha salva no aparelho (`localStorage`), já vem marcada na próxima vez.
+- Menu de pausa (Esc ou botão ☰): Continuar, Trocar personagem (troca na hora, sem recarregar).
+- Teste `personagem` cobre a troca Lukas ↔ Anna (traje, chapéu/saia, ligado ao jogador).
+
 ## 2026-11-24 — Visual 3: carros reais (2 modelos dos créditos do Bah City)
 - Modelos originais dos autores no Sketchfab (CC BY 4.0, atribuição na tela inicial e em
   `public/models/cars3d/CREDITOS.txt`): **Honda City 2017** (dewa) e **2002 Peugeot 206 GTI** (DisneyCars).

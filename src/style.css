@@ -91,3 +91,29 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 #speedo b{font:900 34px Rubik,sans-serif;line-height:1;position:relative;z-index:1;text-shadow:0 0 6px #000}#speedo small{font-size:11px;opacity:.7}
 #speedo i{position:absolute;left:50%;bottom:50%;width:3px;height:44px;opacity:.85;margin-left:-1.5px;background:#ff5f6d;transform-origin:50% 100%;border-radius:2px}
 @media (pointer:coarse){#speedo{bottom:170px;width:96px;height:96px}#speedo b{font-size:26px}}
+
+/* ---------- seleção de personagem (entrada e menu) ---------- */
+.charsel{margin:0 0 14px}
+.charsel h2{font:900 20px Rubik,sans-serif;margin:0 0 10px;color:var(--beer)}
+.cs-stage{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:10px;height:clamp(300px,46vh,430px)}
+.cs-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.cs-card{position:relative;border-radius:14px;border:2px solid rgba(255,255,255,.16);background:linear-gradient(180deg,rgba(29,78,158,.35),rgba(12,21,48,.55));display:flex;flex-direction:column;justify-content:flex-end;transition:border-color .2s,box-shadow .2s,transform .2s}
+.cs-card.on{border-color:var(--beer);box-shadow:0 0 0 3px rgba(244,180,26,.35),0 10px 24px rgba(0,0,0,.35);transform:translateY(-2px)}
+.cs-hit{flex:1;cursor:grab;touch-action:none}
+.cs-hit:active{cursor:grabbing}
+.cs-info{position:relative;z-index:2;padding:8px 8px 10px;background:linear-gradient(180deg,transparent,rgba(12,21,48,.92) 40%);border-radius:0 0 12px 12px;display:grid;gap:4px}
+.cs-info b{font:900 19px Rubik,sans-serif}
+.cs-info small{font-size:12px;opacity:.85;line-height:1.25}
+.cs-pick{font:800 14px Rubik,sans-serif;border:0;border-radius:999px;padding:9px 10px;background:#fff;color:#10224a;cursor:pointer;touch-action:manipulation}
+.cs-card.on .cs-pick{background:var(--beer)}
+.cs-hint{font-size:12px;opacity:.7;margin:8px 0 0}
+#start .panel{width:min(620px,100%);max-height:calc(100dvh - 24px);overflow:auto}
+#start.sel #keysDesk{display:none}
+.modal{position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:rgba(8,14,34,.72);z-index:20}
+.modal[hidden]{display:none}
+.modal .panel{width:min(620px,100%);max-height:calc(100dvh - 24px);overflow:auto}
+.menuBtns{display:grid;gap:12px;justify-items:center}
+.big.alt{background:#fff;box-shadow:0 4px 0 #9aa8c4}
+#bMenu{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:14px;width:46px;height:46px;font:900 20px Rubik;color:#fff;cursor:pointer;z-index:3}
+.touch #bMenu{left:auto;right:12px;bottom:auto;top:256px}
+@media (max-width:520px){.cs-stage{height:clamp(260px,44vh,360px)}.cs-info b{font-size:17px}.cs-info small{display:none}}
