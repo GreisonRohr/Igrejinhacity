@@ -139,6 +139,21 @@ function roofTexture() {
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
+/**
+ * Texturas reais (Poly Haven, CC0 — public/textures/ground/CREDITOS.txt): mapa de detalhe em luminância (média 0,5) +
+ * mapa normal. A cor continua vindo do vértice (cada rua/calçada/telhado com seu tom); o material dobra o detalhe.
+ * `unit` = metros por unidade de UV da malha; `size` = metros que a foto cobre.
+ */
+const TEX_DIR = (import.meta.env?.BASE_URL || '/') + 'textures/ground/';
+function realSurface(mat, name, unit, size, { normal = 0.9, repeat = null } = {}) {
+  const L = new THREE.TextureLoader(), rep = repeat || [unit / size, unit / size];
+  const prep = t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); t.anisotropy = 8; return t; };
+  const map = prep(L.load(TEX_DIR + name + '.webp')); map.colorSpace = THREE.NoColorSpace;   // detalhe linear (não é cor)
+  const nrm = prep(L.load(TEX_DIR + name + '_n.webp'));
+  mat.map = map; mat.normalMap = nrm; mat.normalScale.set(normal, normal); mat.color.setScalar(2); mat.needsUpdate = true;
+  return mat;
+}
+
 export class City {
   constructor(world, terrain, { buildDist = 3500, roadDist = 950 } = {}, exclusions = []) {
     this.world = world; this.t = terrain;
@@ -159,6 +174,11 @@ export class City {
     this.markMat = new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 });
     this.bridgeMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: concreteTexture() });
     this.cobbleMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: cobbleTexture(), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+    // superfícies com foto real + relevo (asfalto 4 m/UV, paralelepípedo 2,5 m, calçada 1,2 m, telha 1,2 × 0,4 m)
+    realSurface(this.roadMat, 'asfalto', 4, 3.0, { normal: 0.7 });
+    realSurface(this.cobbleMat, 'paralelepipedo', 2.5, 2.4, { normal: 1.1 });
+    realSurface(this.walkMat, 'bloquete', 1.2, 2.0, { normal: 0.9 });
+    realSurface(this.roofMat, 'telha', 1, 2.5, { normal: 1.0, repeat: [1.2 / 2.5, 0.4 / 2.5] });
     this.waterMat = new THREE.MeshPhongMaterial({ vertexColors: true, color: 0x3f7fb0, specular: 0x9fc6e8, shininess: 60, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
   }
 
@@ -731,7 +751,7 @@ export class City {
     if (roof === 'flat' || !rect) {
       const col = this._realRoof() || pick(FLAT), y = top + 0.05;
       const tris = THREE.ShapeUtils.triangulateShape(p.map(([x, z]) => new THREE.Vector2(x, z)), []);
-      for (const [i, j, k] of tris) ch.roofs.tri([p[i][0], y, p[i][1]], [p[j][0], y, p[j][1]], [p[k][0], y, p[k][1]], [[p[i][0] / 4, p[i][1] / 4], [p[j][0] / 4, p[j][1] / 4], [p[k][0] / 4, p[k][1] / 4]], col, 0, [0, 1, 0]);
+      for (const [i, j, k] of tris) ch.roofs.tri([p[i][0], y, p[i][1]], [p[j][0], y, p[j][1]], [p[k][0], y, p[k][1]], [[0.02, 0.6], [0.02, 0.6], [0.02, 0.6]], col, 0, [0, 1, 0]);   // laje: sem telha
       // platibanda
       for (let i = 0; i < p.length; i++) {
         const a = p[i], b = p[(i + 1) % p.length], out = [-(b[1] - a[1]), 0, b[0] - a[0]];

@@ -3,6 +3,15 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Auditoria visual do Bah City + Visual 4: chão e telhados reais
+- `docs/auditoria-visual-bahcity.md`: comparação elemento por elemento (carros, pessoas, árvores, prédios, telhados,
+  praças, calçadas, ruas, mobiliário, chão, luz, sombra, câmera, HUD, densidade, estilo), o que pode vir das fontes do
+  Bah City (CC BY) e o que precisa ser recriado (texturas, fachadas e árvores dele não têm licença), e plano em 8 passos.
+- Primeiro passo do plano: asfalto (trincas e desgaste), paralelepípedo de basalto, calçada de bloquete e telha de barro
+  com fotos reais e mapa de relevo (Poly Haven, CC0 — `public/textures/ground/CREDITOS.txt`), 512 px WebP (~570 KB no
+  total). A cor de cada rua/calçada/telhado continua vindo do jogo (mapa de detalhe com média 0,5). Laje plana lisa.
+  Mesmo número de triângulos e chamadas de desenho (701 / 2597k), heap 110 MB.
+
 ## 2026-11-24 — Personagens da Oktoberfest e seleção de personagem
 - Dois protagonistas com traje típico, sobre o corpo CC0 da Quaternius (mesmo esqueleto e animações dos pedestres):
   **Lukas** — camisa xadrez azul, lederhosen de couro com suspensórios, peitilho e bordado verde, meião de lã com

@@ -1,0 +1,6 @@
+Texturas de chão e telhado (Poly Haven, CC0 1.0 — domínio público), reduzidas para 512 px e convertidas em mapa de
+detalhe (luminância, média 0,5) + mapa normal (OpenGL):
+asfalto        — asphalt_02 (Rob Tuytel)            https://polyhaven.com/a/asphalt_02            3,0 m
+paralelepipedo — cobblestone_floor_03 (Rob Tuytel)  https://polyhaven.com/a/cobblestone_floor_03  2,4 m
+bloquete       — concrete_pavers_02 (Amal Kumar)    https://polyhaven.com/a/concrete_pavers_02    2,0 m
+telha          — clay_roof_tiles_02 (Amal Kumar)    https://polyhaven.com/a/clay_roof_tiles_02    2,5 m
