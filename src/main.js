@@ -546,7 +546,10 @@ await stage('Preparando a placa de vídeo…', 0.88, 1, async tick => {
   // envia a geometria à GPU em lotes (libera a cópia em memória sem um travamento único longo)
   const all = []; scene.traverse(o => { if (o.isMesh || o.isInstancedMesh || o.isPoints) all.push([o, o.visible]); });
   for (const [o] of all) o.visible = false;
-  const t = terrain, ortho = new THREE.OrthographicCamera(t.minX, t.maxX, -t.minZ, -t.maxZ, -5000, 5000);
+  // enquadra tudo (inclui bairros além do relevo carregado: sem isso a cópia deles ficava na memória)
+  const bb = new THREE.Box3(); for (const [o] of all) if (!o.isSkinnedMesh) bb.expandByObject(o);
+  const t = { minX: Math.min(terrain.minX, bb.min.x) - 50, maxX: Math.max(terrain.maxX, bb.max.x) + 50, minZ: Math.min(terrain.minZ, bb.min.z) - 50, maxZ: Math.max(terrain.maxZ, bb.max.z) + 50 };
+  const ortho = new THREE.OrthographicCamera(t.minX, t.maxX, -t.minZ, -t.maxZ, -5000, 5000);
   ortho.position.set(0, 2000, 0); ortho.up.set(0, 0, -1); ortho.lookAt(0, 0, 0); ortho.updateMatrixWorld();
   const rt = new THREE.WebGLRenderTarget(8, 8), sh = renderer.shadowMap.enabled, gl = renderer.getContext();
   renderer.shadowMap.enabled = false; renderer.setRenderTarget(rt);
@@ -564,6 +567,8 @@ await stage('Preparando a placa de vídeo…', 0.88, 1, async tick => {
   await renderer.compileAsync(scene, camera);
   for (const [o, v] of all) o.visible = v;
 });
+const origCells = city.compactOrig?.() ?? 0;   // relevo original só onde foi escavado
+window.__origCells = origCells;   // células do relevo original guardadas (diagnóstico)
 $('loading').hidden = true;
 $('versao').textContent = 'Versão de teste: ' + VERSAO;
 $('play').disabled = false; $('play').textContent = 'Jogar';

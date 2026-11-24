@@ -172,12 +172,23 @@ export class City {
     return c;
   }
 
+  /** Fim da carga: a cópia do relevo original (11 MB) vira só as células que mudaram (rio, valão, praça). */
+  compactOrig() {
+    const tt = this._orig, t = this.t; if (!tt || !tt.h) return 0;
+    const diff = new Map(), a = tt.h, b = t.h;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.set(i, a[i]);
+    tt.h = null; this._orig = null;
+    tt.hi = function (i, j) { i = i < 0 ? 0 : i >= t.nx ? t.nx - 1 : i; j = j < 0 ? 0 : j >= t.nz ? t.nz - 1 : j; const k = j * t.nx + i, v = diff.get(k); return v === undefined ? t.h[k] : v; };
+    return diff.size;
+  }
+
   /* ---------- 1. rio: calcula o nível da água e escava o leito (antes de montar o terreno) ---------- */
   carveWater() {
     const t = this.t;
     this.orig = (x, z) => t.heightAt(x, z);          // será trocado por cópia antes de escavar
     const copy = new Float32Array(t.h), tt = Object.create(t); tt.h = copy;
     this.orig = (x, z) => t.heightAt.call(tt, x, z);
+    this._orig = tt;
     this.waterLines = [];
     // máscara do rio (polígono da Prefeitura) na grade do terreno, por varredura de linhas
     this.riverAreas = this.world.areas.filter(a => a.k === 'river');
@@ -341,7 +352,7 @@ export class City {
       for (const [i, j, k] of tris) b.tri([a.p[i][0], y + 0.15, a.p[i][1]], [a.p[j][0], y + 0.15, a.p[j][1]], [a.p[k][0], y + 0.15, a.p[k][1]], [[0, 0], [1, 0], [0, 1]], col, 0, [0, 1, 0]);
     }
     const g = b.build();
-    if (g) { const m = new THREE.Mesh(g, this.waterMat); m.receiveShadow = true; this.group.add(m); this.water = m; }
+    if (g) { freeAfterUpload(g); const m = new THREE.Mesh(g, this.waterMat); m.receiveShadow = true; this.group.add(m); this.water = m; }
   }
 
   buildRoads() {
