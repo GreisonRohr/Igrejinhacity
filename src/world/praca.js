@@ -213,7 +213,7 @@ export function buildPraca(ctx) {
   const gravelT = tex(128, 128, (c, w, h) => { let sd = 3; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     c.fillStyle = '#857d71'; c.fillRect(0, 0, w, h); for (let i = 0; i < 700; i++) { const v = 100 + r() * 110; c.fillStyle = `rgb(${v},${v - 5},${v - 12})`; c.beginPath(); c.ellipse(r() * w, r() * h, 1 + r() * 3.5, 1 + r() * 2.5, r() * 3, 0, 7); c.fill(); } }, true);
   const FL = { shrubs: [], bamboo: [], rocks: [], tufts: [] };   // vegetação e pedras naturais do piloto (foliage.js)
-  const stoneP = new THREE.MeshLambertMaterial({ map: stonePilot() }), grassP = grassWorld(new THREE.MeshLambertMaterial({ map: grassPilot() }));
+  const stoneP = new THREE.MeshLambertMaterial({ map: stonePilot() }), grassP = grassWorld(new THREE.MeshLambertMaterial({ map: grassPilot(), color: 0xbfc9a5 }));   // grama à sombra das copas: menos neon
   const wn = waterNormal(), waterP = new THREE.MeshStandardMaterial({ color: 0x55614f, roughness: 0.12, metalness: 0, normalMap: wn, normalScale: new THREE.Vector2(0.6, 0.6), transparent: true, opacity: 0.82 });
   wn.repeat.set(2, 2); updaters.push(dt => { wn.offset.x = (wn.offset.x + dt * 0.05) % 1; wn.offset.y = (wn.offset.y + dt * 0.02) % 1; });
   const WALL = 2.8, gravel = new THREE.MeshLambertMaterial({ map: gravelT }), conc = new THREE.MeshLambertMaterial({ map: concT }), stoneW = new THREE.MeshLambertMaterial({ map: stoneT });
@@ -408,9 +408,12 @@ export function buildPraca(ctx) {
     }
     for (const s of [-1, 1]) { const y = Y(pg.x, (pg.z0 + pg.z1) / 2); k.box(0.25, 0.32, pg.z1 - pg.z0 + 1.2, M.wood, pg.x + s * pg.w / 2, y + 2.9, (pg.z0 + pg.z1) / 2); }
     for (let z = pg.z0; z <= pg.z1; z += 0.9) { const y = Y(pg.x, z); k.box(pg.w + 0.8, 0.12, 0.1, M.wood, pg.x, y + 3.48, z); }
-    for (let i = 0; i < 30; i++) {
-      const z = pg.z0 + (pg.z1 - pg.z0) * (i + 0.5) / 30, y = Y(pg.x, z), x = pg.x + ((i * 7) % 5 - 2) * 0.8;
-      k.add(new THREE.IcosahedronGeometry(1, 0), i % 7 === 3 ? M.pinkFlower : M.vine, x, y + 3.75, z, i, 0, 0, 1.3, 0.45, 1.2);
+    // trepadeira sobre a pérgola: ramos de folhas (mesmos cartões dos arbustos) achatados, alguns pendendo nas bordas
+    for (let i = 0; i < 34; i++) {
+      const z = pg.z0 + (pg.z1 - pg.z0) * (i + 0.5) / 34, y = Y(pg.x, z), x = pg.x + ((i * 7) % 5 - 2) * 0.75;
+      FL.shrubs.push([x, y + 3.42, z, 1.25 + ((i * 13) % 5) * 0.1, ((i * 37) % 10) / 10, i * 1.9]);
+      if (i % 3 === 0) for (const sd of [-1, 1]) FL.shrubs.push([pg.x + sd * (pg.w / 2 + 0.15), y + 2.55, z, 0.75, ((i * 11) % 10) / 10, i + sd]);
+      if (i % 6 === 2) k.add(new THREE.IcosahedronGeometry(0.35, 0), M.pinkFlower, x, y + 3.9, z, i, 0, 0, 1, 0.6, 1);
     }
     for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
       const z = pg.z0 + 2.5 + i * (pg.z1 - pg.z0 - 5) / 4, x = pg.x + s * 1.15, y = Y(x, z);
@@ -568,6 +571,16 @@ export function buildPraca(ctx) {
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const trees = [], palms = [], bamboos = [];
   trees.push(...fixedTrees);
+  // copas reais da ortofoto (GEO Igrejinha 2016): centro e raio de cada copa grande da praça; o tronco procura o ponto
+  // livre mais perto (fora de caminho, arroio e estruturas). A praça real é quase toda coberta (53% de copa).
+  const CANOPY = [[-23, 13, 9], [-21, -3, 9], [-11, -29, 9], [-5, 21, 9], [-1, -39, 9], [5, 35, 9], [7, 13, 9], [15, -7, 9], [25, -27, 9], [31, -13, 9], [19, 27, 9], [29, 13, 9], [-25, 31, 9], [-31, 45, 9], [-25, -29, 8], [25, 41, 9], [3, -23, 7], [-43, 51, 6], [11, -19, 4], [-15, -15, 4]];
+  for (const [ox, oz, R] of CANOPY) {
+    if (!inside(ox, oz) || trees.some(t => Math.hypot(t[0] - ox, t[1] - oz) < 6)) continue;
+    let spot = null;
+    for (let k = 0; k < 40 && !spot; k++) { const a = k * 2.4, d = k === 0 ? 0 : 0.6 + k * 0.18, x = ox + Math.cos(a) * d, z = oz + Math.sin(a) * d;
+      if (inside(x, z) && !nearStream(x, z, 2.5) && !occupied(x, z, 0.8) && !decks.some(q => Math.hypot(x - q.qx, z - q.qz) < q.L / 2 + 2)) spot = [x, z]; }
+    if (spot) trees.push([spot[0], spot[1], Math.max(0.55, R / 8.0 * 1.05), (ox * 13 + oz * 7) % 6.28, true]);
+  }
   for (let i = 0; i < 900 && trees.length < 12; i++) {
     const x = X0 + rnd() * (X1 - X0), z = Z0 + rnd() * (Z1 - Z0);
     const bed = inBed(x, z);
@@ -575,7 +588,10 @@ export function buildPraca(ctx) {
     if (trees.some(t => Math.hypot(t[0] - x, t[1] - z) < 11)) continue;
     trees.push([x, z, 0.8 + rnd() * 0.35, rnd() * 6.28]);
   }
-  for (let i = 0; i < 300 && palms.length < 5; i++) {
+  // palmeiras ao longo da pérgola (fotos 5, 38, 66) antes das soltas
+  for (let i = 0; i < 9; i++) { const z = pg.z0 - 2 + i * (pg.z1 - pg.z0 + 4) / 8, x = pg.x + (i % 2 ? 1 : -1) * (pg.w / 2 + 1.6);
+    if (inside(x, z) && !nearStream(x, z, 2) && !occupied(x, z, 0.4) && ![...trees, ...palms].some(t => Math.hypot(t[0] - x, t[1] - z) < 2.5)) palms.push([x, z, 0.95 + (i % 3) * 0.12]); }
+  for (let i = 0; i < 300 && palms.length < 14; i++) {
     const x = X0 + rnd() * (X1 - X0), z = Z0 + rnd() * (Z1 - Z0);
     if (!inside(x, z) || nearStream(x, z, 3) || occupied(x, z, 1.5) || decks.some(d => Math.hypot(x - d.qx, z - d.qz) < d.L / 2 + 4) || [...trees, ...palms].some(t => Math.hypot(t[0] - x, t[1] - z) < 6)) continue;
     palms.push([x, z, 0.9 + rnd() * 0.3]);
@@ -585,7 +601,9 @@ export function buildPraca(ctx) {
   // árvores grandes e palmeiras vão para o sistema de árvores detalhadas (src/world/trees.js)
   const treeList = [];
   // piloto: árvores junto ao arroio com a copa nova (trees.js bigP) e verdes mais vivos (nada de verde quase preto)
-  trees.forEach(([x, z, sc, r], i) => { const p = inPil(x, z); treeList.push({ x, y: Y(x, z) + (inBed(x, z) ? 0.3 : 0), z, s: sc * (p ? 0.92 + (i % 3) * 0.08 : 1), rot: r, kind: p ? 'bigP' : 'big', color: p ? [0x7fa356, 0x8aaa5c, 0x739a4c, 0x96b265][i % 4] : [0x4f7f33, 0x5a8a3a, 0x46752f, 0x628f3f][i % 4] }); });
+  // verdes das copas: figueira/tipuana escuras com algumas mais claras (amarelo-esverdeado da tipuana, ortofoto)
+  const GREENS = [0x5f8a3e, 0x6c9445, 0x557f37, 0x7f9f48, 0x648c40, 0x8aa653];
+  trees.forEach(([x, z, sc, r, real], i) => { const p = inPil(x, z); treeList.push({ x, y: Y(x, z) + (inBed(x, z) ? 0.3 : 0), z, s: sc * (p && !real ? 0.92 + (i % 3) * 0.08 : 1), rot: r, kind: real ? 'fig' : p ? 'bigP' : 'big', color: p || real ? GREENS[(i * 5) % GREENS.length] : [0x4f7f33, 0x5a8a3a, 0x46752f, 0x628f3f][i % 4] }); });
   palms.forEach(([x, z, sc]) => treeList.push({ x, y: Y(x, z), z, s: sc, rot: x * 7 % 6.28, kind: 'palm', color: 0x5d9a3d }));
   const bambooG = new THREE.CylinderGeometry(0.07, 0.07, 9, 5).translate(0, 4.5, 0), bl = [];
   bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) { const bx = x + (rnd() - 0.5) * 2.4, bz = z + (rnd() - 0.5) * 2.4, r = rnd();
@@ -629,6 +647,17 @@ export function buildPraca(ctx) {
       k.add(new THREE.CylinderGeometry(0.18, 0.13, 0.5, 6), lampGlass, x, y + 3.72, z);
       k.add(new THREE.ConeGeometry(0.28, 0.25, 6), M.black, x, y + 4.08, z);
       colliders.push({ circle: [x, z, 0.2] });
+    }
+    // à noite: mancha de luz quente no piso sob cada lampião (aditiva, sem luz real — barato no celular)
+    if (lamps.length) {
+      const c = document.createElement('canvas'); c.width = c.height = 64; const g2 = c.getContext('2d');
+      const gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,214,150,1)'); gr.addColorStop(0.5, 'rgba(255,190,120,.4)'); gr.addColorStop(1, 'rgba(255,170,100,0)');
+      g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64); const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      const pm = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -16 });
+      const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(9, 9).rotateX(-PI / 2), pm, lamps.length), d = new THREE.Object3D();
+      lamps.forEach(([x, z], i) => { d.position.set(x, Y(x, z) + 0.12, z); d.updateMatrix(); pool.setMatrixAt(i, d.matrix); });
+      pool.renderOrder = 3; pool.visible = false; pool.userData.dynamic = true; g.add(pool);
+      updaters.push((dt, st) => { pm.opacity = st.night * 0.75; pool.visible = st.night > 0.05; });
     }
   }
 

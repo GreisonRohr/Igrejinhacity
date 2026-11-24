@@ -35,7 +35,7 @@ import { MAP_MALE_CASUAL } from './player/retarget.js';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
-export const VERSAO = 'Centro 1 · Ruas, calçadas e fachadas';
+export const VERSAO = 'Centro 2 · Praça Dona Luiza';
 if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */
@@ -121,7 +121,7 @@ const landmarks = await stage('Montando a Igreja, a praça e a Oktoberfest…', 
 const realTrees = await fetchPackedJSON(BASE + 'data/trees.data.json').catch(() => null);
 const street = await stage('Plantando árvores…', 0.82, 0.88, () => buildStreetLife(world, terrain, city, Q, landmarks.parking, realTrees, (x, z) => (landmarks.inPraca && landmarks.inPraca(x, z)) || landmarks.blocked(x, z, 2.5)));   // sem árvore dentro dos pontos (copa ~2,5 m)
 // árvores detalhadas perto da câmera (cartões de folha, vento); longe ficam as copas simples
-const treeLOD = new TreeLOD(scene, { cap: isTouch ? { leafy: 70, big: 24, palm: 20 } : { leafy: 110, big: 30, palm: 30 }, radius: isTouch ? 90 : 110 });
+const treeLOD = new TreeLOD(scene, { cap: isTouch ? { leafy: 70, big: 24, palm: 26, bigP: 16, fig: 20 } : { leafy: 110, big: 30, palm: 34, bigP: 16, fig: 22 }, radius: isTouch ? 90 : 110 });
 for (const t of street.trees) treeLOD.add(t);
 for (const t of landmarks.trees) treeLOD.add(t, true);
 const forestData = await fetchPackedJSON(BASE + 'data/forest.data.json').catch(() => null);

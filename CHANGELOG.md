@@ -3,6 +3,16 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Centro 2 (C3): Praça Dona Luiza
+- Árvores pela ortofoto (GEO Igrejinha 2016): copas reais detectadas na imagem (53% da quadra é copa) viram ~17
+  figueiras/tipuanas nas posições e raios medidos; o tronco procura o ponto livre mais perto (fora de caminho, arroio e
+  estruturas). Espécie nova `fig` (trees.js): copa baixa, larga e fechada (460 ramos de folha), verdes escuros e
+  variados — a praça passa a ser sombreada como a real.
+- Palmeiras ao longo da pérgola (fotos 5, 38, 66) e mais palmeiras soltas (5 → 14).
+- Pérgola: trepadeira com ramos de folhas no lugar dos bolos verdes, com flores rosas e ramos pendendo nas bordas.
+- Gramado em tom de sombra (menos neon). Noite: mancha de luz quente no piso sob cada lampião da praça.
+- Orçamento: 709 draw calls, 2270k triângulos, heap 112 MB. 12/12 suítes.
+
 ## 2026-11-24 — Centro 1: ruas, calçadas e fachadas da região central
 - Nova estratégia: uma região por vez. Região central delimitada em `src/world/centro.js` (praça, Rua Coberta e uma
   quadra em volta); levantamento e plano em `docs/centro-plano.md` (117 fotos de referência comparadas com o jogo).
