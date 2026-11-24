@@ -2,6 +2,17 @@
 
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
+
+## 2026-11-24 — Etapa 1: mapa em tela cheia com GPS (referência: Bah City)
+- `M` (ou toque no radar) abre o mapa vetorial de Igrejinha: rodovias, avenidas, ruas, caminhos e ciclovias reais
+  (largura real), prédios, rio/arroios, parques, nomes das ruas ao longo delas, pontos marcantes e lugares; zoom (roda,
+  pinça, botões), arrastar, centralizar em mim, escala, legenda, relógio, rua/bairro atuais.
+- Busca: 662 ruas, 12.696 endereços do cadastro do GEO ("Rua da Independência, 478"), lugares e pontos turísticos.
+- GPS: clique/toque marca destino; rota pelo grafo de navegação (a pé; de carro na etapa 2) em roxo no mapa e no radar,
+  feixe roxo no destino, distância restante no painel, recálculo ao desviar 30 m, aviso de chegada; botão direito remove;
+  duplo clique/toque leva até lá. Esc/M fecham; o personagem não anda com o mapa aberto.
+- O desenho vetorial é montado aos poucos depois da carga (sem travar). Teste novo `mapa`.
+
 ## 2026-11-23 — Qualidade visual expandida para a Praça Dona Luísa inteira
 - O padrão validado junto à passarela vale agora para toda a praça (raio de 62 m): árvores com copa em lóbulos, galhos
   curvos, sombra recortada e fade perto da câmera (16 árvores `bigP`); bambu fino; arbustos, tufos e pedras naturais;

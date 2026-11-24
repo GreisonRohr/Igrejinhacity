@@ -23,6 +23,7 @@ import { Pedestrians } from './sim/pedestrians.js';
 import { Interactions } from './interact/interact.js';
 import { TreeLOD } from './world/trees.js';
 import { buildUrbano } from './world/urbano.js';
+import { BigMap } from './ui/bigmap.js';
 import { buildForest } from './world/forest.js';
 import { loadHumans } from './player/humans.js';
 import { MAP_MALE_CASUAL } from './player/retarget.js';
@@ -337,7 +338,23 @@ interact.add((px, pz) => {
   let dd = Infinity; for (const d of uberDests) dd = Math.min(dd, Math.hypot(px - d.spot[0], pz - d.spot[1]));
   return dd < 3.5 ? { dist: dd - 0.3, label: 'E · chamar Uber', touchLabel: 'Toque em UBER para escolher o destino', button: 'Uber', run: openUber } : null;
 });
-input.on('act', () => { if (!running) return; const c = interact.best(player.x, player.z); if (c) c.run(); else openUber(); });   // longe de tudo: chama o Uber
+/* ---------- mapa em tela cheia (M) com busca e GPS — src/ui/bigmap.js ---------- */
+function teleportTo(x, z, nome = 'o ponto marcado') {
+  const [fx, fz] = freeSpotNear(x, z);
+  $('fade').classList.add('on');
+  setTimeout(() => {
+    player.x = player.prev.x = fx; player.z = player.prev.z = fz;
+    player.surf = player.prev.y = player.groundAt(fx, fz, terrain.heightAt(fx, fz)); player.speed = 0; cam.first = true;
+    peds.prefill(fx, fz); $('fade').classList.remove('on'); toast('', `Você foi até ${nome}.`, 3);
+  }, 450);
+}
+const bigmap = new BigMap({ world, geoX, nav, places, terrain, player, onTeleport: (x, z) => teleportTo(x, z, bigmap._labelAt(x, z)), onChange: d => { gpsBeam.visible = !!d; if (d) gpsBeam.position.set(d.x, terrain.heightAt(d.x, d.z), d.z); } });
+const gpsBeam = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 160, 16, 1, true).translate(0, 80, 0), new THREE.MeshBasicMaterial({ color: 0xc13cff, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide }));
+gpsBeam.visible = false; gpsBeam.renderOrder = 3; scene.add(gpsBeam);
+input.on('map', () => { if (running) bigmap.toggle(undefined, whereAmI(player.x, player.z)); });
+addEventListener('keydown', e => { if (e.code === 'Escape' && bigmap.open) bigmap.toggle(false); });
+$('map').addEventListener('click', () => { if (running) bigmap.toggle(true, whereAmI(player.x, player.z)); });   // toque no radar abre o mapa
+input.on('act', () => { if (!running || bigmap.open) return; const c = interact.best(player.x, player.z); if (c) c.run(); else openUber(); });   // longe de tudo: chama o Uber
 
 /* ---------- onde estou: rua, número e bairro (cadastro e bairros do GEO Igrejinha) ---------- */
 const addrGrid = new Map();
@@ -373,7 +390,7 @@ const sim = new FixedLoop(h => {
 function frame(now) {
   const rawDt = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, rawDt); last = now;
   const look = input.takeLook();
-  const ax = running ? input.axes() : { f: 0, t: 0, run: false };
+  const ax = running && !bigmap.open ? input.axes() : { f: 0, t: 0, run: false };
   frameAx = ax;
   const alpha = sim.advance(rawDt);                 // simulação em passos fixos de 1/60 s
   // olhar do protagonista: pessoa ou Waldir mais perto (até 6 m)
@@ -414,12 +431,16 @@ function frame(now) {
     $('prompt').style.display = it ? 'block' : 'none';
     if (it) $('prompt').textContent = isTouch ? it.touchLabel : it.label;
     $('bAct').textContent = it ? it.button : 'Uber';
-    minimap.draw(player.x, player.z, cam.yaw, player.ang, places);
+    const gps = bigmap.update(dt);
+    if (gps?.arrived) toast('GPS', `: você chegou — ${gps.arrived}.`, 4);
+    minimap.draw(player.x, player.z, cam.yaw, player.ang, places, { route: bigmap.route, dest: bigmap.dest });
+    if (bigmap.open) { bigmap.draw(); $('bmClock').textContent = $('clockT').textContent; }
     // ponto mais próximo
     let near = null, nd = 1e9;
     for (const l of LANDMARKS) { const d = Math.hypot(l.x - player.x, l.z - player.z); if (d < nd) { nd = d; near = l; } }
-    $('objS').textContent = near.nome;
-    $('objD').textContent = `${nd < 1000 ? Math.round(nd) + ' m' : (nd / 1000).toFixed(1) + ' km'} daqui`;
+    const km = v => v < 1000 ? Math.round(v) + ' m' : (v / 1000).toFixed(1) + ' km';
+    if (bigmap.dest) { $('objT').textContent = 'GPS'; $('objS').textContent = bigmap.dest.name; $('objD').textContent = `${km(bigmap.routeLen)} pela rota`; }
+    else { $('objT').textContent = 'Explorando Igrejinha'; $('objS').textContent = near.nome; $('objD').textContent = `${km(nd)} daqui`; }
     if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('on'); }
   }
 
@@ -476,8 +497,9 @@ $('play').addEventListener('click', () => {
   $('start').hidden = true; $('hud').hidden = false; running = true;
   toast('Bem-vindo a Igrejinha!', isTouch ? ' Use o joystick para andar e arraste a tela para olhar.' : ' WASD para andar, Shift corre, arraste o mouse para olhar.', 6);
 });
+(function mapIdle() { if (!bigmap.buildStep(4)) setTimeout(mapIdle, 30); })();   // desenho do mapa montado aos poucos
 if (params.has('autostart')) $('play').click();
 requestAnimationFrame(frame);
 
 // acesso para testes automatizados
-window.__game = { peds, interact, nav, spatial, sim, events, waldir, street, urbano, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };
+window.__game = { bigmap, peds, interact, nav, spatial, sim, events, waldir, street, urbano, scene, camera, renderer, terrain, player, cam, sky, city, world, landmarks, LM };

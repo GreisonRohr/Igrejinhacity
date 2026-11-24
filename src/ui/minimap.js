@@ -30,7 +30,7 @@ export class Minimap {
     g.save(); g.scale(1 / t.cell, 1 / t.cell); g.translate(-t.x0, -t.z0); fn(g); g.restore();
   }
 
-  draw(px, pz, yaw, heading, extras = []) {
+  draw(px, pz, yaw, heading, extras = [], { route = null, dest = null } = {}) {
     const g = this.ctx, W = this.W, c = W / 2, s = c / this.range;
     const fx = Math.sin(yaw), fz = Math.cos(yaw), rx = -fz, rz = fx;
     const T = (x, z) => { const dx = x - px, dz = z - pz; return [c + (dx * rx + dz * rz) * s, c - (dx * fx + dz * fz) * s]; };
@@ -44,7 +44,11 @@ export class Minimap {
     const sxp = this.bg.width / t.W, szp = this.bg.height / t.H, R = this.range * 1.5;
     const wx0 = Math.max(t.x0, px - R), wz0 = Math.max(t.z0, pz - R), wx1 = Math.min(t.x0 + t.W, px + R), wz1 = Math.min(t.z0 + t.H, pz + R);
     if (wx1 > wx0 && wz1 > wz0) g.drawImage(this.bg, (wx0 - t.x0) * sxp, (wz0 - t.z0) * szp, (wx1 - wx0) * sxp, (wz1 - wz0) * szp, wx0, wz0, wx1 - wx0, wz1 - wz0);
+    // rota do GPS (roxa) por cima do chão
+    if (route && route.length > 1) { g.strokeStyle = '#c13cff'; g.lineWidth = 7 / s; g.lineCap = g.lineJoin = 'round'; g.beginPath(); g.moveTo(route[0][0], route[0][1]); for (const q of route) g.lineTo(q[0], q[1]); g.stroke(); }
     g.setTransform(1, 0, 0, 1, 0, 0);
+    if (dest) { let [a, b] = T(dest.x, dest.z); const dx = a - c, dy = b - c, d = Math.hypot(dx, dy); if (d > c - 14) { a = c + dx / d * (c - 14); b = c + dy / d * (c - 14); }
+      g.fillStyle = '#ff3b5c'; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(a, b, 9, 0, 7); g.fill(); g.stroke(); }
     g.font = '900 15px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     for (const l of [...LANDMARKS, ...extras]) {
       let [a, b] = T(l.x, l.z);

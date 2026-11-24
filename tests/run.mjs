@@ -260,6 +260,36 @@ await suite('pedestres', async () => {
   return `${r.dia} pessoas às 10 h (alvo às 3 h: ${r.madrugada}); ${JSON.stringify(r.st)}; pista ${r.viol.pista}/${r.samples}; passo ${r.ms.toFixed(2)} ms (pior ${r.worst.toFixed(1)}); “${r.fala.slice(1, 40)}”`;
 });
 
+await suite('mapa', async () => {
+  const p = await page();
+  const r = await p.evaluate(async () => {
+    const g = __game, M = g.bigmap, out = {};
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyM' }));
+    out.abriu = M.open && !document.getElementById('bigmap').hidden;
+    out.ruas = M.index.filter(e => e.t === 'rua').length; out.enderecos = [...M.addr.values()].reduce((a, l) => a + l.length, 0);
+    const res = M.search('independencia 478'); out.busca = res[0] && res[0].n;
+    out.buscaPonto = (M.search('casa de pedra')[0] || {}).n;
+    const d = res[0]; M.setDest(d.x, d.z, d.n); out.rota = M.route.length; out.dist = Math.round(M.routeLen);
+    // anda pela rota: o restante diminui e a chegada limpa o destino
+    const pl = g.player, path = M.route.slice(); let L0 = M.routeLen;
+    pl.x = path[Math.floor(path.length / 2)][0]; pl.z = path[Math.floor(path.length / 2)][1]; M.update(0.1); out.diminuiu = M.routeLen < L0;
+    pl.x = d.x + 3; pl.z = d.z; out.chegou = (M.update(0.1) || {}).arrived; out.limpo = !M.dest;
+    // desenho e fechar com Esc
+    M.view.s = 1.2; M.draw(); const px = M.cv.getContext('2d').getImageData(M.cv.width >> 1, M.cv.height >> 1, 1, 1).data; out.desenhou = px[3] > 0;
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' })); out.fechou = !M.open;
+    return out;
+  });
+  assert(!p.errors.length, 'erros: ' + p.errors[0]);
+  assert(r.abriu && r.fechou, 'abrir/fechar');
+  assert(r.ruas > 100 && r.enderecos > 1000, `índice pequeno: ${r.ruas} ruas, ${r.enderecos} endereços`);
+  assert(/Independ/.test(r.busca || '') && /478/.test(r.busca), 'busca de endereço: ' + r.busca);
+  assert(/Casa de Pedra/.test(r.buscaPonto || ''), 'busca de ponto: ' + r.buscaPonto);
+  assert(r.rota > 2 && r.diminuiu && r.chegou && r.limpo, 'GPS: ' + JSON.stringify(r));
+  await p.screenshot({ path: OUT + '/mapa.png' }).catch(() => {});
+  await p.close();
+  return `${r.ruas} ruas, ${r.enderecos} endereços; "${r.busca}" → rota de ${r.dist} m; chegada ok`;
+});
+
 await suite('waldir', async () => {
   const p = await page();
   const ok = await p.evaluate(async () => {
