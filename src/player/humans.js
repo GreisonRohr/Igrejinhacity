@@ -20,12 +20,12 @@ const NOMINAL = { Walk_Loop: 1.35, Walk_Formal_Loop: 1.15, Jog_Fwd_Loop: 3.4, Sp
 function clothe(mat) {
   const u = {
     uTop: { value: new THREE.Color(0x2a3550) }, uPants: { value: new THREE.Color(0x2f4a6e) }, uShoes: { value: new THREE.Color(0xf2f2f2) },
-    uSkin: { value: new THREE.Color(1, 1, 1) }, uSleeve: { value: 1 }, uPuff: { value: 0.012 }, uShorts: { value: 0 }, uSkirt: { value: 0 },
+    uSkin: { value: new THREE.Color(1, 1, 1) }, uSleeve: { value: 1 }, uPuff: { value: 0.012 }, uPuffP: { value: 0.01 }, uShorts: { value: 0 }, uSkirt: { value: 0 },
   };
   mat.userData.cloth = u;
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, u);
-    sh.vertexShader = `uniform float uSleeve; uniform float uPuff; uniform float uShorts; uniform float uSkirt;
+    sh.vertexShader = `uniform float uSleeve; uniform float uPuff; uniform float uPuffP; uniform float uShorts; uniform float uSkirt;
       varying float vTop; varying float vPants; varying float vShoes;
       float isAny(float i, float a, float b) { return float(abs(i - a) < 0.5 || abs(i - b) < 0.5); }
       ` + sh.vertexShader.replace('#include <skinbase_vertex>', `#include <skinbase_vertex>
@@ -43,7 +43,7 @@ function clothe(mat) {
         vPants = min(1.0, pelvis + thigh * (1.0 - 0.0 * uShorts) + calf * (1.0 - max(uShorts, uSkirt)));
         vShoes = foot;
       }`).replace('#include <begin_vertex>', `#include <begin_vertex>
-        transformed += normal * (vTop * uPuff + vPants * 0.006 + vShoes * 0.01);`);
+        transformed += normal * (vTop * uPuff + vPants * (1.0 - vTop) * uPuffP + vShoes * 0.02);`);
     sh.fragmentShader = `uniform vec3 uTop; uniform vec3 uPants; uniform vec3 uShoes; uniform vec3 uSkin;
       varying float vTop; varying float vPants; varying float vShoes;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
@@ -77,6 +77,8 @@ export async function loadHumans(base) {
   const [male, female, anims, ...hairs] = await Promise.all([load(dir + 'male.glb'), load(dir + 'female.glb'), load(dir + 'anims.glb'),
     ...HAIRS.map(h => load(dir + 'hair_' + h + '.glb').catch(() => null))]);
   const clips = Object.fromEntries(anims.animations.map(c => [c.name, c]));
+  // materiais com metalness 0: o mapa de metal não muda nada (só ocupa memória de vídeo e uma leitura de textura)
+  for (const gl of [male, female, ...hairs]) gl?.scene.traverse(o => { const m = o.material; if (m && m.metalnessMap && m.metalness === 0) { m.metalnessMap.dispose(); m.metalnessMap = null; m.needsUpdate = true; } });
   const hairSrc = {}; HAIRS.forEach((h, i) => { let m = null; hairs[i]?.scene.traverse(o => { if (o.isSkinnedMesh) m = o; }); hairSrc[h] = m; });
   // altura do modelo (para escalar à altura de cada pessoa)
   const heightOf = g => { const b = new THREE.Box3().setFromObject(g.scene); return b.max.y - b.min.y; };
@@ -109,16 +111,15 @@ export async function loadHumans(base) {
       root.add(m); return m;
     };
     const parts = {};
-    const mixer = new THREE.AnimationMixer(root), actions = {};
-    for (const [k, c] of Object.entries(clips)) { actions[k] = mixer.clipAction(c); actions[k].setEffectiveWeight(0); actions[k].play(); }
-    for (const k of ['Jump_Start', 'Jump_Land', 'Interact']) if (actions[k]) { actions[k].setLoop(THREE.LoopOnce); actions[k].clampWhenFinished = true; }
+    const mixer = new THREE.AnimationMixer(root), actions = setupActions(mixer, Object.values(clips));
     const person = {
-      root, mixer, actions, bones, cloth, look: null, current: 'Idle_Loop', weights: {},
+      root, mixer, actions, bones, cloth, look: null, current: 'Idle_Loop', phase: 0,
       /** Troca a aparência (roupa, pele, cabelo, altura). */
       dress(l) {
         this.look = l;
         cloth.uTop.value.setHex(l.top); cloth.uPants.value.setHex(l.pants); cloth.uShoes.value.setHex(l.shoes);
-        cloth.uSkin.value.setHex(l.skin ?? 0xffffff).multiplyScalar(1.35);   // textura base é morena: o ganho permite peles claras cloth.uSleeve.value = l.sleeve ?? 1; cloth.uPuff.value = l.puff ?? 0.01; cloth.uShorts.value = l.shorts ? 1 : 0;
+        cloth.uSkin.value.setHex(l.skin ?? 0xffffff).multiplyScalar(1.35);   // textura base é morena: o ganho permite peles claras
+        cloth.uSleeve.value = l.sleeve ?? 1; cloth.uPuff.value = l.puff ?? 0.014; cloth.uPuffP.value = l.puffP ?? 0.01; cloth.uShorts.value = l.shorts ? 1 : 0;
         for (const p of Object.values(parts)) if (p) p.visible = false;
         root.traverse(o => { if (o.userData.brows) o.material.color.setHex(l.hairColor ?? 0x3a2a1e); });
         for (const key of [l.hair, l.beard ? 'beard' : null]) {
@@ -127,29 +128,20 @@ export async function loadHumans(base) {
           if (parts[key]) { parts[key].visible = true; parts[key].material.color.setHex(l.hairColor ?? 0x3a2a1e); }
         }
         root.scale.setScalar((l.height || (l.female ? 1.66 : 1.76)) / H[l.female ? 'f' : 'm']);
+        // corpo base é de super-herói: afina braços e coxas (escala só na largura; o eixo do osso é y)
+        const k = l.slim ?? (l.female ? 0.95 : 0.88);
+        for (const [n, f] of [['upperarm_l', 1], ['upperarm_r', 1], ['thigh_l', 0.5], ['thigh_r', 0.5]]) { const b = bones[n]; if (b) { const s = 1 - (1 - k) * f; b.scale.set(s, 1, s); } }
+        // tórax e trapézio menos largos; pescoço/cabeça e braços devolvem a escala (sem afinar a cabeça)
+        const c = 1 - (1 - k) * 0.9;
+        if (bones.spine_03) bones.spine_03.scale.set(c, 1, c);
+        for (const n of ['neck_01', 'clavicle_l', 'clavicle_r']) if (bones[n]) bones[n].scale.set(1 / c, 1, 1 / c);
         return this;
       },
       /** Escolhe a animação: s = { speed, mode ('idle'|'walk'|'run'|'sprint'), air (0..1), vy, sit, talk, formal } */
       play(dt, s) {
-        let want = 'Idle_Loop';
-        if (s.sit) want = s.talk ? 'Sitting_Talking_Loop' : 'Sitting_Idle_Loop';
-        else if (s.air > 0.5) want = s.vy > 0.5 ? 'Jump_Start' : 'Jump_Loop';
-        else if (s.speed > 4.8 || s.mode === 'sprint') want = 'Sprint_Loop';
-        else if (s.speed > 2.4) want = 'Jog_Fwd_Loop';
-        else if (s.speed > 0.15) want = s.formal ? 'Walk_Formal_Loop' : 'Walk_Loop';
-        else if (s.talk) want = 'Idle_Talking_Loop';
-        if (!actions[want]) want = 'Idle_Loop';
-        if (want !== this.current) { if (actions[want].loop === THREE.LoopOnce) actions[want].reset(); this.current = want; }
-        const k = Math.min(1, dt * (s.air > 0.5 ? 14 : 8));
-        for (const [name, a] of Object.entries(actions)) {
-          const w = a.getEffectiveWeight(), t = name === this.current ? 1 : 0;
-          if (w === 0 && t === 0) continue;
-          a.setEffectiveWeight(w + (t - w) * k);
-          if (NOMINAL[name]) a.timeScale = Math.max(0.6, Math.min(1.6, s.speed / NOMINAL[name]));
-        }
-        mixer.update(dt);
+        playClips(this, dt, s);
         // corpo base é atlético: braços um pouco mais junto do corpo e ombros menos erguidos (por cima da animação)
-        const arm = this.armsIn ?? 0.22;
+        const arm = this.armsIn ?? 0.1;
         for (const [n, sgn] of [['upperarm_l', -1], ['upperarm_r', 1]]) { const b = bones[n]; if (b) b.rotateZ(sgn * arm); }
         for (const [n, sgn] of [['clavicle_l', -1], ['clavicle_r', 1]]) { const b = bones[n]; if (b) b.rotateZ(sgn * arm * 0.3); }
       },
@@ -174,34 +166,68 @@ export async function loadHumans(base) {
     const src = anims.scene; src.updateMatrixWorld(true); root.updateMatrixWorld(true);
     const rt = retargetClips(src, Object.values(clips), obj, map);
     const bones = {}; obj.traverse(o => { if (o.isBone) bones[o.name] = o; });
-    const mixer = new THREE.AnimationMixer(obj), actions = {};
-    for (const c of rt) { actions[c.name] = mixer.clipAction(c); actions[c.name].setEffectiveWeight(0); actions[c.name].play(); }
-    for (const k of ['Jump_Start', 'Jump_Land', 'Interact']) if (actions[k]) { actions[k].setLoop(THREE.LoopOnce); actions[k].clampWhenFinished = true; }
-    const person = { root, mixer, actions, bones, current: 'Idle_Loop', play: null };
+    const mixer = new THREE.AnimationMixer(obj), actions = setupActions(mixer, rt);
+    const person = { root, mixer, actions, bones, current: 'Idle_Loop', phase: 0, play: null };
     person.play = function (dt, s) { playClips(this, dt, s); };
     return person;
   }
   return { make, makeFromFBX, heights: H };
 }
 
-/** Escolha e mistura das animações (comum a todos os personagens). */
+const LOCO = ['Walk_Loop', 'Walk_Formal_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop'];
+/** Ações do mixer: todas tocando com peso 0; as de locomoção têm o tempo guiado à mão (fase comum). */
+function setupActions(mixer, list) {
+  const actions = {};
+  for (const c of list) { const a = actions[c.name] = mixer.clipAction(c); a.setEffectiveWeight(0); a.play(); if (LOCO.includes(c.name)) a.timeScale = 0; }
+  for (const k of ['Jump_Start', 'Jump_Land', 'Interact']) if (actions[k]) { actions[k].setLoop(THREE.LoopOnce); actions[k].clampWhenFinished = true; }
+  return actions;
+}
+
+/**
+ * Escolha e mistura das animações (comum ao protagonista e aos pedestres).
+ * Locomoção como espaço de mistura 1D pela velocidade: parado → andar (1,35 m/s) → trote (3,4) → corrida (6,2);
+ * entre dois pontos os dois ciclos tocam juntos na mesma fase da passada (o pé não "pula" ao trocar de ritmo).
+ * Sentar, pular e falar parado são estados próprios, com transição suave de peso.
+ */
 function playClips(p, dt, s) {
-  const actions = p.actions;
-  let want = 'Idle_Loop';
-  if (s.sit) want = s.talk ? 'Sitting_Talking_Loop' : 'Sitting_Idle_Loop';
-  else if (s.air > 0.5) want = s.vy > 0.5 ? 'Jump_Start' : 'Jump_Loop';
-  else if (s.speed > 4.8 || s.mode === 'sprint') want = 'Sprint_Loop';
-  else if (s.speed > 2.4) want = 'Jog_Fwd_Loop';
-  else if (s.speed > 0.15) want = s.formal ? 'Walk_Formal_Loop' : 'Walk_Loop';
-  else if (s.talk) want = 'Idle_Talking_Loop';
-  if (!actions[want]) want = 'Idle_Loop';
-  if (want !== p.current) { if (actions[want].loop === THREE.LoopOnce) actions[want].reset(); p.current = want; }
-  const k = Math.min(1, dt * (s.air > 0.5 ? 14 : 8));
-  for (const [name, a] of Object.entries(actions)) {
-    const w = a.getEffectiveWeight(), t = name === p.current ? 1 : 0;
+  const A = p.actions, tw = p._tw || (p._tw = {});
+  for (const n in A) tw[n] = 0;
+  let state = null;
+  if (s.sit) state = s.talk ? 'Sitting_Talking_Loop' : 'Sitting_Idle_Loop';
+  else if (s.air > 0.5) state = s.vy > 0.5 ? 'Jump_Start' : 'Jump_Loop';
+  if (state && !A[state]) state = null;
+  if (state) {
+    if (p.current !== state && A[state].loop === THREE.LoopOnce) A[state].reset();
+    tw[state] = 1; p.current = state;
+  } else {
+    const walk = s.formal && A.Walk_Formal_Loop ? 'Walk_Formal_Loop' : 'Walk_Loop';
+    const idle = s.talk && A.Idle_Talking_Loop ? 'Idle_Talking_Loop' : 'Idle_Loop';
+    const v = s.speed < 0.12 ? 0 : s.speed;
+    const pts = [[idle, 0], [walk, NOMINAL[walk]], ['Jog_Fwd_Loop', NOMINAL.Jog_Fwd_Loop], ['Sprint_Loop', NOMINAL.Sprint_Loop]].filter(q => A[q[0]]);
+    let i = 0; while (i < pts.length - 2 && v > pts[i + 1][1]) i++;
+    const [na, va] = pts[i], [nb, vb] = pts[i + 1] || pts[i];
+    const t = vb > va ? Math.max(0, Math.min(1, (v - va) / (vb - va))) : 1;
+    tw[na] += 1 - t; tw[nb] += t;
+    p.current = t < 0.5 ? na : nb;
+  }
+  // pesos seguem o alvo com suavização (no ar, mais rápido)
+  const k = Math.min(1, dt * (s.air > 0.5 ? 14 : 7));
+  for (const n in A) {
+    const a = A[n], w = a.getEffectiveWeight(), t = tw[n];
     if (w === 0 && t === 0) continue;
-    a.setEffectiveWeight(w + (t - w) * k);
-    if (NOMINAL[name]) a.timeScale = Math.max(0.6, Math.min(1.6, s.speed / NOMINAL[name]));
+    let nw = w + (t - w) * k; if (t === 0 && nw < 0.003) nw = 0;
+    a.setEffectiveWeight(nw);
+  }
+  // fase única da passada: avança pela média ponderada dos ritmos dos ciclos ativos
+  let num = 0, den = 0;
+  for (const n of LOCO) {
+    const a = A[n]; if (!a) continue; const w = a.getEffectiveWeight(); if (w <= 0) continue;
+    const sc = Math.max(0.6, Math.min(1.6, (s.speed || 0.0001) / NOMINAL[n]));
+    num += w * sc / a.getClip().duration; den += w;
+  }
+  if (den > 0) {
+    p.phase = ((p.phase || 0) + dt * num / den) % 1;
+    for (const n of LOCO) { const a = A[n]; if (a) a.time = p.phase * a.getClip().duration; }
   }
   p.mixer.update(dt);
 }

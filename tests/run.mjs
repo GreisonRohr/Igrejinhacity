@@ -330,6 +330,31 @@ await suite('waldir', async () => {
   return ok.slice(0, 60);
 });
 
+await suite('personagem', async () => {
+  const p = await page();
+  const r = await p.evaluate(() => {
+    const g = __game, h = window.__hero, pl = g.player;
+    if (!h || !h.cloth) return { erro: 'protagonista não é o modelo CC0' };
+    const W = () => { const o = {}; let s = 0; for (const [n, a] of Object.entries(h.actions)) { const w = a.getEffectiveWeight(); if (w > 0.01) o[n] = +w.toFixed(2); s += w; } return { o, s }; };
+    const out = {};
+    // velocidades intermediárias: dois ciclos ao mesmo tempo, mesma fase da passada, peso total ~1
+    for (const v of [0, 0.8, 2.2, 4.5, 9]) { for (let i = 0; i < 120; i++) h.play(1 / 60, { speed: v, mode: v > 5 ? 'sprint' : 'walk', air: 0 }); out[v] = W(); }
+    const wj = h.actions.Walk_Loop, jg = h.actions.Jog_Fwd_Loop;
+    const fase = Math.abs(wj.time / wj.getClip().duration - jg.time / jg.getClip().duration);
+    // giro gradual: virar 180° parado leva mais de um passo e menos de 1 s; correndo, a virada é mais aberta
+    pl.speed = 0; pl.ang = 0; let n0 = 0; while (Math.abs(Math.atan2(Math.sin(pl.ang - Math.PI), Math.cos(pl.ang - Math.PI))) > 0.05 && n0 < 300) { pl.step(1 / 60, { f: -1, t: 0, run: false }, 0); n0++; }
+    return { out, fase, n0 };
+  });
+  assert(!r.erro, r.erro);
+  assert(!p.errors.length, 'erros: ' + p.errors[0]);
+  for (const [v, w] of Object.entries(r.out)) assert(Math.abs(w.s - 1) < 0.05, `peso total ${w.s.toFixed(2)} a ${v} m/s`);
+  assert(Object.keys(r.out['2.2'].o).length === 2, 'a 2,2 m/s deveria misturar andar e trote: ' + JSON.stringify(r.out['2.2'].o));
+  assert(r.fase < 0.01, 'ciclos fora de fase: ' + r.fase);
+  assert(r.n0 > 3 && r.n0 < 60, `meia-volta em ${r.n0} passos`);
+  await p.close();
+  return `CC0; mistura ${JSON.stringify(r.out['2.2'].o)} a 2,2 m/s, fase comum; meia-volta em ${(r.n0 / 60).toFixed(2)} s`;
+});
+
 await suite('capturas', async () => {
   const p = await page('autostart', [1280, 720]);
   const views = [['praca', -20, 5, 2.4, 14, 0.15, 10], ['rua', 150, 200, 2, 10, 0.12, 15], ['oktoberfest', -190, -612, 3.14, 22, 0.12, 15], ['noite', -60, -20, 2.9, 22, 0.25, 21]];

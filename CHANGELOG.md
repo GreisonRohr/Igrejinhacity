@@ -3,6 +3,27 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Visual 2: personagens (frente gráfica)
+- **Memória antes de novos assets: 154 → 110 MB** (heap medido no teste de orçamento). A malha do rio (14 MB) e os
+  bairros além do relevo (≈18 MB, nunca enviados à GPU porque ficavam fora do enquadramento da carga) agora soltam a
+  cópia em memória depois do envio; a cópia do relevo de antes da escavação (11,7 MB) virou só as 67 mil células que
+  mudaram. Mapas de metal sem efeito (metalness 0) removidos dos corpos e cabelos.
+- **Protagonista com licença limpa:** o mesmo corpo CC0 da Quaternius dos pedestres (Universal Base Characters +
+  Universal Animation Library), vestido como o personagem de referência (jaqueta grafite de manga comprida, calça
+  cargo, tênis escuro, cabelo curto, barba). O FBX enviado pelo diretor (licença a confirmar) sai das versões
+  publicadas; continua no repositório e abre com `?heroi=fbx`.
+- **Animação:** locomoção como espaço de mistura pela velocidade (parado → andar → trote → corrida) com os dois ciclos
+  na mesma fase da passada; transição suave de peso para sentar, pular e falar. Vale para o protagonista e pedestres.
+- **Rotação gradual:** giro com velocidade angular máxima (12 rad/s parado, 9 andando, 6,5 correndo).
+- **Corpo menos "super-herói":** braços, coxas e tórax afinados pela escala dos ossos; roupa com volume (jaqueta e
+  calça soltas do corpo). Correção: manga, short e volume da roupa dos pedestres nunca eram aplicados (linha dentro de
+  um comentário).
+- **Celular:** pedestres realistas a mais de 15 m atualizam o esqueleto a cada 2 quadros; só o corpo do protagonista
+  projeta sombra; carros 3D estacionados próximos 16 → 14 no computador (paga os triângulos do protagonista).
+- Teste novo `personagem` (modelo CC0, peso total da mistura, fase comum, meia-volta gradual). 12/12 suítes.
+- Fontes CC0 avaliadas: Quaternius Ultimate Animated Character Pack (Google Drive com cota excedida), OpenGameArt
+  (bloqueado na rede do ambiente), Kenney Animated/Mini/Blocky Characters (estilo cabeçudo/blocado, destoa do mapa).
+
 ## 2026-11-24 — Visual 1: carros 3D (frente gráfica)
 - O carro que o jogador dirige usa modelos 3D reais do **Kenney Car Kit** (CC0, licença em
   `public/models/cars/LICENSE-Kenney-CarKit.txt`): sedã, hatch esportivo, SUV, SUV de luxo, táxi, van, picape e

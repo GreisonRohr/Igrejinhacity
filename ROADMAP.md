@@ -87,7 +87,8 @@ Prioridade do diretor: 1 carros · 2 personagens · 3 árvores · 4 prédios · 
 testada no orçamento de celular e publicada com link próprio. Fontes: CC0 (Kenney, Quaternius, Poly Haven); assets do
 BahCity só com autorização do autor.
 - [x] Visual 1 — carros 3D (Kenney Car Kit, CC0): carro dirigido + estacionados próximos.
-- [ ] Visual 2 — personagens (modelo rigado CC0 com animações andar/correr/sentar).
+- [x] Visual 2 — personagens: protagonista CC0 (Quaternius), mistura de animações, giro gradual, memória 154→110 MB.
+  Pendente: roupas modeladas (hoje pintadas no corpo), pedestres de média distância com o modelo 3D (hoje bonecos).
 - [ ] Visual 3 — árvores · [ ] Visual 4 — prédios · [ ] Visual 5 — praças · [ ] Visual 6 — ruas.
 
 ## Ciclos (ordem proposta)

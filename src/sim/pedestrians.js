@@ -536,7 +536,7 @@ Pedestrians.prototype.useHumans = function (humans, scene, { male = 6, female = 
   this.real = { radius, used: new Set(), pools: { m: [], f: [] } };
   for (const [sex, n] of [['m', male], ['f', female]]) for (let i = 0; i < n; i++) {
     const h = humans.make({ female: sex === 'f', top: 0x888888, pants: 0x333333, shoes: 0xffffff, hair: null });
-    h.root.visible = false; h.agent = null;
+    h.root.visible = false; h.agent = null; h.idx = i; h.acc = 0;
     h.blob = this.crowd.blob.geometry && new THREE.Mesh(this.crowd.blob.geometry, this.crowd.blob.material); h.blob.renderOrder = 1; h.blob.visible = false; scene.add(h.blob);
     h.root.traverse(o => { if (o.isSkinnedMesh && o.geometry.attributes.position.count >= 3000) h.body = o; });
     h.root.traverse(o => { if (o.isSkinnedMesh && o !== undefined && o.geometry.attributes.position.count < 5000) o.castShadow = false; });   // olhos, cabelo: sem sombra
@@ -558,7 +558,10 @@ Pedestrians.prototype._realNear = function (a, dist, P, alpha, dt) {
   h.root.position.set(P.x, ground + (sit ? Math.max(0, a.lift) : Math.min(0.23, a.lift)), P.z);
   h.root.rotation.y = a.pang + d * alpha;
   h.dist = dist; h.blob.position.set(P.x, ground + 0.04, P.z); h.blob.visible = true;
-  h.play(dt, { speed: a.speed, mode: a.speed > 2.4 ? 'run' : 'walk', air: 0, sit, talk: a.state === 'falar' || a.state === 'grupo', formal: a.look.old });
+  // animação por distância: até 15 m todo quadro; mais longe, a cada 2 quadros (metade do custo do esqueleto)
+  h.acc += dt; if (dist > 15 && (this._fr + h.idx) % 2) return true;
+  const hdt = h.acc; h.acc = 0;
+  h.play(hdt, { speed: a.speed, mode: a.speed > 2.4 ? 'run' : 'walk', air: 0, sit, talk: a.state === 'falar' || a.state === 'grupo', formal: a.look.old });
   // cabeça: olhar o jogador quando ele passa perto
   if (a.lookP && h.bones.Head) { let w = Math.atan2(this.player.x - a.x, this.player.z - a.z) - h.root.rotation.y; w = Math.atan2(Math.sin(w), Math.cos(w)); h.bones.Head.rotation.y += Math.max(-1, Math.min(1, w)) * 0.7; }
   return true;

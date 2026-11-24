@@ -1,3 +1,4 @@
-male_casual.fbx + man_tex.png: modelo enviado pelo diretor do projeto em 23/11/2026 (protagonista).
-Origem e licença: a confirmar pelo diretor antes de publicar o jogo fora do ambiente privado.
-Animações: transferidas em tempo de carga da Universal Animation Library (Quaternius, CC0) — src/player/retarget.js.
+male_casual.fbx + man_tex.png: modelo enviado pelo diretor do projeto em 23/11/2026.
+Origem e licença: a confirmar. NÃO entra nas versões publicadas (a partir da Visual 2 o protagonista é o corpo CC0
+da Quaternius, src/main.js HERO_LOOK); só carrega com ?heroi=fbx em teste local.
+Animações: Universal Animation Library (Quaternius, CC0) transferidas em tempo de carga — src/player/retarget.js.

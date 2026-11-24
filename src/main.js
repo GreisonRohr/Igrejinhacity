@@ -33,7 +33,7 @@ import { MAP_MALE_CASUAL } from './player/retarget.js';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
-export const VERSAO = 'Visual 1 · Carros 3D';
+export const VERSAO = 'Visual 2 · Personagens';
 if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */
@@ -188,22 +188,29 @@ tryLoadGLB(BASE + 'models/protagonista.glb', 1.8).then(glb => {
 });
 /* ---------- pessoas realistas (Quaternius CC0, src/player/humans.js) ---------- */
 const humans = await loadHumans(BASE).catch(e => { console.warn('personagens realistas não carregados:', e.message); return null; });
-// Protagonista: modelo "male_casual" enviado pelo diretor (public/models/hero), com as animações da biblioteca
-// Quaternius transferidas para o esqueleto dele (src/player/retarget.js). Sem ele, fica o procedural.
-const hero = humans ? await humans.makeFromFBX(BASE + 'models/hero/male_casual.fbx', MAP_MALE_CASUAL, { height: 1.80 }).catch(e => { console.warn('protagonista:', e.message); return null; }) : null;
+// Protagonista (Visual 2): mesmo corpo CC0 da Quaternius dos pedestres, vestido como o personagem de referência
+// (jaqueta grafite de manga comprida, calça cargo, tênis claro, cabelo curto, barba). O modelo "male_casual" enviado
+// pelo diretor (licença a confirmar, fora das versões publicadas) continua disponível com ?heroi=fbx.
+export const HERO_LOOK = { female: false, skin: 0xf7d2b6, top: 0x2b2f37, pants: 0x56606d, shoes: 0x2f3237, sleeve: 2, puff: 0.032, puffP: 0.024,
+  hair: 'buzzed', hairColor: 0x241811, beard: true, height: 1.80 };
+const hero = !humans ? null : params.get('heroi') === 'fbx'
+  ? await humans.makeFromFBX(BASE + 'models/hero/male_casual.fbx', MAP_MALE_CASUAL, { height: 1.80 }).catch(e => { console.warn('protagonista:', e.message); return null; })
+  : humans.make(HERO_LOOK);
 if (hero) {
   const m = player.mesh;
   for (const c of [...m.children]) c.visible = false;
   m.add(hero.root);
-  const hb = hero.bones;
+  const hb = hero.bones, _UP = new THREE.Vector3(0, 1, 0);
+  hero.root.traverse(o => { if (o.isMesh) { o.castShadow = o.geometry.attributes.position.count > 3000; o.frustumCulled = false; } });   // sombra só do corpo
   m.userData.animate = (dt, speed, run, air, ex) => {
     hero.play(dt, { speed, mode: player.mode, air, vy: player.vy });
     // por cima da animação: olhar para quem está perto e inclinar com o peso (arrancada, freada, ladeira)
     if (ex) {
       const ly = ex.lookYaw == null ? 0 : Math.max(-1, Math.min(1, ex.lookYaw));
       hero.lookCur = (hero.lookCur || 0) + (ly - (hero.lookCur || 0)) * Math.min(1, dt * 5);
-      if (hb.head) hb.head.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), hero.lookCur * 0.6);
-      if (hb.spine) hb.spine.rotateX(ex.lean || 0);
+      const head = hb.head || hb.Head, spine = hb.spine || hb.spine_02;
+      if (head) head.rotateOnWorldAxis(_UP, hero.lookCur * 0.6);
+      if (spine) spine.rotateX(ex.lean || 0);
     }
   };
   window.__hero = hero;
@@ -366,7 +373,7 @@ const vctx = { models: carModels, groundAt: (x, z, cur) => player.groundAt(x, z,
 function nearestParked(x, z, R = 3.2) { let best = null, bd = R; for (const c of street.cars) { const d = Math.hypot(c.x - x, c.z - z); if (d < bd) { bd = d; best = c; } } return best; }
 const _cm = new THREE.Matrix4();
 function parkedMesh(c, on) { const M = on ? street.carMatrix(c, _cm) : ZERO_M; for (let k = 0; k < c.inst.length; k += 2) { c.inst[k].setMatrixAt(c.inst[k + 1], M); c.inst[k].instanceMatrix.needsUpdate = true; } }
-const parkedLOD = MODEL_NAMES.length ? new ParkedLOD(scene, carModels, MODEL_NAMES, street, isTouch ? { cap: 12, radius: 40 } : { cap: 16, radius: 50 }) : null;
+const parkedLOD = MODEL_NAMES.length ? new ParkedLOD(scene, carModels, MODEL_NAMES, street, isTouch ? { cap: 12, radius: 40 } : { cap: 14, radius: 50 }) : null;
 if (parkedLOD) parkedLOD.hide = (c, hidden) => parkedMesh(c, !hidden);
 function setParkedVisible(c, on) {
   if (parkedLOD) { if (on) parkedLOD.skip.delete(c); else { parkedLOD.skip.add(c); if (parkedLOD.shown.delete(c)) parkedLOD.t = 0; } }
@@ -542,6 +549,8 @@ world.roads = world.roads.filter(r => r.br);
 world.areas = []; world.water = []; world.gen = [];
 if (geoX) { geoX.floors = null; geoX.ind = null; geoX.names = null; }
 
+const origCells = city.compactOrig?.() ?? 0;   // relevo original só onde foi escavado
+window.__origCells = origCells;   // células do relevo original guardadas (diagnóstico)
 await stage('Preparando a placa de vídeo…', 0.88, 1, async tick => {
   // envia a geometria à GPU em lotes (libera a cópia em memória sem um travamento único longo)
   const all = []; scene.traverse(o => { if (o.isMesh || o.isInstancedMesh || o.isPoints) all.push([o, o.visible]); });
@@ -567,8 +576,6 @@ await stage('Preparando a placa de vídeo…', 0.88, 1, async tick => {
   await renderer.compileAsync(scene, camera);
   for (const [o, v] of all) o.visible = v;
 });
-const origCells = city.compactOrig?.() ?? 0;   // relevo original só onde foi escavado
-window.__origCells = origCells;   // células do relevo original guardadas (diagnóstico)
 $('loading').hidden = true;
 $('versao').textContent = 'Versão de teste: ' + VERSAO;
 $('play').disabled = false; $('play').textContent = 'Jogar';

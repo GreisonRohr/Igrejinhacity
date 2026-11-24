@@ -52,7 +52,9 @@ export class Walker {
       // direção desejada no mundo, relativa à câmera
       const want = camYaw + Math.atan2(-t, f);
       let d = want - this.ang; d = Math.atan2(Math.sin(d), Math.cos(d));
-      const turn = d * Math.min(1, dt * 10);
+      // giro gradual: segue a direção com suavização e velocidade angular máxima (correndo vira mais aberto)
+      const maxW = this.speed > 5 ? 6.5 : this.speed > 2 ? 9 : 12;
+      const turn = Math.max(-maxW * dt, Math.min(maxW * dt, d * Math.min(1, dt * 10)));
       this.ang += turn;
       this.lean += (Math.max(-0.25, Math.min(0.25, -turn / Math.max(dt, 1e-3) * 0.02 * this.speed / 4)) - this.lean) * Math.min(1, dt * 6);
     } else this.lean *= 1 - Math.min(1, dt * 6);
