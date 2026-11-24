@@ -14,6 +14,7 @@ indicado e no tag local `etapa-N-*`).
 | Personagens da Oktoberfest | https://claude.ai/artifact/FNyG7b5F3j6Wz4YnvbYixs | 7e7ac8e | estável (12/12 testes) |
 | Visual 4 · Chão e telhados reais | https://claude.ai/artifact/9odsEdHhFY4c79UNpk7xLy | bd54d14 | estável (12/12 testes) |
 | Centro 1 · Ruas, calçadas e fachadas | https://claude.ai/artifact/7H2tG2xK6d4koe4nCUR9zp | a8df1d4 | estável (12/12 testes) |
+| Centro 2 · Praça Dona Luiza | https://claude.ai/artifact/DW2bhXro7T11fTsLFVTueG | 99d0167 | estável (12/12 testes) |
 
 ## O que testar
 
@@ -67,3 +68,10 @@ indicado e no tag local `etapa-N-*`).
 - Térreos com letreiros legíveis (Banco do Brasil, Supermercado Dia, Casa do Artesão e tipos de comércio),
   sacadas nos prédios altos, sobrados históricos coloridos; à noite, letreiros acesos.
 - Sair do centro: o resto da cidade fica como antes.
+
+### Centro 2 — Praça Dona Luiza
+- Andar pela praça: copa fechada de figueiras nas posições reais (ortofoto), chão sombreado; vista de cima parecida
+  com a foto aérea.
+- Pérgola com trepadeira e palmeiras ao longo dela; parquinho, arroio e passarela como antes.
+- À noite: luz quente dos lampiões no piso dos caminhos.
+- No celular: conferir fluidez dentro da praça (mais árvores detalhadas).
