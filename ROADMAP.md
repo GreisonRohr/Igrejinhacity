@@ -82,6 +82,14 @@ Ver TECHNICAL_ARCHITECTURE.md (A1–A9): sem passo fixo, sem consulta espacial �
 | P3-5 | Dados brutos grandes fora do git |
 | P3-6 | Acessibilidade: tamanho de texto, tremida, redução de movimento |
 
+## Frente gráfica (paralela às etapas de gameplay)
+Prioridade do diretor: 1 carros · 2 personagens · 3 árvores · 4 prédios · 5 praças · 6 ruas. Uma melhoria por vez,
+testada no orçamento de celular e publicada com link próprio. Fontes: CC0 (Kenney, Quaternius, Poly Haven); assets do
+BahCity só com autorização do autor.
+- [x] Visual 1 — carros 3D (Kenney Car Kit, CC0): carro dirigido + estacionados próximos.
+- [ ] Visual 2 — personagens (modelo rigado CC0 com animações andar/correr/sentar).
+- [ ] Visual 3 — árvores · [ ] Visual 4 — prédios · [ ] Visual 5 — praças · [ ] Visual 6 — ruas.
+
 ## Ciclos (ordem proposta)
 
 | Ciclo | Conteúdo | Itens | Estrutural? | Situação |

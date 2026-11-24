@@ -4,6 +4,41 @@
 // O jogador entra num carro estacionado (F), que some do "estacionamento" e vira o carro dirigido.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+/* ---------- modelos 3D (Kenney Car Kit 3.1, CC0 — public/models/cars/LICENSE-Kenney-CarKit.txt) ----------
+ * Os modelos vêm com proporção de brinquedo (curtos e altos); a carroceria é esticada para medidas reais de carro
+ * brasileiro e as rodas são escaladas por igual (continuam redondas) e reposicionadas nos eixos esticados. */
+export const CAR_MODELS = {   // arquivo: [comprimento, largura, altura] reais em m
+  sedan: [4.4, 1.78, 1.47], 'hatchback-sports': [4.0, 1.74, 1.45], suv: [4.5, 1.86, 1.72], 'suv-luxury': [4.75, 1.92, 1.75],
+  taxi: [4.4, 1.78, 1.6], van: [4.9, 1.95, 1.95], truck: [5.2, 1.9, 1.85], 'sedan-sports': [4.3, 1.8, 1.38], delivery: [6.0, 2.1, 2.8],
+};
+async function bytes(url) {
+  try { const r = await fetch(url + '.b64.json'); if (r.ok) { const j = await r.json(); return Uint8Array.from(atob(j.base64), c => c.charCodeAt(0)).buffer; } } catch { /* sem cópia */ }
+  const r = await fetch(url); if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer();
+}
+export async function loadCarModels(base) {
+  const L = new GLTFLoader(), dir = base + 'models/cars/', out = {};
+  await Promise.all(Object.keys(CAR_MODELS).map(async n => { try { out[n] = (await L.parseAsync(await bytes(dir + n + '.glb'), dir)).scene; } catch (e) { console.warn('carro', n, e.message); } }));
+  return out;
+}
+/** Instância pronta de um modelo, nas medidas reais; devolve { group, wheels[4] (frente esq/dir primeiro), len, w, hl }. */
+export function buildModelCar(src, name, tint = null) {
+  const [L, W, H] = CAR_MODELS[name], g = new THREE.Group(), s = src.clone(true);
+  const box = new THREE.Box3().setFromObject(s), size = box.getSize(new THREE.Vector3());
+  const sx = W / size.x, sy = H / size.y, sz = L / size.z, sw = Math.min(1.25, (sy + sx) / 2 * 1.02);
+  const wheels = [];
+  for (const ch of [...s.children]) {
+    if (/wheel/.test(ch.name)) {
+      ch.position.set(ch.position.x * sx * 1.05, ch.position.y * sw, ch.position.z * sz * 0.94); ch.scale.setScalar(sw);
+      const piv = new THREE.Group(); piv.position.copy(ch.position); ch.position.set(0, 0, 0); piv.add(ch); g.add(piv);
+      piv.userData.front = piv.position.z > 0; wheels.push(piv);
+    } else { ch.position.set(ch.position.x * sx, ch.position.y * sy, ch.position.z * sz); ch.scale.set(sx, sy, sz); g.add(ch); }
+  }
+  g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; const m = o.material; o.material = new THREE.MeshStandardMaterial({ map: m.map, roughness: 0.42, metalness: 0.15 }); if (o.material.map) o.material.map.colorSpace = THREE.SRGBColorSpace; } });
+  wheels.sort((a, b) => b.position.z - a.position.z);
+  return { group: g, wheels: wheels.filter(w => w.position.y < H * 0.5), len: L, w: W, h: H };
+}
 
 const PI = Math.PI;
 // perfis laterais (z = frente +, y = altura) por tipo; largura em x
@@ -30,7 +65,9 @@ export function carGeometries(type = 'hatch', segs = 7) {
 }
 
 /** Carro do jogador (mais detalhe: rodas com aro que giram, faróis e lanternas que acendem). */
-export function makeCarMesh(type, color) {
+export function makeCarMesh(type, color, models = null) {
+  const mname = models && (models[type] ? type : Object.keys(models).find(n => models[n]));
+  if (mname) return modelCarMesh(models[mname], mname);
   const G = carGeometries(type, 14), g = new THREE.Group();
   const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.25 });
   const glassM = new THREE.MeshStandardMaterial({ color: 0x1e2830, roughness: 0.08, metalness: 0.4 });
@@ -56,10 +93,25 @@ export function makeCarMesh(type, color) {
   return g;
 }
 
+function modelCarMesh(src, name) {
+  const M = buildModelCar(src, name), g = M.group, L = M.len / 2, yl = 0.75;
+  const lightM = new THREE.MeshStandardMaterial({ color: 0xfff6dd, emissive: 0xfff2cc, emissiveIntensity: 0.2 });
+  const tailM = new THREE.MeshStandardMaterial({ color: 0x8a1010, emissive: 0xff2020, emissiveIntensity: 0.3 });
+  for (const s of [-1, 1]) {   // faróis e lanternas finos por cima do modelo (acendem à noite, luz de freio)
+    const h = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.03), lightM); h.position.set(s * (M.w / 2 - 0.3), yl, L + 0.01); g.add(h);
+    const t = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.03), tailM); t.position.set(s * (M.w / 2 - 0.25), yl + 0.1, -L - 0.01); g.add(t);
+  }
+  const beam = new THREE.SpotLight(0xfff2d0, 0, 45, 0.5, 0.6, 1.2); beam.position.set(0, yl, L); beam.target.position.set(0, 0, L + 12); g.add(beam, beam.target);
+  // rodas no formato que o Vehicle espera: frente primeiro; o giro vai num grupo interno
+  const wheels = M.wheels.map(p => { const spin = p.children[0]; return { rotation: { set: (a, b) => { p.rotation.y = b; spin.rotation.x = a; } } }; });
+  g.userData = { wheels, lightM, tailM, beam, len: M.len, w: M.w, model: name };
+  return g;
+}
+
 export class Vehicle {
   constructor(scene, { type = 'hatch', color = 0xb02a2a, x, z, yaw }, ctx) {
     this.ctx = ctx;           // { groundAt(x,z,cur), blocked(x,z,r), surfOffset(x,z), terrain }
-    this.type = type; this.mesh = makeCarMesh(type, color); scene.add(this.mesh);
+    this.type = type; this.mesh = makeCarMesh(type, color, ctx.models); scene.add(this.mesh);
     this.x = x; this.z = z; this.yaw = yaw; this.v = 0; this.steer = 0; this.y = ctx.groundAt(x, z, ctx.terrain.heightAt(x, z) + 1);
     this.pitch = 0; this.roll = 0; this.spin = 0; this.prev = { x, z, yaw, y: this.y }; this.hit = 0; this.honk = 0;
   }

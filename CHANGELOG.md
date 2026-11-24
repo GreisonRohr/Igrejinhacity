@@ -3,6 +3,14 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-24 — Visual 1: carros 3D (frente gráfica)
+- O carro que o jogador dirige usa modelos 3D reais do **Kenney Car Kit** (CC0, licença em
+  `public/models/cars/LICENSE-Kenney-CarKit.txt`): sedã, hatch esportivo, SUV, SUV de luxo, táxi, van, picape e
+  sedã esportivo, escalados para medidas reais de carro brasileiro; rodas giram e esterçam; faróis/lanternas mantidos.
+- Carros estacionados perto do jogador (16 no computador, 12 no celular, até 50/40 m) trocam para o mesmo modelo 3D;
+  longe continuam os simplificados (alcance 450 → 300 m para pagar os triângulos). Entrar num carro pega o mesmo modelo.
+- Assets do BahCity: sem licença publicada; não foram usados. Orçamento: 687 draw calls, 2588k triângulos, heap 154 MB.
+
 
 ## 2026-11-24 — Etapa 2: veículos e direção (referência: Bah City)
 - F (ou botão CARRO) entra no carro estacionado mais perto e sai dele; o carro deixado fica onde parou (voltar e F de
