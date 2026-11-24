@@ -9,6 +9,7 @@ indicado e no tag local `etapa-N-*`).
 | 1 · Mapa com GPS | https://claude.ai/artifact/DRwE91z3PLaSP5Edb8QgM5 | f8100f7 | estável (testes ok) |
 | 2 · Veículos e direção | https://claude.ai/artifact/SMCCawX2FLJ8JdeFD61RPX | 6d0775f | estável (11/11 testes) |
 | Visual 1 · Carros 3D | https://claude.ai/artifact/N8TYCwn3UiPPMnD6uewzaY | f5ab102 | estável (11/11 testes) |
+| Visual 2 · Personagens | https://claude.ai/artifact/PgvJTL1rzVxBTMr9UfZXs3 | 41ad70f | estável (12/12 testes) |
 
 ## O que testar
 
@@ -31,3 +32,12 @@ indicado e no tag local `etapa-N-*`).
 - Andar pela rua: os carros estacionados perto (até ~50 m) são os mesmos modelos 3D; longe, os simplificados.
 - Comparar com o link da Etapa 2. No celular: ver se a carga e o FPS ficaram iguais.
 - Conhecido: a troca do carro simplificado para o 3D aparece ao se aproximar (≈50 m); a cor vem da textura do pacote.
+
+### Visual 2 — Personagens (Quaternius CC0)
+- Protagonista novo: andar (joystick/WASD), correr (Shift / joystick no fim), parar — a passada muda de ritmo sem
+  "pulo" entre andar, trote e corrida; ao virar, o corpo gira aos poucos (correndo, a curva é mais aberta).
+- Pular, sentar perto de alguém (pedestres sentados), conversar (E): transições suaves.
+- Pedestres próximos: mangas, shorts e roupa mais solta (correção); comparar com o link da Visual 1.
+- No celular: carga, FPS e aquecimento do aparelho em 5 min de passeio pela praça.
+- Conhecido: roupa é pintada sobre o corpo base (sem malha de roupa); pedestres a mais de ~25–30 m ainda são os
+  bonecos feitos em código; uma pausa única de coleta de memória pode ocorrer logo após a carga.
