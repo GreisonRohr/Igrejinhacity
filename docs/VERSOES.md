@@ -10,6 +10,7 @@ indicado e no tag local `etapa-N-*`).
 | 2 · Veículos e direção | https://claude.ai/artifact/SMCCawX2FLJ8JdeFD61RPX | 6d0775f | estável (11/11 testes) |
 | Visual 1 · Carros 3D | https://claude.ai/artifact/N8TYCwn3UiPPMnD6uewzaY | f5ab102 | estável (11/11 testes) |
 | Visual 2 · Personagens | https://claude.ai/artifact/PgvJTL1rzVxBTMr9UfZXs3 | 41ad70f | estável (12/12 testes) |
+| Visual 3 · Carros reais | https://claude.ai/artifact/PeWkb3ghazynRuQxwBHbmu | a18cf1b | estável (12/12 testes) |
 
 ## O que testar
 
@@ -41,3 +42,8 @@ indicado e no tag local `etapa-N-*`).
 - No celular: carga, FPS e aquecimento do aparelho em 5 min de passeio pela praça.
 - Conhecido: roupa é pintada sobre o corpo base (sem malha de roupa); pedestres a mais de ~25–30 m ainda são os
   bonecos feitos em código; uma pausa única de coleta de memória pode ocorrer logo após a carga.
+
+### Visual 3 — Carros reais (Honda City 2017 e Peugeot 206, Sketchfab CC BY 4.0)
+- Estacionados perto (até ~42 m; 35 m no celular): os dois modelos em 10 cores; mais longe, os simplificados.
+- F para entrar: o carro dirigido é o mesmo modelo e a mesma cor; rodas giram e esterçam; faróis à noite, luz de freio.
+- Bater, frear, ré, sair; comparar com a Visual 2.
