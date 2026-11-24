@@ -15,6 +15,7 @@ indicado e no tag local `etapa-N-*`).
 | Visual 4 · Chão e telhados reais | https://claude.ai/artifact/9odsEdHhFY4c79UNpk7xLy | bd54d14 | estável (12/12 testes) |
 | Centro 1 · Ruas, calçadas e fachadas | https://claude.ai/artifact/7H2tG2xK6d4koe4nCUR9zp | a8df1d4 | estável (12/12 testes) |
 | Centro 2 · Praça Dona Luiza | https://claude.ai/artifact/DW2bhXro7T11fTsLFVTueG | 99d0167 | estável (12/12 testes) |
+| Centro 3 · Rua Coberta | https://claude.ai/artifact/AJuFpoPFNtGZj1EjVJ5Qam | 4d54a2b | estável (12/12 testes) |
 
 ## O que testar
 
@@ -75,3 +76,7 @@ indicado e no tag local `etapa-N-*`).
 - Pérgola com trepadeira e palmeiras ao longo dela; parquinho, arroio e passarela como antes.
 - À noite: luz quente dos lampiões no piso dos caminhos.
 - No celular: conferir fluidez dentro da praça (mais árvores detalhadas).
+
+### Centro 3 — Rua Coberta e lojas da Dorneles
+- Rua Coberta de dia e à noite: luminárias sob os arcos, luz no asfalto; fábrica Piccadilly ao lado com faixas e marquises.
+- R. Gen. Ernesto Dorneles: Farmácias São João, Kosmus, Trilegal, Hashtag Presentes com letreiro e cores próprias.
