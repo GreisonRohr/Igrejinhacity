@@ -11,6 +11,7 @@ indicado e no tag local `etapa-N-*`).
 | Visual 1 · Carros 3D | https://claude.ai/artifact/N8TYCwn3UiPPMnD6uewzaY | f5ab102 | estável (11/11 testes) |
 | Visual 2 · Personagens | https://claude.ai/artifact/PgvJTL1rzVxBTMr9UfZXs3 | 41ad70f | estável (12/12 testes) |
 | Visual 3 · Carros reais | https://claude.ai/artifact/PeWkb3ghazynRuQxwBHbmu | a18cf1b | estável (12/12 testes) |
+| Personagens da Oktoberfest | https://claude.ai/artifact/FNyG7b5F3j6Wz4YnvbYixs | 7e7ac8e | estável (12/12 testes) |
 
 ## O que testar
 
@@ -47,3 +48,8 @@ indicado e no tag local `etapa-N-*`).
 - Estacionados perto (até ~42 m; 35 m no celular): os dois modelos em 10 cores; mais longe, os simplificados.
 - F para entrar: o carro dirigido é o mesmo modelo e a mesma cor; rodas giram e esterçam; faróis à noite, luz de freio.
 - Bater, frear, ré, sair; comparar com a Visual 2.
+
+### Personagens da Oktoberfest (Lukas e Anna)
+- Tela inicial: escolher Lukas (lederhosen) ou Anna (dirndl), girar arrastando, Jogar.
+- Andar, correr, pular, entrar no carro com cada um; câmera perto para ver o traje.
+- Esc ou ☰: menu → Trocar personagem (troca na hora). Fechar e reabrir o jogo: a escolha vem marcada.
