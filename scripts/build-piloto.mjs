@@ -249,6 +249,8 @@ for (const p of blocks) {
     }
     const pos = ws.filter(w => w > 0); e.w = pos.length >= ws.length * 0.5 ? med(pos) : 0;
   }
+  // estatística: perímetro com calçada
+  { const per = E.reduce((a, e) => a + e.L, 0), comW = E.reduce((a, e) => a + (e.w > 0 ? e.L : 0), 0); (globalThis.__perim ||= []).push([Math.round(per), Math.round(100 * comW / per), Math.round(p[0][0]), Math.round(p[0][1])]); }
   // contorno do meio-fio
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -454,6 +456,8 @@ for (const [r, sp] of spec) {
   }
 }
 console.log('transições na borda', trans.length);
+{ const P2 = globalThis.__perim || []; const tot = P2.reduce((a, q) => a + q[0], 0), com = P2.reduce((a, q) => a + q[0] * q[1] / 100, 0);
+  console.log('perímetro de quadra com calçada:', Math.round(100 * com / tot) + '%', '| quadras com menos de 50%:', P2.filter(q => q[1] < 50).map(q => q[1] + '%@' + q[2] + ',' + q[3]).join(' ')); }
 
 /* ---------- 6. mapa de piso (0,5 m) para andar: 0 lote, 1 asfalto, 2 calçada, 3 canteiro ---------- */
 const GC = 0.5, GW = Math.round((BOX.x1 - BOX.x0) / GC), GH = Math.round((BOX.z1 - BOX.z0) / GC), grid = new Uint8Array(GW * GH);
