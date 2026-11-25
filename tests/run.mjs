@@ -219,6 +219,12 @@ await suite('pedestres', async () => {
     let worst = 0, tot = 0, viol = { predio: 0, pista: 0, chao: 0 }, samples = 0;
     // está no meio da pista de carro (fora de travessia)?
     const inLane = (x, z) => {
+      // piloto: o piso gerado é a referência, com o mesmo critério do modelo antigo (0,6 m dentro da pista, fora dos cruzamentos)
+      const PL = g.city.piloto; if (PL && PL.inBox(x, z)) {
+        if (![[0, 0], [0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6]].every(([a, b]) => PL.cls(x + a, z + b) === 1)) return false;
+        for (let i = 0; i < nav.nodes.length; i += 2) if (Math.hypot(nav.nodes[i] - x, nav.nodes[i + 1] - z) < 10) return false;
+        return true;
+      }
       for (const e of nav.edges) {
         if (!(e.f & nav.CAR) || e.br) continue;
         const pts = [nav.nodePos(e.a)]; for (let j = 0; j < e.m.length; j += 2) pts.push([e.m[j], e.m[j + 1]]); pts.push(nav.nodePos(e.b));
@@ -296,7 +302,7 @@ await suite('dirigir', async () => {
   const r = await p.evaluate(async () => {
     const g = __game, out = {}, wait = ms => new Promise(res => setTimeout(res, ms)), key = (code, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code }));
     // carro estacionado mais perto da praça com rua livre à frente
-    let c = null, bd = 1e9; for (const q of g.street.cars) { const d = Math.hypot(q.x, q.z); if (d < bd && g.city.surfOffset(q.x + Math.sin(q.yaw) * 8, q.z + Math.cos(q.yaw) * 8) > 0) { bd = d; c = q; } }
+    let c = null, bd = 1e9; for (const q of g.street.cars) { const d = Math.hypot(q.x, q.z); if (d < bd && g.city.surfOffset(q.x + Math.sin(q.yaw) * 8, q.z + Math.cos(q.yaw) * 8) > 0 && !g.street.cars.some(o => o !== q && [8, -8].some(k => Math.hypot(o.x - q.x - Math.sin(q.yaw) * k, o.z - q.z - Math.cos(q.yaw) * k) < 7))) { bd = d; c = q; } }   // frente e trás livres de outro estacionado
     g.player.x = c.x + 1.5; g.player.z = c.z; await wait(200);
     key('KeyF', true); key('KeyF', false); await wait(300);
     out.dentro = !!g.drive.car; const v = g.drive.car; if (!v) return out;

@@ -291,7 +291,8 @@ if (landmarks.pipoca) {
 
 /* ---------- pedestres (src/sim/pedestrians.js, spec em docs/spec-pedestres.md) ---------- */
 const peds = new Pedestrians({ scene, nav, spatial, terrain, city, world, landmarks, places: world.places, quality: isTouch ? 'medium' : 'high',
-  groundAt: (x, z) => player.groundAt(x, z, terrain.heightAt(x, z)), hours: () => sky.hours });
+  groundAt: (x, z) => player.groundAt(x, z, terrain.heightAt(x, z)), hours: () => sky.hours,
+  snapSidewalk: piloto ? (x, z, nx, nz, half) => piloto.walkSpot(x, z, nx, nz, half) : null, pisoAt: piloto ? (x, z) => piloto.cls(x, z) : null });
 if (geoX && geoX.censo) {
   const sectors = geoX.censo;
   peds.censusAt = (x, z) => { for (const [d, p] of sectors) if (inPolyXZ(x, z, p)) return d; return null; };

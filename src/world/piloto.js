@@ -27,9 +27,15 @@ export class Piloto {
   }
   /** Faixa de pedestre: no piloto, não repete outra a menos de 5 m (rótulas e cruzamentos com muitos braços). */
   zebraOk(x, z) { if (!this.inBox(x, z)) return true; if (this.zebras.some(([a, b]) => Math.hypot(a - x, b - z) < 5)) return false; this.zebras.push([x, z]); return true; }
+  /** Pedestre: ponto na calçada do lado (nx,nz) do eixo, ~1 m depois do meio-fio; null fora da caixa/sem calçada. */
+  walkSpot(ax, az, nx, nz, half) {
+    if (!this.inBox(ax, az)) return null;
+    this.verge = true; const p = this.lampSpot(ax, az, nx, nz, Math.max(0, half - 1)); this.verge = false; if (!p) return null;   // sem calçada: anda na margem
+    const x2 = p[0] + nx * 0.6, z2 = p[1] + nz * 0.6; return this.cls(x2, z2) === 2 ? [x2, z2] : p;
+  }
   /** Poste: do eixo para fora até a calçada; devolve [x, z] 0,5 m depois do meio-fio, ou null. */
   lampSpot(ax, az, nx, nz, half) {
-    for (let t = half; t < half + 14; t += 0.25) { const x = ax + nx * t, z = az + nz * t, c = this.cls(x, z); if (c === 0) return null; if (c === 2) { const x2 = x + nx * 0.5, z2 = z + nz * 0.5; return this.cls(x2, z2) === 2 ? [x2, z2] : [x, z]; } }
+    for (let t = half; t < half + 14; t += 0.25) { const x = ax + nx * t, z = az + nz * t, c = this.cls(x, z); if (c === 0) return this.verge ? [x + nx * 0.6, z + nz * 0.6] : null; if (c === 2) { const x2 = x + nx * 0.5, z2 = z + nz * 0.5; return this.cls(x2, z2) === 2 ? [x2, z2] : [x, z]; } }
     return null;
   }
   /**

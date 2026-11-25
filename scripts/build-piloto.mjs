@@ -303,8 +303,37 @@ for (const loop of loops) {
 }
 
 /* ---------- 4. classificação do chão (lote > canteiro > calçada > asfalto) ---------- */
-const sets = [...blocks.map(p => ({ p, c: 3 })), ...medPolys.map(m => ({ p: m.p, c: 2, grass: m.grass })), ...curbPolys.map(p => ({ p, c: 1 }))];
-const code = P2 => !P2 ? 1 : P2.c === 3 ? 0 : P2.c === 2 ? (P2.grass ? 4 : 3) : 2;   // 0 lote, 1 asfalto, 2 calçada, 3 canteiro de concreto, 4 canteiro gramado
+// faixa de asfalto de cada via: do eixo até o meio-fio/quadra/canteiro (raio a cada 2 m, até meia pista + 6 m); sem
+// nada do lado (parque, área verde) a pista acaba na meia largura + 0,5 m — o resto do espaço público fica terreno
+const edgeSegs = new SegGrid(20);
+for (const p of [...curbPolys, ...blocks, ...medPolys.map(m => m.p)]) p.forEach((a, i) => edgeSegs.add({ a, b: p[(i + 1) % p.length] }));
+const rayE = (x, z, dx, dz, max) => { let best = Infinity; for (const { a, b } of edgeSegs.near(x, z, x + dx * max, z + dz * max)) { const ex = b[0] - a[0], ez = b[1] - a[1], den = dx * ez - dz * ex; if (Math.abs(den) < 1e-9) continue; const t = ((a[0] - x) * ez - (a[1] - z) * ex) / den, u = ((a[0] - x) * dz - (a[1] - z) * dx) / den; if (u >= 0 && u <= 1 && t > 0.05 && t < max && t < best) best = t; } return best; };
+const bands = [], nodeExt = new Map();
+for (const [r, sp] of spec) {
+  const { S } = resampleArc(P(r), 2); if (!S.some(q => inBox(q.x, q.z, 10))) continue;
+  const E = S.map(q => [1, -1].map(sg => { const m = sp.half + 6, t = rayE(q.x, q.z, q.nx * sg, q.nz * sg, m); return t < m ? t + 0.05 : sp.half + 0.5; }));
+  // um polígono por trecho contínuo (borda esquerda + borda direita invertida), largura suavizada para não serrilhar
+  const Es = E.map((e, k) => [0, 1].map(j => { const w = []; for (let i = Math.max(0, k - 1); i <= Math.min(E.length - 1, k + 1); i++) w.push(E[i][j]); return Math.min(...w); }));
+  let run = [];
+  const flushB = () => { if (run.length >= 2) bands.push([...run.map(k => [S[k].x + S[k].nx * Es[k][0], S[k].z + S[k].nz * Es[k][0]]), ...run.slice().reverse().map(k => [S[k].x - S[k].nx * Es[k][1], S[k].z - S[k].nz * Es[k][1]])].map(q => [r2(q[0]), r2(q[1])])); run = []; };
+  for (let k = 0; k < S.length; k++) { if (inBox(S[k].x, S[k].z, 10)) run.push(k); else flushB(); } flushB();
+  for (const q of [P(r)[0], P(r).at(-1)]) { const k2 = key(q), e = Math.max(...E[0], ...E.at(-1)); nodeExt.set(k2, Math.max(nodeExt.get(k2) || 0, e)); }
+  for (const q of P(r).slice(1, -1)) { const k2 = key(q); if (nodeExt.has(k2) || (occ.get(key(r.p[P(r).indexOf(q)] || q)) || []).length > 1) nodeExt.set(k2, Math.max(nodeExt.get(k2) || 0, sp.half + 2)); }
+}
+// cruzamentos: disco de asfalto (cobre o canto entre as faixas; o meio-fio arredondado e o lote têm prioridade)
+const vehNodes = new Map(); for (const [r] of spec) for (const q of P(r)) vehNodes.set(key(q), (vehNodes.get(key(q)) || 0) + 1);
+for (const [k2, cnt] of vehNodes) { if (cnt < 2) continue; const [x, z] = k2.split(',').map(Number); if (!inBox(x, z, 8)) continue; const R = (nodeExt.get(k2) || 6) + 4.5, pts = [];
+  for (let i = 0; i < 24; i++) { const an = -i / 24 * Math.PI * 2; pts.push([r2(x + Math.cos(an) * R), r2(z + Math.sin(an) * R)]); } bands.push(pts.reverse()); }
+// vias de pedestre largas (calçadão, Rua Coberta): piso de calçada
+const pedBands = [];
+for (const r of roads) { if (r.br || !(r.k === 'pedestrian' || (r.k === 'footway' && r.w >= 3)) || !r.p.some(([x, z]) => inBox(x, z, 5))) continue;
+  const { S } = resampleArc(P(r), 2), h = Math.max(1.5, (r.w || 4) / 2);
+  for (let k = 0; k < S.length - 1; k++) { const a = S[k], b = S[k + 1]; pedBands.push([[a.x + a.nx * h, a.z + a.nz * h], [b.x + b.nx * h, b.z + b.nz * h], [b.x - b.nx * h, b.z - b.nz * h], [a.x - a.nx * h, a.z - a.nz * h]].map(q => [r2(q[0]), r2(q[1])])); } }
+console.log('faixas de asfalto', bands.length, '| calçadão', pedBands.length);
+const sets = [...blocks.map(p => ({ p, c: 3 })), ...medPolys.map(m => ({ p: m.p, c: 2, grass: m.grass })), ...curbPolys.map(p => ({ p, c: 1 })),
+  ...pedBands.map(p => ({ p, c: 0.75 })), ...bands.map(p => ({ p, c: 0.5 }))];
+// 0 lote/terreno, 1 asfalto, 2 calçada (e calçadão), 3 canteiro de concreto, 4 canteiro gramado
+const code = P2 => !P2 ? 0 : P2.c === 3 ? 0 : P2.c === 2 ? (P2.grass ? 4 : 3) : P2.c === 0.5 ? 1 : 2;
 const polyGrid = new SegGrid(T * 4); const edges = [];
 sets.forEach((P2, pi) => { P2.pi = pi; let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity; for (const [x, z] of P2.p) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); } P2.bb = [x0, z0, x1, z1];
   P2.p.forEach((a, i) => { const b = P2.p[(i + 1) % P2.p.length]; if (Math.abs(b[1] - a[1]) < 1e-9 && Math.abs(b[0] - a[0]) < 1e-9) return; const e = { a, b, pi }; edges.push(e); polyGrid.add(e); }); });
@@ -340,7 +369,7 @@ for (let tx = Math.floor(BOX.x0 / T) * T; tx < BOX.x1; tx += T) for (let tz = Ma
 /* ---------- 5. meio-fio onde calçada/canteiro encontram o asfalto ---------- */
 const curbs = [];   // [ax, az, bx, bz, tipo] tipo: 0 reto (concreto), 1 esquina/canteiro (amarelo)
 sets.forEach((P2, pi) => {
-  if (P2.c === 3) return;   // borda de lote: sem meio-fio
+  if (P2.c === 3 || P2.c === 0.5) return;   // borda de lote e da faixa de asfalto: sem meio-fio próprio
   const p = P2.p, n = p.length;
   for (let i = 0; i < n; i++) {
     const a = p[i], b = p[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.02) continue;

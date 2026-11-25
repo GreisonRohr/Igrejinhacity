@@ -1,7 +1,7 @@
 {
  "pistaNoLote": [
   "3.4%",
-  "1.1%"
+  "1.3%"
  ],
  "calcadaNoLote": [
   "22.2%",
@@ -13,9 +13,9 @@
   "mediana 0.06 m, P90 0.55 m"
  ],
  "trapezios": {
-  "asfalto": 4795,
-  "calcada": 3131,
-  "canteiro": 1294
+  "asfalto": 12745,
+  "calcada": 7913,
+  "canteiro": 2413
  },
- "meioFio": 3561
+ "meioFio": 3328
 }

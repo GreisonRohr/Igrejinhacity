@@ -88,6 +88,7 @@ export class Pedestrians {
 
   /** O ponto está sobre a pista de carros (com margem m do meio-fio para dentro)? */
   inLane(x, z, m = 0.4) {
+    if (this.pisoAt) { const c = this.pisoAt(x, z); if (c >= 0) return c === 1; }   // piloto das quadras: o piso gerado decide
     const L = this.lanes.get(Math.floor(x / 50) + ',' + Math.floor(z / 50)); if (!L) return false;
     for (const s of L) {
       const dx = s[2] - s[0], dz = s[3] - s[1], l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - s[0]) * dx + (z - s[1]) * dz) / l2));
@@ -264,6 +265,8 @@ export class Pedestrians {
           let tx = t1x + t2x, tz = t1z + t2z; const tl = Math.hypot(tx, tz) || 1; tx /= tl; tz /= tl;
           const cosH = Math.max(0.5, tx * t1x + tz * t1z), oo = o * s / cosH;
           let x = b[0] - tz * oo, z = b[1] + tx * oo;
+          // piloto das quadras: a calçada real (da quadra até o meio-fio) decide onde se anda
+          if (this.snapSidewalk && o > 0) { const sp = this.snapSidewalk(b[0], b[1], -tz * s, tx * s, o - Math.min(1.1, (e.sw || 1.2) / 2)); if (sp) { x = sp[0]; z = sp[1]; } }
           // calçada encostada em prédio (dado aproximado): chega mais perto do meio-fio
           for (let tries = 0; tries < 3 && o > 0 && this.spatial.blocked(x, z, 0.3); tries++) { const f = 1 - (tries + 1) * 0.18; x = b[0] - tz * oo * f; z = b[1] + tx * oo * f; }
           Q.push([x, z]);

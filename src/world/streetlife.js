@@ -46,11 +46,16 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
       acc += L;
       for (const [si, s] of [[0, 1], [1, -1]]) {
         if (dual && s < 0) continue;   // pista dupla: só o lado de fora (à direita do sentido do trânsito)
+        // piloto das quadras: meio-fio e borda da calçada medidos no piso gerado (fim do asfalto / fim da calçada)
+        const PL = city.piloto && city.piloto.inBox(ax, az) ? city.piloto : null;
+        let tCurb = null, tWalk = null;
+        if (PL) { let t = 0; while (t < half + 8 && PL.cls(ax + nx * s * t, az + nz * s * t) === 1) t += 0.25; tCurb = t >= 2.5 ? t : null;
+          if (tCurb !== null) { let u = tCurb; while (u < tCurb + 8 && PL.cls(ax + nx * s * u, az + nz * s * u) === 2) u += 0.25; tWalk = u - tCurb >= 1.8 ? u : null; } }
         // árvore na borda externa da calçada
         if (!realTrees && STREET_TREES.has(r.k) && acc >= nextTree[si] && sw[si] >= 1.8) {
           nextTree[si] = acc + 11 + rnd() * 12;
-          const off = half + sw[si] - 0.55, x = ax + nx * s * off, z = az + nz * s * off;
-          if (!nearNode(x, z, 11) && !nearBridge(x, z) && !lampNear(x, z) && !city.blocked(x, z, 1.2) && rnd() < 0.8 && okSpot(x, z, 3)) {
+          const off = PL ? (tWalk ?? -1) - 0.55 : half + sw[si] - 0.55, x = ax + nx * s * off, z = az + nz * s * off;
+          if (off > 0 && !nearNode(x, z, 11) && !nearBridge(x, z) && !lampNear(x, z) && !city.blocked(x, z, 1.2) && rnd() < 0.8 && okSpot(x, z, 3)) {
             const t = rnd(), kind = t < 0.12 ? 'palm' : t < 0.24 ? 'ipe' : t < 0.3 ? 'ipeA' : 'leafy';
             trees.push({ x, z, y: terrain.heightAt(x, z) + 0.15, kind, s: 0.75 + rnd() * 0.5, rot: rnd() * 6.28 });
           }
@@ -58,8 +63,8 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
         // carro estacionado junto ao meio-fio
         if (PARK_ON.has(r.k) && width >= 7 && acc >= nextCar[si]) {
           nextCar[si] = acc + 6 + rnd() * 16;
-          const off = half - 1.15, x = ax + nx * s * off, z = az + nz * s * off;
-          if (rnd() < 0.55 && !nearNode(x, z, 14) && !nearBridge(x, z) && okSpot(x, z, 2.6)) {
+          const off = PL ? (tCurb ?? -1) - 1.15 : half - 1.15, x = ax + nx * s * off, z = az + nz * s * off;
+          if (off > 0 && rnd() < 0.55 && !nearNode(x, z, 14) && !nearBridge(x, z) && okSpot(x, z, 2.6)) {
             const yaw = Math.atan2(ux * s, uz * s);
             cars.push({ x, z, y: terrain.heightAt(x, z) + 0.08, yaw, c: rnd() });
           }
