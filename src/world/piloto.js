@@ -8,11 +8,16 @@ export class Piloto {
     const g = data.grid, bin = atob(g.b64); this.grid = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) this.grid[i] = bin.charCodeAt(i);
     this.gc = g.cell; this.gw = g.w; this.gh = g.h;
     this.ringRoads = new Set((data.rings || []).flat());   // vias do anel das rótulas (sem pintura de faixa)
+    this.ringGeo = data.ringGeo || [];                       // [cx, cz, raio] de cada rótula
+    this.areas = data.areas || [data.box];                   // região = união das áreas das etapas
+    this.trans = new Map(); for (const [ri, s, dir, cL, eL, cR, eR] of data.trans || []) (this.trans.get(ri) || this.trans.set(ri, []).get(ri)).push({ s, dir, cL, eL, cR, eR });
     this.zebras = [];
   }
-  inBox(x, z, m = 0) { const b = this.box; return x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m; }
+  inBox(x, z, m = 0) { for (const b of this.areas) if (x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m) return true; return false; }
+  /** perto de uma rótula (dentro do anel + margem): sem pintura de faixa e com poucas faixas de pedestre */
+  nearRing(x, z, m = 0) { for (const [cx, cz, R] of this.ringGeo) if (Math.hypot(x - cx, z - cz) < R + m) return true; return false; }
   /** 0 lote, 1 asfalto, 2 calçada, 3 canteiro de concreto, 4 canteiro gramado; -1 fora da caixa */
-  cls(x, z) { const i = Math.floor((x - this.box.x0) / this.gc), j = Math.floor((z - this.box.z0) / this.gc); return i < 0 || j < 0 || i >= this.gw || j >= this.gh ? -1 : this.grid[j * this.gw + i]; }
+  cls(x, z) { const i = Math.floor((x - this.box.x0) / this.gc), j = Math.floor((z - this.box.z0) / this.gc); if (i < 0 || j < 0 || i >= this.gw || j >= this.gh) return -1; const c = this.grid[j * this.gw + i]; return c === 255 ? -1 : c; }
   /** piso por onde se anda (como City.surfOffset); null fora da caixa */
   surf(x, z) { const c = this.cls(x, z); return c < 0 ? null : c === 1 ? 0.08 : c >= 2 ? 0.23 : 0; }
   /** Troca o traçado das vias corrigidas (só se os dados conferem com o world.json carregado). */
@@ -26,7 +31,12 @@ export class Piloto {
     return true;
   }
   /** Faixa de pedestre: no piloto, não repete outra a menos de 5 m (rótulas e cruzamentos com muitos braços). */
-  zebraOk(x, z) { if (!this.inBox(x, z)) return true; if (this.zebras.some(([a, b]) => Math.hypot(a - x, b - z) < 5)) return false; this.zebras.push([x, z]); return true; }
+  zebraOk(x, z) {
+    if (!this.inBox(x, z)) return true;
+    if (this.nearRing(x, z, 3) || this.cls(x, z) !== 1) return false;   // nada sobre o anel da rótula nem fora do asfalto
+    const R = this.nearRing(x, z, 25) ? 10 : 5;                          // acessos da rótula: uma faixa por braço
+    if (this.zebras.some(([a, b]) => Math.hypot(a - x, b - z) < R)) return false; this.zebras.push([x, z]); return true;
+  }
   /** Pedestre: ponto na calçada do lado (nx,nz) do eixo, ~1 m depois do meio-fio; null fora da caixa/sem calçada. */
   walkSpot(ax, az, nx, nz, half) {
     if (!this.inBox(ax, az)) return null;

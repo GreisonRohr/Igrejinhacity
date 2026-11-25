@@ -7,15 +7,15 @@
   "22.2%",
   "0%"
  ],
- "pistaSobCalcada": "2.6%",
+ "pistaSobCalcada": "5.0%",
  "eixo": [
   "mediana 1.39 m, P90 4.56 m",
   "mediana 0.06 m, P90 0.55 m"
  ],
  "trapezios": {
-  "asfalto": 12745,
-  "calcada": 7913,
-  "canteiro": 2413
+  "asfalto": 12638,
+  "calcada": 8153,
+  "canteiro": 2447
  },
- "meioFio": 3328
+ "meioFio": 3346
 }

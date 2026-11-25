@@ -12,7 +12,18 @@ import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { toXZ } from '../src/geo.js';
 
-export const BOX = { x0: -190, z0: -60, x1: 60, z1: 410 };
+// Expansão por ETAPAS (cumulativas; cada uma validada e publicada à parte — rollback = etapa anterior).
+// Retângulos com lados múltiplos de 5 m (alinhados à grade do terreno). Uso: PILOTO_ETAPA=n node scripts/build-piloto.mjs
+export const ETAPAS = [
+  { nome: 'Piloto (praça, Castelo Branco, Dorneles, rótula norte)', r: [-190, -60, 60, 410] },
+  { nome: 'Centro leste (malha entre a Dorneles e a Rua Tiradentes)', r: [60, -60, 360, 410] },
+  { nome: 'Centro norte (até a Igreja e o Centro Administrativo)', r: [-130, -480, 360, -60] },
+  { nome: 'Centro, faixa leste até o arroio', r: [360, -300, 640, 330] },
+];
+const ETAPA = Math.max(1, Math.min(ETAPAS.length, +(process.env.PILOTO_ETAPA || 1)));
+const AREAS = ETAPAS.slice(0, ETAPA).map(e => ({ x0: e.r[0], z0: e.r[1], x1: e.r[2], z1: e.r[3] }));
+export const BOX = { x0: Math.min(...AREAS.map(a => a.x0)), z0: Math.min(...AREAS.map(a => a.z0)), x1: Math.max(...AREAS.map(a => a.x1)), z1: Math.max(...AREAS.map(a => a.z1)) };
+console.log('ETAPA', ETAPA, '—', ETAPAS[ETAPA - 1].nome, '| áreas', AREAS.length);
 const FADE = 30;                       // a correção do eixo some em 30 m fora da caixa
 const T = 5;                           // ladrilho = célula do terreno (terrain.json: cell 5, origem múltipla de 5)
 const URBAN = new Set(['primary', 'secondary', 'tertiary', 'residential', 'living_street', 'primary_link', 'secondary_link', 'tertiary_link']);
@@ -23,8 +34,8 @@ const smoothstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b
 
 const W = JSON.parse(zlib.gunzipSync(Buffer.from(JSON.parse(fs.readFileSync('public/data/world.data.json')).gzip_base64, 'base64')));
 const roads = W.roads;
-const inBox = (x, z, m = 0) => x > BOX.x0 - m && x < BOX.x1 + m && z > BOX.z0 - m && z < BOX.z1 + m;
-const fadeAt = (x, z) => { const dx = Math.max(BOX.x0 - x, 0, x - BOX.x1), dz = Math.max(BOX.z0 - z, 0, z - BOX.z1); return 1 - Math.min(1, Math.hypot(dx, dz) / FADE); };
+const inBox = (x, z, m = 0) => AREAS.some(A => x > A.x0 - m && x < A.x1 + m && z > A.z0 - m && z < A.z1 + m);   // região = união das áreas
+const fadeAt = (x, z) => { let d = Infinity; for (const A of AREAS) { const dx = Math.max(A.x0 - x, 0, x - A.x1), dz = Math.max(A.z0 - z, 0, z - A.z1); d = Math.min(d, Math.hypot(dx, dz)); } return 1 - Math.min(1, d / FADE); };
 
 /* ---------- quadras ---------- */
 const signedArea = p => { let s = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; };
@@ -277,6 +288,13 @@ for (const [r, sp] of spec) {
   // trechos contínuos → polígono (borda da pista + linha do meio), com nariz em quarto de círculo nas pontas
   let run = [];
   const flush = () => {
+    // largura suavizada (mediana de 5 + média de 3): sem serrilhado onde o raio até a pista oposta oscila
+    if (run.length >= 3) {
+      const g0 = run.map(q => q.g), gm = g0.map((_, k) => med(g0.slice(Math.max(0, k - 2), k + 3))), gs = gm.map((_, k) => (gm[Math.max(0, k - 1)] + gm[k] + gm[Math.min(gm.length - 1, k + 1)]) / 3);
+      run = run.map((q, k) => { const sh = (gs[k] - q.g) / 2; return { ...q, g: gs[k], m: [q.m[0] + q.dx * sh, q.m[1] + q.dz * sh] }; });
+      // descarta pontas finas (< 0,8 m) que sobram nos extremos
+      while (run.length > 3 && run[0].g < 0.8) run.shift(); while (run.length > 3 && run.at(-1).g < 0.8) run.pop();
+    }
     if (run.length >= 3) {
       const cap = (end, dir) => {   // quarto de círculo: do meio do canteiro até a borda da pista
         const R = Math.min(end.g / 2, 2.5), o = [end.m[0] - end.tx * dir * R, end.m[1] - end.tz * dir * R], pts = [];
@@ -329,7 +347,16 @@ const pedBands = [];
 for (const r of roads) { if (r.br || !(r.k === 'pedestrian' || (r.k === 'footway' && r.w >= 3)) || !r.p.some(([x, z]) => inBox(x, z, 5))) continue;
   const { S } = resampleArc(P(r), 2), h = Math.max(1.5, (r.w || 4) / 2);
   for (let k = 0; k < S.length - 1; k++) { const a = S[k], b = S[k + 1]; pedBands.push([[a.x + a.nx * h, a.z + a.nz * h], [b.x + b.nx * h, b.z + b.nz * h], [b.x - b.nx * h, b.z - b.nz * h], [a.x - a.nx * h, a.z - a.nz * h]].map(q => [r2(q[0]), r2(q[1])])); } }
-console.log('faixas de asfalto', bands.length, '| calçadão', pedBands.length);
+// espaços de pedestre da Prefeitura (camada Praças e Espaços de Lazer): o que fica sobre o espaço público, e não sobre uma
+// quadra, é calçadão (ex.: Rua Coberta, sobre a Rua Ary Delmar Koppe) — não depende do OSM
+const espacos = [];
+for (const f of JSON.parse(fs.readFileSync('data/raw/geoigrejinha/pracas_lazer.geojson')).features) for (const pg of f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates) {
+  let p = pg[0].map(c => toXZ(c[1], c[0])); if (!p.some(([x, z]) => inBox(x, z))) continue; if (signedArea(p) < 0) p.reverse();
+  const xs = p.map(q => q[0]), zs = p.map(q => q[1]); let n = 0, fora = 0;
+  for (let x = Math.min(...xs); x <= Math.max(...xs); x += 1) for (let z = Math.min(...zs); z <= Math.max(...zs); z += 1) if (inPoly(x, z, p)) { n++; if (!inAnyBlock(x, z)) fora++; }
+  if (n && fora / n > 0.8) { pedBands.push(p.map(q => [r2(q[0]), r2(q[1])])); espacos.push([f.properties.Nome_1, Math.round(100 * fora / n) + '%']); }
+}
+console.log('faixas de asfalto', bands.length, '| calçadão', pedBands.length, '| espaços de pedestre da Prefeitura:', espacos.map(e => e.join(' ')).join(', ') || '—');
 const sets = [...blocks.map(p => ({ p, c: 3 })), ...medPolys.map(m => ({ p: m.p, c: 2, grass: m.grass })), ...curbPolys.map(p => ({ p, c: 1 })),
   ...pedBands.map(p => ({ p, c: 0.75 })), ...bands.map(p => ({ p, c: 0.5 }))];
 // 0 lote/terreno, 1 asfalto, 2 calçada (e calçadão), 3 canteiro de concreto, 4 canteiro gramado
@@ -342,7 +369,7 @@ const classify = (x, z) => { let w = null; for (const P2 of bbGrid.get(Math.floo
 const quads = { 1: [], 2: [], 3: [], 4: [] };
 const segX = (e, z) => e.a[0] + (e.b[0] - e.a[0]) * (z - e.a[1]) / (e.b[1] - e.a[1]);
 for (let tx = Math.floor(BOX.x0 / T) * T; tx < BOX.x1; tx += T) for (let tz = Math.floor(BOX.z0 / T) * T; tz < BOX.z1; tz += T) {
-  const x0 = tx, x1 = tx + T, z0 = tz, z1 = tz + T;
+  const x0 = tx, x1 = tx + T, z0 = tz, z1 = tz + T; if (!inBox(tx + T / 2, tz + T / 2)) continue;
   const es = [...polyGrid.near(x0, z0, x1, z1)].filter(e => Math.max(e.a[0], e.b[0]) >= x0 && Math.min(e.a[0], e.b[0]) <= x1 && Math.max(e.a[1], e.b[1]) >= z0 && Math.min(e.a[1], e.b[1]) <= z1);
   const zs = new Set([z0, z1]);
   for (const e of es) { for (const q of [e.a, e.b]) if (q[1] > z0 && q[1] < z1) zs.add(q[1]);
@@ -399,12 +426,30 @@ W.buildings.forEach((b, bi) => {
 });
 console.log('prédios na caixa', bstat.naCaixa, '| avançam sobre calçada/rua', bstat.avancam, '| corrigidos (≤ 4 m)', bstat.corrigidos, '| maiores, mantidos', bstat.grandes);
 
+/* ---------- 5c. transição na borda da região: medidas do piloto onde cada via sai (a malha antiga continua com elas) ---------- */
+const trans = [];
+for (const [r, sp] of spec) {
+  if (ring.has(r) || r.k === 'service') continue;
+  const p = P(r), { S } = resampleArc(p, 0.5);
+  for (let k = 0; k < S.length - 1; k++) {
+    const a = S[k], b = S[k + 1], ia = inBox(a.x, a.z), ib = inBox(b.x, b.z); if (ia === ib) continue;
+    const dir = ia ? 1 : -1, q = ia ? a : b;                // dir: +1 = sai da região no sentido do traçado
+    const qx = q.x - q.tx * dir * 1.5, qz = q.z - q.tz * dir * 1.5;   // mede 1,5 m para dentro
+    if (classify(qx, qz) !== 1) continue;
+    const side = sg => { let t = 0; while (t < 25 && classify(qx + q.nx * sg * t, qz + q.nz * sg * t) === 1) t += 0.1; const c = t; while (t < c + 12 && classify(qx + q.nx * sg * t, qz + q.nz * sg * t) === 2) t += 0.1; return [r2(c), r2(t)]; };
+    const [cL, eL] = side(1), [cR, eR] = side(-1);
+    if (cL < 2 || cR < 2 || cL > 20 || cR > 20) continue;
+    trans.push([roads.indexOf(r), r2((a.s + b.s) / 2), dir, cL, eL, cR, eR]);
+  }
+}
+console.log('transições na borda', trans.length);
+
 /* ---------- 6. mapa de piso (0,5 m) para andar: 0 lote, 1 asfalto, 2 calçada, 3 canteiro ---------- */
 const GC = 0.5, GW = Math.round((BOX.x1 - BOX.x0) / GC), GH = Math.round((BOX.z1 - BOX.z0) / GC), grid = new Uint8Array(GW * GH);
-for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) grid[j * GW + i] = classify(BOX.x0 + (i + 0.5) * GC, BOX.z0 + (j + 0.5) * GC);
+for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) { const x = BOX.x0 + (i + 0.5) * GC, z = BOX.z0 + (j + 0.5) * GC; grid[j * GW + i] = inBox(x, z) ? classify(x, z) : 255; }   // 255 = fora da região
 
-const data = { v: 1, fonte: 'GEO Igrejinha — Quadras (camada 7577); eixos OSM centrados entre as quadras', box: BOX, fade: FADE,
-  rings: loops.map(l => l.map(q => roads.indexOf(q))), buildings: bfix, borig: bfix.map(([bi]) => [bi, W.buildings[bi].p[0]]), roads: corr, asph: quads[1], walk: quads[2], med: quads[3], medG: quads[4], curbs, grid: { cell: GC, w: GW, h: GH, b64: Buffer.from(grid).toString('base64') },
+const data = { v: 2, etapa: ETAPA, nome: ETAPAS[ETAPA - 1].nome, areas: AREAS, fonte: 'GEO Igrejinha — Quadras (camada 7577); eixos OSM centrados entre as quadras', box: BOX, fade: FADE,
+  trans, rings: loops.map(l => l.map(q => roads.indexOf(q))), ringGeo: loops.map(l => { const pts = l.flatMap(q => P(q)), cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cz = pts.reduce((a, q) => a + q[1], 0) / pts.length; return [r2(cx), r2(cz), r2(Math.max(...pts.map(q => Math.hypot(q[0] - cx, q[1] - cz))))]; }), buildings: bfix, borig: bfix.map(([bi]) => [bi, W.buildings[bi].p[0]]), roads: corr, asph: quads[1], walk: quads[2], med: quads[3], medG: quads[4], curbs, grid: { cell: GC, w: GW, h: GH, b64: Buffer.from(grid).toString('base64') },
   blocks: blocks.filter(p => p.some(([x, z]) => inBox(x, z, 10))).map(p => p.map(q => [r2(q[0]), r2(q[1])])), curbPolys, medPolys: medPolys.map(m => m.p),
   orig: [...newP.keys()].map(r => [roads.indexOf(r), r.p]) };
 fs.writeFileSync('public/data/piloto.data.json', JSON.stringify({ gzip_base64: zlib.gzipSync(JSON.stringify(data), { level: 9 }).toString('base64') }));

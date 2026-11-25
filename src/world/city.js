@@ -470,7 +470,10 @@ export class City {
     const corners = []; for (const r of this.world.roads) if (URBAN.has(r.k)) for (const q of [r.p[0], r.p[r.p.length - 1]]) if ((ends.get(cornerKey(q)) || 0) >= 2 && inCentro(q[0], q[1], 20)) corners.push(q);
     const nearCorner = (x, z, d) => corners.some(q => Math.abs(q[0] - x) < d && Math.abs(q[1] - z) < d && Math.hypot(q[0] - x, q[1] - z) < d);
     for (const r of this.world.roads) {
-      const pts = resample(r.p, 4), n = pts.length;
+      // piloto: vértice extra onde a via sai da região (a malha antiga começa ali, com as medidas do piloto)
+      const TR = PL && !r.br ? PL.trans.get(roadIdx.get(r)) : null;
+      let pts = resample(r.p, 4); if (TR) pts = insertArcs(pts, TR.map(t => t.s));
+      const n = pts.length;
       const unpaved = r.pav === 'terra' || (!r.pav && (r.k === 'track' || ['unpaved', 'gravel', 'dirt', 'ground', 'compacted'].includes(r.sf)));
       const cobble = r.pav === 'pedra' || r.pav === 'bloco';
       const foot = r.k === 'path' || r.k === 'footway' || r.k === 'steps' || r.k === 'cycleway';
@@ -500,18 +503,27 @@ export class City {
             seg = [a[0], a[1], b[0], b[1], half, sideL, sideR, dual && !foot ? r.med / 2 + 1 : 0, r.med && !dual && !noMed ? r.med / 2 : 0], R = half + Math.max(sideL, sideR, dual ? r.med / 2 + 1 : 0) + 1;
           for (let bi = Math.floor((Math.min(a[0], b[0]) - R) / 50); bi <= Math.floor((Math.max(a[0], b[0]) + R) / 50); bi++) for (let bj = Math.floor((Math.min(a[1], b[1]) - R) / 50); bj <= Math.floor((Math.max(a[1], b[1]) + R) / 50); bj++) { const k = bi + ',' + bj; let L = sb.get(k); if (!L) sb.set(k, L = []); L.push(seg); } } }
       const NRM = pts.map((_, i) => perp(pts, i, true));
-      const off = (i, o) => { const [nx, nz, m] = NRM[i]; return [pts[i][0] + nx * o * m, pts[i][1] + nz * o * m]; };
+      let LAT = null;   // por vértice: [meio-fio esq., calçada esq., meio-fio dir., calçada dir.] na transição com o piloto
+      const latO = (i, o) => { const L = LAT && LAT[i]; if (!L) return o; const s = o >= 0 ? 1 : -1, a = Math.abs(o), c = s > 0 ? L[0] : L[2], w = s > 0 ? L[1] : L[3], sd = s > 0 ? sideL : sideR;
+        return s * (a <= half ? a * c / half : c + (a - half) * (sd > 0 ? w / sd : 1)); };
+      const off = (i, o) => { const [nx, nz, m] = NRM[i], o2 = latO(i, o); return [pts[i][0] + nx * o2 * m, pts[i][1] + nz * o2 * m]; };
       const wuv = (q, s) => [q[0] / s, q[1] / s];
       const cum = [0]; for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      // fora da região, até 25 m da borda: largura de pista e calçada passam das medidas do piloto às do dado
+      const trDist = (s0) => { let best = null; for (const t of TR || []) { const d = (s0 - t.s) * t.dir; if (!best || Math.abs(d) < Math.abs(best.d)) best = { d, t }; } return best; };
+      if (TR) LAT = cum.map(s0 => { const b = trDist(s0); if (!b || b.d > 25) return null; const f = b.d <= 0 ? 1 : 1 - smooth(0, 25, b.d), lerp = (a, c) => a + (c - a) * f;
+        return [lerp(half, b.t.cL), lerp(sideL, b.t.eL - b.t.cL), lerp(half, b.t.cR), lerp(sideR, b.t.eR - b.t.cR)]; });
+      const overlapTr = (a, b2) => { const b = trDist((a + b2) / 2); return !!b && b.d > -3 && b.d <= 0.01; };   // 3 m dentro da região: emenda sem fresta
       // tira contínua entre deslocamentos o0 e o1 (o > 0 = esquerda), altura dy, no construtor B
       const ri = roadIdx.get(r);
       const dirAt = i => { const a = pts[i], b = pts[Math.min(n - 1, i + 1)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / L, (b[1] - a[1]) / L]; };
       let posFilt = null;   // (x, z, i) => false para pular o quad (definido por trecho, no centro)
-      const pil = PL && !r.br, inPil = (x, z) => pil && PL.inBox(x, z);
+      const pil = PL && !r.br, inPil = (x, z, i) => pil && PL.inBox(x, z) && !(i !== undefined && overlapTr(cum[i], cum[i + 1]));
       const strip = (B, o0, o1, dy, col, uvs = 4, filt = null) => {
         for (let i = 0; i < n - 1; i++) {
           if (filt && !filt(cum[i], cum[i + 1])) continue;
-          if (pil && dy !== 0.03 && PL.inBox((off(i, o0)[0] + off(i + 1, o1)[0]) / 2, (off(i, o0)[1] + off(i + 1, o1)[1]) / 2)) continue;   // piloto: pista/calçada vêm do build
+          if (pil && dy !== 0.03 && PL.inBox((off(i, o0)[0] + off(i + 1, o1)[0]) / 2, (off(i, o0)[1] + off(i + 1, o1)[1]) / 2) && !overlapTr(cum[i], cum[i + 1])) continue;   // piloto: pista/calçada vêm do build
+          if (pil && dy === 0.03 && PL.nearRing((pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2, 12)) continue;   // sem pintura dentro e em volta da rótula
           const a0 = off(i, o0), a1 = off(i + 1, o0), b1 = off(i + 1, o1), b0 = off(i, o1);
           if (posFilt && !posFilt((a0[0] + a1[0] + b0[0] + b1[0]) / 4, (a0[1] + a1[1] + b0[1] + b1[1]) / 4, i, B)) continue;
           B.quad([a0[0], hy(a0, i) + dy, a0[1]], [a1[0], hy(a1, i + 1) + dy, a1[1]], [b1[0], hy(b1, i + 1) + dy, b1[1]], [b0[0], hy(b0, i) + dy, b0[1]],
@@ -555,11 +567,11 @@ export class City {
         if (sideR) { strip(W, -half, -half - sideR, curbH, sideCol, 1.2, F()); }
         const curbCol = (a, b) => centro && nearCorner((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, half + side + 7) ? C.yellow : C.curb;
         if (sideL || r.br) for (let i = i0; i < i1; i++) { const a = off(i, half), b = off(i + 1, half), [nx, nz] = NRM[i];
-          if (inPil((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
+          if (inPil((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i)) continue;
           if (posFilt && !posFilt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, ch.walk)) continue;
           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [-nx, 0, -nz]); }
         if (sideR) for (let i = i0; i < i1; i++) { const a = off(i, -half), b = off(i + 1, -half), [nx, nz] = NRM[i];
-          if (inPil((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
+          if (inPil((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i)) continue;
           if (posFilt && !posFilt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, ch.walk)) continue;
           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [nx, 0, nz]); }
         // canteiro central (pista única com canteiro)
@@ -1209,6 +1221,17 @@ function resample(p, step) {
   for (let i = 0; i < p.length - 1; i++) {
     const [ax, az] = p[i], [bx, bz] = p[i + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / step));
     for (let k = 1; k <= n; k++) out.push([ax + (bx - ax) * k / n, az + (bz - az) * k / n]);
+  }
+  return out;
+}
+/** Insere vértices nas posições de arco `ss` de uma polilinha (transição do piloto). */
+function insertArcs(p, ss) {
+  const c = [0]; for (let i = 1; i < p.length; i++) c.push(c[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+  const cs = ss.filter(s => s > 0.05 && s < c.at(-1) - 0.05).sort((a, b) => a - b), out = [p[0]]; let k = 0;
+  for (let i = 1; i < p.length; i++) {
+    while (k < cs.length && cs[k] < c[i] - 0.05) { const s = cs[k++]; if (s <= c[i - 1] + 0.05) continue; const f = (s - c[i - 1]) / (c[i] - c[i - 1]); out.push([p[i - 1][0] + (p[i][0] - p[i - 1][0]) * f, p[i - 1][1] + (p[i][1] - p[i - 1][1]) * f]); }
+    while (k < cs.length && cs[k] <= c[i] + 0.05) k++;
+    out.push(p[i]);
   }
   return out;
 }
