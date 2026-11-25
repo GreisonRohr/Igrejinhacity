@@ -3,6 +3,14 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-25 — Experimental: piloto de reconstrução urbana pelas quadras da Prefeitura
+- Auditoria do GEO Igrejinha (`docs/auditoria-geo.md`): 380 camadas, quadras e lotes não usados até então.
+- `scripts/build-piloto.mjs` + `src/world/piloto.js` (`?piloto` / `npm run build:piloto`): eixo centrado entre as
+  quadras, pista dupla ancorada na quadra do seu lado, nós por mínimos quadrados, rótula fixa; calçada e meio-fio
+  pela quadra com esquina em arco; canteiro com aberturas e nariz; asfalto só na faixa de cada via; prédios que
+  avançam até 4 m voltam ao lote; pedestres, carros estacionados, árvores e postes na calçada real.
+- Centro 7 inalterado sem o parâmetro (14/14 suítes, 704 chamadas, 2248k triângulos). Detalhes: `docs/piloto-quadras.md`.
+
 ## 2026-11-25 — Centro 7: malha urbana do centro (referência Bah City)
 - Estudo da abordagem do Bah City (sem código-fonte público; índice de dados e jogo): `docs/malha-urbana-bahcity.md`.
 - Remendos de altura sob as ruas do centro e das cabeceiras de ponte (`City.flattenStreets`): pista, calçada e chão

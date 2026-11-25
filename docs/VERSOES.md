@@ -102,3 +102,8 @@ indicado e no tag local `etapa-N-*`).
 - Cruzamentos em volta da praça: asfalto único, calçadas param na borda da outra rua, faixas de pedestre nas bordas.
 - Castelo Branco (pista dupla): sem faixa no canteiro.
 - Ponte Edmundo Kichler (acesso norte do centro): cabeceiras niveladas, encontro de concreto, sem vão.
+
+## Experimental — Piloto de reconstrução pelas quadras (25/11/2026)
+- Link (independente, não substitui o principal): https://claude.ai/artifact/FtfUVq1FMyvvXxsytFhdhp
+- Base: Centro 7. Ruas, calçadas, esquinas, canteiros e meio-fio gerados das quadras da Prefeitura numa caixa piloto
+  (x −190…60, z −60…410). Detalhes: `docs/piloto-quadras.md`.

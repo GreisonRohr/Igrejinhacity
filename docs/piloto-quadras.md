@@ -36,3 +36,33 @@ Ver `docs/piloto-validacao.json` (gerado pelo build) e as imagens em `docs/pilot
 Nada no código depende do centro: muda-se a caixa (`BOX` em `scripts/build-piloto.mjs`) ou se processa por regiões.
 As 861 quadras da cidade passam pelo mesmo caminho; o que precisa de atenção antes de expandir está na seção de
 problemas restantes do relatório.
+
+## Resultados (25/11/2026)
+
+| Medida (caixa piloto) | Centro 7 | Piloto |
+|---|---|---|
+| Eixo fora do centro do vão (mediana / P90) | 1,39 m / 4,56 m | 0,06 m / 0,55 m |
+| Calçada dentro de lote | 22,2% | 0% (por construção) |
+| Pista dentro de lote | 3,4% | 1,1% |
+| Pista de dados passando sob a calçada real | — | 2,6% |
+| Eixo corrigido sobre o asfalto gerado | — | 98,5% |
+| Prédios do cadastro avançando sobre calçada/rua | 60 de 186 | 7 (> 4 m, mantidos) |
+| Pedestres no meio da pista (suíte) | 0 / 2038 | 0 / 2039 |
+| Chamadas de desenho / triângulos / heap | 704 / 2248k / 113 MB | 707 / 2288k / 115 MB |
+
+Testes: as 14 suítes passam no modo estável (idêntico ao Centro 7) e com `TEST_QS=&piloto`; a suíte `piloto` anda a pé
+pela Castelo Branco × João Corrêa, atravessa o canteiro, contorna a rótula e sobe 130 m da Dorneles pela calçada
+(maior degrau 0,15–0,23 m = meio-fio).
+
+Imagens: `docs/piloto/jogo-*.jpg` (antes × depois no jogo) e `docs/piloto/ortofoto-*.jpg` (Centro 7 × piloto sobre a
+ortofoto de 0,2 m/px).
+
+## Problemas restantes
+
+1. Rótula: linhas de borda das pistas ainda cruzam o anel; muitas faixas de pedestre nos acessos.
+2. 7 prédios avançam mais de 4 m sobre o espaço público (cadastro × quadras divergem): revisar um a um com a foto.
+3. Pista dupla perto da João Corrêa: sem canteiro (vão estreito); o nariz de canteiro junto à rótula é serrilhado.
+4. Larguras de pista vêm da lei (GEO); onde a rua real é mais estreita, a borda pintada fica sob a calçada (2,6%).
+5. Calçadão: a Rua Coberta não é via de pedestre no OSM; o espaço sem quadra nem pista fica terreno.
+6. Transição na borda da caixa piloto: a malha antiga recomeça fora dela (corte reto).
+7. Os 3 DWG da Prefeitura seguem sem conversão (podem trazer meio-fio real e confirmar as larguras).
