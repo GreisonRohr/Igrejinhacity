@@ -19,6 +19,7 @@ indicado e no tag local `etapa-N-*`).
 | Centro 4 · Ambientação | https://claude.ai/artifact/4Keok1dgnzp8W5CWiEr1KS | 16bdd00 | estável (12/12 testes) |
 | Centro 5 · Bordas da praça e do arroio | https://claude.ai/artifact/C1N2haTFV5BDLifGrd5A61 | 45dd3e7 | estável (12/12 testes) |
 | Centro 6 · Prédios fora das ruas | https://claude.ai/artifact/8Y4ydUgrkRi1R6nTZhm3dM | 090567a | estável (12/12 testes) |
+| Centro 7 · Malha urbana | https://claude.ai/artifact/So4w6No4TREGUdfkzrqrvB | 9a14b58 | estável (13/13 testes) |
 
 ## O que testar
 
@@ -96,3 +97,8 @@ indicado e no tag local `etapa-N-*`).
 
 ### Centro 6 — prédios fora das ruas
 - Andar/dirigir pela João Corrêa e pela Dorneles: nenhuma parede na pista ou na calçada (São João, Piccadilly, Panvel).
+
+### Centro 7 — malha urbana (cruzamentos, pontes, terreno)
+- Cruzamentos em volta da praça: asfalto único, calçadas param na borda da outra rua, faixas de pedestre nas bordas.
+- Castelo Branco (pista dupla): sem faixa no canteiro.
+- Ponte Edmundo Kichler (acesso norte do centro): cabeceiras niveladas, encontro de concreto, sem vão.
