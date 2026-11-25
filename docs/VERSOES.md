@@ -18,6 +18,7 @@ indicado e no tag local `etapa-N-*`).
 | Centro 3 · Rua Coberta | https://claude.ai/artifact/AJuFpoPFNtGZj1EjVJ5Qam | 4d54a2b | estável (12/12 testes) |
 | Centro 4 · Ambientação | https://claude.ai/artifact/4Keok1dgnzp8W5CWiEr1KS | 16bdd00 | estável (12/12 testes) |
 | Centro 5 · Bordas da praça e do arroio | https://claude.ai/artifact/C1N2haTFV5BDLifGrd5A61 | 45dd3e7 | estável (12/12 testes) |
+| Centro 6 · Prédios fora das ruas | https://claude.ai/artifact/8Y4ydUgrkRi1R6nTZhm3dM | 090567a | estável (12/12 testes) |
 
 ## O que testar
 
@@ -92,3 +93,6 @@ indicado e no tag local `etapa-N-*`).
 - Contorno da praça nas 4 ruas: o piso, a grama e as árvores param na calçada; nada sobre o asfalto.
 - Travessias do arroio (João Corrêa e Dorneles): sem bambu/mato/paredes na rua; canal termina no nível da calçada.
 - Dirigir pela João Corrêa sobre o bueiro: pista lisa, sem manchas de chão.
+
+### Centro 6 — prédios fora das ruas
+- Andar/dirigir pela João Corrêa e pela Dorneles: nenhuma parede na pista ou na calçada (São João, Piccadilly, Panvel).
