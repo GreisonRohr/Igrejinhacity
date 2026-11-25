@@ -6,6 +6,7 @@ import { editHeights } from './terrain.js';
 import { freeAfterUpload } from './merge.js';
 import { inCentro, CENTRO } from './centro.js';
 import { signAtlas, SOBRADO_CORES, LOJAS_FOTOS } from './fachadas.js';
+import { Quadras, inPiloto } from './quadras.js';
 
 const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
 // Piloto do upgrade visual (centro): sombra de contato, lojas no térreo e muros/portões das casas até PILOT_R da praça
@@ -422,6 +423,9 @@ export class City {
     const lampGrid = new Set(), lampKey = (x, z) => Math.round(x / 10) + ',' + Math.round(z / 10);
     const addLamp = (x, z, y, yaw) => { const k = lampKey(x, z); if (lampGrid.has(k)) return; lampGrid.add(k); this.lampPos.push([x, y, z, yaw]); };
     const crossings = this.findCrossings();
+    // teste ?quadras: calçada e meio-fio pela borda real das quadras do GEO, na caixa piloto (quadras.js)
+    const QD = this.qd = this.blocks ? new Quadras(this.blocks, this.world.roads, URBAN) : null;
+    if (QD && this.snapAxes) this.snappedVerts = QD.snap(this.world.roads, URBAN);   // ?quadras=eixo: eixo centrado entre as quadras
     this.zebras = [];                                  // faixas de pedestre (para decoração: casinhas da avenida)
     const duals = this.world.roads.filter(q => q.ow && q.med && !q.br);
     // distância do ponto até a outra pista da mesma avenida (largura real do canteiro)
@@ -505,9 +509,11 @@ export class City {
       const ri = roadIdx.get(r);
       const dirAt = i => { const a = pts[i], b = pts[Math.min(n - 1, i + 1)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / L, (b[1] - a[1]) / L]; };
       let posFilt = null;   // (x, z, i) => false para pular o quad (definido por trecho, no centro)
+      const qPil = QD && URBAN.has(r.k) && !r.br;
       const strip = (B, o0, o1, dy, col, uvs = 4, filt = null) => {
         for (let i = 0; i < n - 1; i++) {
           if (filt && !filt(cum[i], cum[i + 1])) continue;
+          if (qPil && dy > 0.1 && dy < 0.2 && inPiloto((pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2)) continue;   // calçada antiga: no piloto vem da quadra
           const a0 = off(i, o0), a1 = off(i + 1, o0), b1 = off(i + 1, o1), b0 = off(i, o1);
           if (posFilt && !posFilt((a0[0] + a1[0] + b0[0] + b1[0]) / 4, (a0[1] + a1[1] + b0[1] + b1[1]) / 4, i, B)) continue;
           B.quad([a0[0], hy(a0, i) + dy, a0[1]], [a1[0], hy(a1, i + 1) + dy, a1[1]], [b1[0], hy(b1, i + 1) + dy, b1[1]], [b0[0], hy(b0, i) + dy, b0[1]],
@@ -545,15 +551,23 @@ export class City {
           const n2 = Math.max(1, Math.ceil(half / 3.5)), ofs = []; for (let q = -n2; q <= n2; q++) ofs.push(half * q / n2);
           for (let q = ofs.length - 1; q > 0; q--) strip(cobble ? ch.cobble : ch.roads, ofs[q], ofs[q - 1], 0, surfC, cobble ? 2.5 : 4, F());
         } else strip(cobble ? ch.cobble : ch.roads, half, -half, 0, surfC, cobble ? 2.5 : 4, F());
+        // piloto ?quadras: o asfalto vai até a borda da quadra (a calçada da quadra fica por cima)
+        if (qPil) for (const sg of [1, -1]) { if (!(sg > 0 ? sideL : sideR)) continue;
+          const E = []; for (let i = i0; i <= i1; i++) { const [nx, nz] = NRM[i]; E.push(inPiloto(pts[i][0], pts[i][1]) ? QD.ray(pts[i][0], pts[i][1], sg * nx, sg * nz) : Infinity); }
+          for (let i = i0; i < i1; i++) { const e0 = E[i - i0], e1 = E[i + 1 - i0]; if (!(e0 < half + 9 && e1 < half + 9) || e0 <= half || e1 <= half) continue;
+            const a0 = off(i, sg * half), a1 = off(i + 1, sg * half), b1 = off(i + 1, sg * e1), b0 = off(i, sg * e0);
+            ch.roads.quad([a0[0], hy(a0, i), a0[1]], [a1[0], hy(a1, i + 1), a1[1]], [b1[0], hy(b1, i + 1), b1[1]], [b0[0], hy(b0, i), b0[1]], [wuv(a0, 4), wuv(a1, 4), wuv(b1, 4), wuv(b0, 4)], surfC, 0, up); } }
         // calçadas (lajota) + meio-fio de concreto (no centro, amarelo nas esquinas)
         const curbH = 0.15, W = centro ? ch.walkC : ch.walk, sideCol = centro ? C.sideC.clone().multiplyScalar(0.94 + 0.12 * hash(r.p[0][1], r.p[0][0])) : C.side;
         if (sideL) { strip(W, half + sideL, half, curbH, sideCol, 1.2, F()); }
         if (sideR) { strip(W, -half, -half - sideR, curbH, sideCol, 1.2, F()); }
         const curbCol = (a, b) => centro && nearCorner((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, half + side + 7) ? C.yellow : C.curb;
         if (sideL || r.br) for (let i = i0; i < i1; i++) { const a = off(i, half), b = off(i + 1, half), [nx, nz] = NRM[i];
+          if (qPil && inPiloto((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
           if (posFilt && !posFilt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, ch.walk)) continue;
           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [-nx, 0, -nz]); }
         if (sideR) for (let i = i0; i < i1; i++) { const a = off(i, -half), b = off(i + 1, -half), [nx, nz] = NRM[i];
+          if (qPil && inPiloto((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
           if (posFilt && !posFilt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, ch.walk)) continue;
           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [nx, 0, nz]); }
         // canteiro central (pista única com canteiro)
@@ -620,6 +634,7 @@ export class City {
       }
       if (r.br) this.buildBridge(r, pts, NRM, cum, hy, half, side, off, wall);
     }
+    if (QD) { const ch = this.chunk(5, 10); QD.draw({ heightAt: (x, z) => t.heightAt(x, z), walk: ch.walkC, curbB: ch.roads, colWalk: C.sideC, colCurb: C.curb, colCorner: C.yellow }); }
   }
 
   /** Ponte: laje com espessura, calçadas, guarda-corpo metálico com montantes e pilares até o leito. */
@@ -683,6 +698,7 @@ export class City {
   /** Altura do tabuleiro de ponte em (x, z), ou null se não há ponte ali. */
   /** Altura do piso de ruas e calçadas acima do terreno neste ponto (0 fora delas). */
   surfOffset(x, z) {
+    if (this.qd) { const v = this.qd.surf(x, z); if (v !== null) return v; }
     const L = this.surfBins?.get(Math.floor(x / 50) + ',' + Math.floor(z / 50)); if (!L) return 0;
     let best = 0;
     for (const [ax, az, bx, bz, half, sl, sr, md, mm] of L) {

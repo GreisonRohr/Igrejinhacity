@@ -10,6 +10,12 @@ const LAYERS = {
   patrimonio_inventario: [8354, ['Identificação', 'Local', 'Pontuação']],
   feiras: [6591, ['Nome']],
   censo2022: [10305, ['Total de pessoas', 'AREA_KM2', 'NM_BAIRRO', 'SITUACAO']],
+  // auditoria GEO (25/11/2026): lotes só com a geometria; sistema viário completo; drenagem; faces de logradouro
+  lotes: [7579, []],
+  sistema_viario: [7287, ['Logradouro', 'Tipo_Pav', 'Gabarito', 'Larg_Total', 'Passeio_E', 'Passeio_D', 'Faixa_E', 'Faixa_D', 'Estacio_E', 'Estacio_D', 'Canteiro_C', 'Ciclovia_E', 'Ciclovia_D']],
+  drenagem_caixas: [7546, ['Tipo', 'Sigla']],
+  drenagem_rede: [7548, ['Tipo', 'Diametro_cm']],
+  censo_faces_logradouro: [10814, ['NM_TIP_LOG', 'NM_LOG', 'TOT_RES', 'TOT_GERAL']],
 };
 const only = process.argv[2];
 for (const [name, [id, keep]] of Object.entries(LAYERS)) {

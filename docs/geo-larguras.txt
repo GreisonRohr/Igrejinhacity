@@ -1,0 +1,16 @@
+rua | amostras | faixa de domínio real (quadra a quadra, mediana) | largura no jogo (pista+calçadas) | eixo deslocado (mediana) | w | calçadas
+Avenida Presidente Castelo Branco (pista) | 83 | 25.7 | 12.0 | -4.8 | 22 | 4/4
+Rua da Independência | 55 | 15.1 | 16.0 | 1.2 | 10 | 3/3
+Rua General Ernesto Dorneles | 51 | 16.3 | 16.0 | -0.4 | 10 | 3/3
+Rua João Corrêa | 49 | 13.1 | 16.0 | 0.3 | 10 | 3/3
+Avenida Presidente Castelo Branco | 24 | 24.3 | 16.0 | -7.5 | 10 | 3/3
+Rua João Lourenço Schaefer | 22 | 17.8 | 18.0 | -0.7 | 12 | 3/3
+Rua Oswaldo Cruz | 19 | 17.8 | 18.0 | -2.2 | 12 | 3/3
+Rua Benjamin Constant | 17 | 14.9 | 16.0 | -1.1 | 10 | 3/3
+Travessa Santos Dumont | 13 | 18.6 | 18.0 | -1.1 | 12 | 3/3
+Rua Ary Delmar Koppe | 11 | 21.3 | 18.0 | -1.8 | 12 | 3/3
+Rua Tiradentes R-12 12 2.5 3.5 0 0
+Rua João Correa R-16 16 3 3.9 2.2 0
+Avenida Presidente Castelo Branco R-30A 30 4 4.3 2.2 6
+Avenida Presidente Castelo Branco R-24 24 3.5 4.8 2.2 0
+Rua João Correa (Três Coroas) N/A 0 0 0 0 0

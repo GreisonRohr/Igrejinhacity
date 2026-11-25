@@ -1,0 +1,499 @@
+diff --git a/src/world/city.js b/src/world/city.js
+index bf6f150..45c21f0 100644
+--- a/src/world/city.js
++++ b/src/world/city.js
+@@ -6,6 +6,7 @@ import { editHeights } from './terrain.js';
+ import { freeAfterUpload } from './merge.js';
+ import { inCentro, CENTRO } from './centro.js';
+ import { signAtlas, SOBRADO_CORES, LOJAS_FOTOS } from './fachadas.js';
++import { findJunctions, flattenJunction, drawJunction, junctionSurf } from './junctions.js';
+ 
+ const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
+ // Piloto do upgrade visual (centro): sombra de contato, lojas no térreo e muros/portões das casas até PILOT_R da praça
+@@ -37,7 +38,7 @@ const METAL = [0x8e98a4, 0xa9b2bb, 0x6f8fa8].map(c => new THREE.Color(c));
+ const C = {
+   asphalt: new THREE.Color(0x55585c), dirt: new THREE.Color(0xa08660), path: new THREE.Color(0xc2ad86),
+   side: new THREE.Color(0xd4d0c8), sideC: new THREE.Color(0xa9a6a0), curb: new THREE.Color(0xdcd8cf), line: new THREE.Color(0xf0f0ea), yellow: new THREE.Color(0xf2d24b),
+-  concrete: new THREE.Color(0xb9b6ae), plain: new THREE.Color(0xffffff), pool: new THREE.Color(0x7fd6ff),
++  concrete: new THREE.Color(0xb9b6ae), island: new THREE.Color(0xc4c1b9), plain: new THREE.Color(0xffffff), pool: new THREE.Color(0x7fd6ff),
+   pedra: new THREE.Color(0x8a8378), metal: new THREE.Color(0x9aa0a6), concreteDark: new THREE.Color(0x8f8c85), bloco: new THREE.Color(0xa29d94), median: new THREE.Color(0x6f9e4c),
+ };
+ 
+@@ -222,11 +223,19 @@ export class City {
+   flattenStreets() {
+     const t = this.t, bEnds = (this.bridgeEnds || []).filter(e => Math.hypot(e[0], e[1]) < 900);
+     const care = (x, z) => inCentro(x, z, 30) || bEnds.some(e => Math.hypot(e[0] - x, e[1] - z) < 75);
++    // cruzamentos: cota única = média do terreno no centro e nas linhas de corte dos braços
++    const JN = this._junctions();
++    for (const J of JN.list) { let s = t.heightAt(J.x, J.z), n = 1; for (const a of J.arms) { s += t.heightAt(a.S[0], a.S[1]); n++; } J.y = s / n; }
++    const BL = 10;   // rampa de concordância da rua até a cota do cruzamento
+     let nRoads = 0;
+-    for (const r of this.world.roads) {
+-      if (r.br || !(URBAN.has(r.k) || r.k === 'service' || r.k === 'unclassified') || !r.p.some(q => care(q[0], q[1]))) continue;
+-      const pts = resample(r.p, 4), n = pts.length; if (n < 2) continue;
++    this.world.roads.forEach((r, ri) => {
++      if (r.br || !(URBAN.has(r.k) || r.k === 'service' || r.k === 'unclassified') || !r.p.some(q => care(q[0], q[1]))) return;
++      const pts = resample(r.p, 4), n = pts.length; if (n < 2) return;
+       const raw = pts.map(q => t.heightAt(q[0], q[1])), prof = raw.map((v, i) => (raw[Math.max(0, i - 1)] + v * 2 + raw[Math.min(n - 1, i + 1)]) / 4);
++      const cuts = JN.cuts.get(ri);
++      if (cuts) { let acc = 0; for (let i = 0; i < n; i++) { if (i) acc += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
++        let best = Infinity, y = 0; for (const c of cuts) { const d = acc < c.s0 ? c.s0 - acc : acc > c.s1 ? acc - c.s1 : 0; if (d < best) { best = d; y = JN.list[c.j].y; } }
++        if (best < BL) prof[i] = y + (prof[i] - y) * smooth(0, BL, best); } }
+       const sw = r.sw ? Math.max(r.sw[0], r.sw[1]) : 2.2, W = r.w / 2 + sw + 0.4, B = 2.0;
+       for (let i = 0; i < n - 1; i++) {
+         const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; if (!care(ax, az) && !care(bx, bz)) continue;
+@@ -239,10 +248,30 @@ export class City {
+         });
+       }
+       nRoads++;
+-    }
++    });
++    for (const J of JN.list) flattenJunction(J, t, editHeights, 3);   // por último: o piso do cruzamento é plano
+     return nRoads;
+   }
+ 
++  /** Cruzamentos da zona tratada (centro e cabeceiras de ponte), calculados uma vez — ver junctions.js. */
++  _junctions() {
++    if (this._jn) return this._jn;
++    const bEnds = (this.bridgeEnds || []).filter(e => Math.hypot(e[0], e[1]) < 900);
++    const care = (x, z) => inCentro(x, z) || bEnds.some(e => Math.hypot(e[0] - x, e[1] - z) < 45);
++    const spec = r => {
++      if (r.br || !(URBAN.has(r.k) || r.k === 'service' || r.k === 'unclassified')) return null;
++      const unpaved = r.pav === 'terra' || (!r.pav && ['unpaved', 'gravel', 'dirt', 'ground', 'compacted'].includes(r.sf));
++      const urban = URBAN.has(r.k) && !unpaved, dual = !!(r.ow && r.med && this._hasTwin(r));
++      const side = r.sw ? (r.sw[0] + r.sw[1]) / 2 : (urban ? 2.2 : 0);
++      return { half: (dual ? Math.max(3.5, (r.w - r.med) / 2) : r.w) / 2, sideL: dual && this._medSign(r) > 0 ? 0 : side, sideR: dual && this._medSign(r) < 0 ? 0 : side, dual, cobble: r.pav === 'pedra' || r.pav === 'bloco' };
++    };
++    this._jn = findJunctions(this.world.roads, spec, care);
++    // grade para consulta rápida (piso por onde se anda)
++    this._jGrid = new Map();
++    for (const J of this._jn.list) for (let i = Math.floor((J.x - J.R) / 50); i <= Math.floor((J.x + J.R) / 50); i++) for (let k = Math.floor((J.z - J.R) / 50); k <= Math.floor((J.z + J.R) / 50); k++) { const q = i + ',' + k; (this._jGrid.get(q) || this._jGrid.set(q, []).get(q)).push(J); }
++    return this._jn;
++  }
++
+   /* ---------- 1. rio: calcula o nível da água e escava o leito (antes de montar o terreno) ---------- */
+   carveWater() {
+     const t = this.t;
+@@ -422,10 +451,15 @@ export class City {
+     const lampGrid = new Set(), lampKey = (x, z) => Math.round(x / 10) + ',' + Math.round(z / 10);
+     const addLamp = (x, z, y, yaw) => { const k = lampKey(x, z); if (lampGrid.has(k)) return; lampGrid.add(k); this.lampPos.push([x, y, z, yaw]); };
+     const crossings = this.findCrossings();
++    const JN = this._junctions();   // cruzamentos montados como peça única (junctions.js)
+     this.zebras = [];                                  // faixas de pedestre (para decoração: casinhas da avenida)
+     const duals = this.world.roads.filter(q => q.ow && q.med && !q.br);
+     // distância do ponto até a outra pista da mesma avenida (largura real do canteiro)
+     const otherDist = (r, x, z) => { let best = Infinity; for (const q of duals) { if (q === r || q.n !== r.n) continue; for (let i = 0; i < q.p.length - 1; i++) { const a = q.p[i], b = q.p[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)); best = Math.min(best, Math.hypot(x - a[0] - dx * u, z - a[1] - dz * u)); } } return best; };
++    // distância ao longo do raio (x,z)+(dx,dz)·t até o eixo da outra pista da mesma avenida (Infinity se não cruza até tMax)
++    const twinRay = (r, x, z, dx, dz, tMax) => { let best = Infinity; for (const q of duals) { if (q === r || q.n !== r.n) continue; for (let i = 0; i < q.p.length - 1; i++) {
++      const a = q.p[i], b = q.p[i + 1], ex = b[0] - a[0], ez = b[1] - a[1], den = dx * ez - dz * ex; if (Math.abs(den) < 1e-6) continue;
++      const tt = ((a[0] - x) * ez - (a[1] - z) * ex) / den, u = ((a[0] - x) * dz - (a[1] - z) * dx) / den; if (u >= 0 && u <= 1 && tt > 0 && tt < tMax && tt < best) best = tt; } } return best; };
+     // malha do centro (referência Bah City: uma superfície por cruzamento, calçada que contorna a esquina): pista de
+     // cada via urbana, para que calçada/meio-fio/faixas de uma rua não atravessem a pista da outra e a sobreposição de
+     // asfalto no cruzamento fique só com a via mais larga
+@@ -468,14 +502,21 @@ export class City {
+     const corners = []; for (const r of this.world.roads) if (URBAN.has(r.k)) for (const q of [r.p[0], r.p[r.p.length - 1]]) if ((ends.get(cornerKey(q)) || 0) >= 2 && inCentro(q[0], q[1], 20)) corners.push(q);
+     const nearCorner = (x, z, d) => corners.some(q => Math.abs(q[0] - x) < d && Math.abs(q[1] - z) < d && Math.hypot(q[0] - x, q[1] - z) < d);
+     for (const r of this.world.roads) {
+-      const pts = resample(r.p, 4), n = pts.length;
++      // ruas que chegam a um cruzamento: vértice extra exatamente em cada linha de corte
++      const jc = JN.cuts.get(roadIdx.get(r));
++      let pts = resample(r.p, 4), crossIdx = crossings.get(r) || [];
++      if (jc) { const old = pts, oc = arcs(old); pts = insertCuts(old, oc, jc.flatMap(c => [c.s0, c.s1])); const nc = arcs(pts);
++        crossIdx = crossIdx.map(ci => { let b = 0; for (let k = 1; k < nc.length; k++) if (Math.abs(nc[k] - oc[ci]) < Math.abs(nc[b] - oc[ci])) b = k; return b; }); }
++      const n = pts.length;
++      const inJ = (a, b) => !!jc && jc.some(c => (a + b) / 2 > c.s0 && (a + b) / 2 < c.s1);
+       const unpaved = r.pav === 'terra' || (!r.pav && (r.k === 'track' || ['unpaved', 'gravel', 'dirt', 'ground', 'compacted'].includes(r.sf)));
+       const cobble = r.pav === 'pedra' || r.pav === 'bloco';
+       const foot = r.k === 'path' || r.k === 'footway' || r.k === 'steps' || r.k === 'cycleway';
+       const surf = foot ? C.path : unpaved ? C.dirt : r.pav === 'pedra' ? C.pedra : r.pav === 'bloco' ? C.bloco : C.asphalt;
+       const asphalt = !foot && !unpaved && !cobble;
+       // tom próprio por rua (asfalto novo/velho, recapeado): ±8% sobre a cor base, fixo pela posição
+-      const surfJ = surf.clone().multiplyScalar(0.92 + 0.16 * hash(r.p[0][0], r.p[0][1]));
++      // (zona tratada: tom único, para emendar sem degrau de cor com o asfalto do cruzamento)
++      const surfJ = r.p.some(q => care(q[0], q[1])) ? surf.clone() : surf.clone().multiplyScalar(0.92 + 0.16 * hash(r.p[0][0], r.p[0][1]));
+       const urban = URBAN.has(r.k) && !unpaved;
+       // pista dupla só se a pista irmã (mesmo nome, mão única com canteiro) estiver ao lado; senão desenha a rua inteira
+       const dual = r.ow && r.med && !r.br && this._hasTwin(r);
+@@ -483,7 +524,9 @@ export class City {
+       const half = width / 2;
+       const swAvg = r.sw ? (r.sw[0] + r.sw[1]) / 2 : (urban ? 2.2 : 0);
+       const side = r.br ? (urban ? 1.5 : 0.4) : swAvg;
+-      const sideL = side, sideR = dual && !r.br ? 0 : side;   // pista dupla (sentido do OSM = sentido do trânsito): canteiro à esquerda (−), calçada à direita (+)
++      // pista dupla: canteiro do lado da pista irmã (medido na geometria; o sentido do traçado no OSM nem sempre é o do trânsito)
++      const MS = dual ? this._medSign(r) : -1;
++      const sideL = dual && !r.br && MS > 0 ? 0 : side, sideR = dual && !r.br && MS < 0 ? 0 : side;
+       // ponte: pista reta entre as cabeceiras (altura original, antes de escavar o rio)
+       let Y = null;
+       if (r.br) {
+@@ -495,7 +538,7 @@ export class City {
+       // piso por onde se anda: pista +8 cm e calçada +23 cm sobre o terreno (pontes: deckAt)
+       if (!Y) { const sb = this.surfBins || (this.surfBins = new Map());
+         for (let i = 0; i < r.p.length - 1; i++) { const a = r.p[i], b = r.p[i + 1], noMed = /Jo.o Corr/.test(r.n || '') && Math.min(...r.p.map(q => Math.hypot(q[0], q[1] - 47))) < 60,
+-            seg = [a[0], a[1], b[0], b[1], half, sideL, sideR, dual && !foot ? r.med / 2 + 1 : 0, r.med && !dual && !noMed ? r.med / 2 : 0], R = half + Math.max(sideL, sideR, dual ? r.med / 2 + 1 : 0) + 1;
++            seg = [a[0], a[1], b[0], b[1], half, sideL, sideR, dual && !foot ? -MS * (r.med / 2 + 1) : 0, r.med && !dual && !noMed ? r.med / 2 : 0], R = half + Math.max(sideL, sideR, dual ? r.med / 2 + 1 : 0) + 1;
+           for (let bi = Math.floor((Math.min(a[0], b[0]) - R) / 50); bi <= Math.floor((Math.max(a[0], b[0]) + R) / 50); bi++) for (let bj = Math.floor((Math.min(a[1], b[1]) - R) / 50); bj <= Math.floor((Math.max(a[1], b[1]) + R) / 50); bj++) { const k = bi + ',' + bj; let L = sb.get(k); if (!L) sb.set(k, L = []); L.push(seg); } } }
+       const NRM = pts.map((_, i) => perp(pts, i, true));
+       const off = (i, o) => { const [nx, nz, m] = NRM[i]; return [pts[i][0] + nx * o * m, pts[i][1] + nz * o * m]; };
+@@ -508,6 +551,7 @@ export class City {
+       const strip = (B, o0, o1, dy, col, uvs = 4, filt = null) => {
+         for (let i = 0; i < n - 1; i++) {
+           if (filt && !filt(cum[i], cum[i + 1])) continue;
++          if (inJ(cum[i], cum[i + 1])) continue;
+           const a0 = off(i, o0), a1 = off(i + 1, o0), b1 = off(i + 1, o1), b0 = off(i, o1);
+           if (posFilt && !posFilt((a0[0] + a1[0] + b0[0] + b1[0]) / 4, (a0[1] + a1[1] + b0[1] + b1[1]) / 4, i, B)) continue;
+           B.quad([a0[0], hy(a0, i) + dy, a0[1]], [a1[0], hy(a1, i + 1) + dy, a1[1]], [b1[0], hy(b1, i + 1) + dy, b1[1]], [b0[0], hy(b0, i) + dy, b0[1]],
+@@ -551,9 +595,11 @@ export class City {
+         if (sideR) { strip(W, -half, -half - sideR, curbH, sideCol, 1.2, F()); }
+         const curbCol = (a, b) => centro && nearCorner((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, half + side + 7) ? C.yellow : C.curb;
+         if (sideL || r.br) for (let i = i0; i < i1; i++) { const a = off(i, half), b = off(i + 1, half), [nx, nz] = NRM[i];
++          if (inJ(cum[i], cum[i + 1])) continue;
+           if (posFilt && !posFilt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, ch.walk)) continue;
+           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [-nx, 0, -nz]); }
+         if (sideR) for (let i = i0; i < i1; i++) { const a = off(i, -half), b = off(i + 1, -half), [nx, nz] = NRM[i];
++          if (inJ(cum[i], cum[i + 1])) continue;
+           if (posFilt && !posFilt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, ch.walk)) continue;
+           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [nx, 0, nz]); }
+         // canteiro central (pista única com canteiro)
+@@ -562,19 +608,23 @@ export class City {
+         if (r.med && !dual && !noMedian) { strip(ch.roads, r.med / 2, -r.med / 2, 0.2, C.median, 4, F()); }
+         // pista dupla: canteiro gramado até o meio do vão entre as pistas, meio-fio pintado de amarelo
+         if (dual && !r.br && !foot) {
+-          const G = []; for (let i = i0; i <= i1; i++) { const d = otherDist(r, pts[i][0], pts[i][1]); G.push(d === Infinity ? 0 : Math.max(0, Math.min(r.med / 2 + 1, (d - 2 * half) / 2))); }
++          // zona tratada: ilha de concreto na largura real do vão entre as pistas (sem faixa de terra no meio)
++          const gMax = cuid ? 12 : r.med / 2 + 1, medCol = cuid ? C.island : C.median;
++          // largura do vão medida na perpendicular (raio do eixo para o lado do canteiro até o eixo da pista irmã)
++          const G = []; for (let i = i0; i <= i1; i++) { const [nx, nz] = NRM[i], d = cuid ? twinRay(r, pts[i][0], pts[i][1], MS * nx, MS * nz, 2 * gMax + 2 * half + 2) : otherDist(r, pts[i][0], pts[i][1]); G.push(d === Infinity ? 0 : Math.max(0, Math.min(gMax, (d - 2 * half) / 2))); }
+           for (let i = i0; i < i1; i++) {
+-            const g0 = G[i - i0], g1 = G[i + 1 - i0]; if (g0 < 0.4 || g1 < 0.4) continue;
+-            const a0 = off(i, -half), a1 = off(i + 1, -half), b0 = off(i, -half - g0), b1 = off(i + 1, -half - g1), [nx, nz] = NRM[i];
+-            ch.roads.quad([a0[0], hy(a0, i) + 0.15, a0[1]], [a1[0], hy(a1, i + 1) + 0.15, a1[1]], [b1[0], hy(b1, i + 1) + 0.15, b1[1]], [b0[0], hy(b0, i) + 0.15, b0[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.median, 0, up);
+-            ch.roads.quad([a0[0], hy(a0, i), a0[1]], [a1[0], hy(a1, i + 1), a1[1]], [a1[0], hy(a1, i + 1) + 0.15, a1[1]], [a0[0], hy(a0, i) + 0.15, a0[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.yellow, 0, [nx, 0, nz]);
++            const g0 = G[i - i0], g1 = G[i + 1 - i0]; if (g0 < 0.4 || g1 < 0.4 || inJ(cum[i], cum[i + 1])) continue;
++            const a0 = off(i, MS * half), a1 = off(i + 1, MS * half), b0 = off(i, MS * (half + g0)), b1 = off(i + 1, MS * (half + g1)), [nx, nz] = NRM[i];
++            ch.roads.quad([a0[0], hy(a0, i) + 0.15, a0[1]], [a1[0], hy(a1, i + 1) + 0.15, a1[1]], [b1[0], hy(b1, i + 1) + 0.15, b1[1]], [b0[0], hy(b0, i) + 0.15, b0[1]], [wuv(a0, 4), wuv(a1, 4), wuv(b1, 4), wuv(b0, 4)], medCol, 0, up);
++            ch.roads.quad([a0[0], hy(a0, i), a0[1]], [a1[0], hy(a1, i + 1), a1[1]], [a1[0], hy(a1, i + 1) + 0.15, a1[1]], [a0[0], hy(a0, i) + 0.15, a0[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.yellow, 0, [-MS * nx, 0, -MS * nz]);
+           }
+         }
+         // sinalização horizontal (padrão brasileiro: amarelo separa sentidos, branco separa faixas/bordas)
+         if (asphalt && !foot && width >= 5.5) {
+           const M = ch.marks, lw = 0.12;
+           // centro: as faixas param antes da faixa de pedestre (não atravessam o cruzamento)
+-          const xs = centro ? (crossings.get(r) || []).map(ci => cum[ci]) : [], clear = (a, b2) => xs.every(s0 => Math.abs((a + b2) / 2 - s0) > 9.5);
++          const xs = centro ? crossIdx.filter(ci => !jc || !jc.some(c => cum[ci] > c.s0 - 1 && cum[ci] < c.s1 + 1)).map(ci => cum[ci]) : [];
++          const clear = (a, b2) => xs.every(s0 => Math.abs((a + b2) / 2 - s0) > 9.5) && (!jc || jc.every(c => (a + b2) / 2 < c.s0 - 3.8 || (a + b2) / 2 > c.s1 + 3.8));
+           const dash = (a, b2) => Math.floor(a / 4) % 2 === 0 && clear(a, b2);
+           const twoWay = !r.ow;
+           if (twoWay) {
+@@ -585,11 +635,12 @@ export class City {
+         }
+       }
+       // faixas de pedestre perto dos cruzamentos (zebrado)
+-      if ((asphalt || cobble) && urban && !r.br) for (const ci of crossings.get(r) || []) {
++      if ((asphalt || cobble) && urban && !r.br) for (const ci of crossIdx) {
+         for (const dir of [1, -1]) {
+           if ((ci === 0 && dir < 0) || (ci === n - 1 && dir > 0)) continue;
+           const cpt = pts[Math.min(n - 1, Math.max(0, ci))], [cux, cuz] = dirAt(Math.min(n - 2, Math.max(0, ci))), oh = care(cpt[0], cpt[1], 20) && crossHalf(ri, cux, cuz, cpt[0], cpt[1], -3) ? crossHalf.full : 0;
+-          const s0 = cum[Math.min(n - 1, Math.max(0, ci))] + dir * Math.max(7, oh + 2.6);
++          const jn = jc ? jc.filter(c => cum[ci] > c.s0 - 1 && cum[ci] < c.s1 + 1) : [];   // cruzamento montado: logo depois do corte
++          const s0 = jn.length ? (dir > 0 ? Math.max(...jn.map(c => c.s1)) + 1.7 : Math.min(...jn.map(c => c.s0)) - 1.7) : cum[Math.min(n - 1, Math.max(0, ci))] + dir * Math.max(7, oh + 2.6);
+           if (s0 < 3 || s0 > cum[n - 1] - 3) continue;
+           let k = 0; while (k < n - 2 && cum[k + 1] < s0) k++;
+           const f = (s0 - cum[k]) / Math.max(1e-6, cum[k + 1] - cum[k]);
+@@ -620,6 +671,12 @@ export class City {
+       }
+       if (r.br) this.buildBridge(r, pts, NRM, cum, hy, half, side, off, wall);
+     }
++    // cruzamentos: asfalto único, esquinas arredondadas, nariz das ilhas do canteiro
++    for (const J of JN.list) {
++      const ch = this.chunk(J.x, J.z), centro = inCentro(J.x, J.z);
++      drawJunction(J, { heightAt: (x, z) => t.heightAt(x, z), asphalt: J.cobble ? ch.cobble : ch.roads, uvA: J.cobble ? 2.5 : 4, walk: centro ? ch.walkC : ch.walk, island: ch.roads, curbB: ch.roads,
++        colAsph: J.cobble ? C.pedra : centro ? C.asphalt.clone().multiplyScalar(0.72) : C.asphalt, colWalk: centro ? C.sideC : C.side, colCurb: centro ? C.yellow : C.curb, colIsland: C.island });
++    }
+   }
+ 
+   /** Ponte: laje com espessura, calçadas, guarda-corpo metálico com montantes e pilares até o leito. */
+@@ -683,6 +740,8 @@ export class City {
+   /** Altura do tabuleiro de ponte em (x, z), ou null se não há ponte ali. */
+   /** Altura do piso de ruas e calçadas acima do terreno neste ponto (0 fora delas). */
+   surfOffset(x, z) {
++    const JL = this._jGrid?.get(Math.floor(x / 50) + ',' + Math.floor(z / 50));
++    if (JL) for (const J of JL) { const v = junctionSurf(J, x, z); if (v !== null) return v; }
+     const L = this.surfBins?.get(Math.floor(x / 50) + ',' + Math.floor(z / 50)); if (!L) return 0;
+     let best = 0;
+     for (const [ax, az, bx, bz, half, sl, sr, md, mm] of L) {
+@@ -692,7 +751,7 @@ export class City {
+       if (mm && Math.abs(o) <= mm) return 0.28;                  // canteiro central de pista única
+       if (Math.abs(o) <= half) { if (best < 0.08) best = 0.08; }
+       else if ((o > 0 && o <= half + sl) || (o < 0 && -o <= half + sr)) return 0.23;
+-      else if (md && o < 0 && -o <= half + md) best = Math.max(best, 0.23);   // canteiro gramado da pista dupla
++      else if (md && (md > 0 ? o < 0 && -o <= half + md : o > 0 && o <= half - md)) best = Math.max(best, 0.23);   // canteiro da pista dupla (md < 0: canteiro à esquerda)
+     }
+     return best;
+   }
+@@ -821,6 +880,21 @@ export class City {
+     void t;
+   }
+ 
++  /** Pista dupla: lado do canteiro em relação ao traçado (−1 = à direita do sentido do traçado, lado −n; +1 = lado +n). */
++  _medSign(r) {
++    if (r._ms) return r._ms;
++    let acc = 0;
++    for (let i = 0; i < r.p.length - 1; i++) {
++      const a = r.p[i], b = r.p[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 1) continue;
++      const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, nx = -(b[1] - a[1]) / L, nz = (b[0] - a[0]) / L;
++      let best = Infinity, side = 0;
++      for (const q of this.world.roads) { if (q === r || !q.ow || !q.med || q.n !== r.n) continue;
++        for (let j = 0; j < q.p.length - 1; j++) { const c = q.p[j], d = q.p[j + 1], dx = d[0] - c[0], dz = d[1] - c[1], l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((mx - c[0]) * dx + (mz - c[1]) * dz) / l2));
++          const px = c[0] + dx * t - mx, pz = c[1] + dz * t - mz, dd = Math.hypot(px, pz); if (dd < best) { best = dd; side = Math.sign(px * nx + pz * nz); } } }
++      if (best < r.w * 3) acc += side * L;
++    }
++    return (r._ms = acc > 0 ? 1 : -1);
++  }
+   _hasTwin(r) {
+     const m = r.p[r.p.length >> 1];
+     for (const q of this.world.roads) {
+@@ -1195,6 +1269,18 @@ function resample(p, step) {
+   }
+   return out;
+ }
++function arcs(p) { const c = [0]; for (let i = 1; i < p.length; i++) c.push(c[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])); return c; }
++/** Insere vértices nas posições de arco `ss` (cortes dos cruzamentos) de uma polilinha já reamostrada. */
++function insertCuts(p, c, ss) {
++  const out = [p[0]], L = c[c.length - 1], cs = ss.filter(s => s > 0.05 && s < L - 0.05).sort((a, b) => a - b);
++  let k = 0;
++  for (let i = 1; i < p.length; i++) {
++    while (k < cs.length && cs[k] < c[i] - 0.05) { const s = cs[k++]; if (s <= c[i - 1] + 0.05) continue; const f = (s - c[i - 1]) / (c[i] - c[i - 1]); out.push([p[i - 1][0] + (p[i][0] - p[i - 1][0]) * f, p[i - 1][1] + (p[i][1] - p[i - 1][1]) * f]); }
++    while (k < cs.length && cs[k] <= c[i] + 0.05) k++;
++    out.push(p[i]);
++  }
++  return out;
++}
+ function pathLen(p) { let s = 0; for (let i = 1; i < p.length; i++) s += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return s || 1; }
+ /** Normal (à esquerda) no vértice i; com miter=true devolve também o fator de esquina. */
+ function perp(p, i, miter = false) {
+diff --git a/src/world/junctions.js b/src/world/junctions.js
+new file mode 100644
+index 0000000..661b678
+--- /dev/null
++++ b/src/world/junctions.js
+@@ -0,0 +1,220 @@
++// Cruzamentos como peça única (referência Bah City): em cada nó onde 3 ou mais braços de rua se encontram, as ruas
++// param numa linha de corte e o cruzamento desenha um asfalto só, esquinas de meio-fio arredondado com calçada até o
++// canto do lote e, entre as duas pistas de uma avenida dupla, o nariz da ilha do canteiro. Tudo no plano (x, z);
++// a altura vem do terreno, aplainado numa cota única por cruzamento (City.flattenStreets).
++//
++// Genérico: recebe as ruas e uma função `spec(r)` com a seção transversal de cada uma; não depende do centro. Para
++// estender à cidade inteira basta ampliar a zona `care`.
++import * as THREE from 'three';
++
++const DEG = Math.PI / 180;
++const NOSE = 25 * DEG, STRAIGHT0 = 155 * DEG, STRAIGHT1 = 205 * DEG;
++const key = q => Math.round(q[0] * 2) + ',' + Math.round(q[1] * 2);
++
++/** Interseção das retas a + u·s e b + w·t → [s, t] (ou null se quase paralelas). */
++function lineX(a, u, b, w) {
++  const den = u[0] * w[1] - u[1] * w[0]; if (Math.abs(den) < 0.08) return null;
++  const dx = b[0] - a[0], dz = b[1] - a[1];
++  return [(dx * w[1] - dz * w[0]) / den, (dx * u[1] - dz * u[0]) / den];
++}
++const bez = (a, c, b, n) => { const o = []; for (let i = 1; i < n; i++) { const t = i / n, s = 1 - t; o.push([s * s * a[0] + 2 * s * t * c[0] + t * t * b[0], s * s * a[1] + 2 * s * t * c[1] + t * t * b[1]]); } return o; };
++// braços quase paralelos e no mesmo sentido (as duas pistas de uma avenida dupla saindo do cruzamento): nariz de ilha
++const parallel = (a, b) => a.u0[0] * b.u0[0] + a.u0[1] * b.u0[1] > Math.cos(30 * DEG);
++const ccwGap = (a0, a1) => { let g = a1 - a0; while (g <= 0) g += Math.PI * 2; return g; };
++
++/**
++ * Acha e monta os cruzamentos.
++ * @param roads lista de ruas ({p, ...}); spec(r) → {half, sideL, sideR, dual, cobble} ou null (fora da malha)
++ * @param care(x, z) → o cruzamento está na zona tratada?
++ * @returns {list, cuts} — cuts: Map(índice da rua → [{s0, s1, j}]) trechos (comprimento ao longo da rua) a não desenhar
++ */
++export function findJunctions(roads, spec, care) {
++  const specs = roads.map(r => spec(r));
++  const cum = roads.map((r, ri) => { if (!specs[ri]) return null; const c = [0]; for (let i = 1; i < r.p.length; i++) c.push(c[i - 1] + Math.hypot(r.p[i][0] - r.p[i - 1][0], r.p[i][1] - r.p[i - 1][1])); return c; });
++  // nós: onde as ruas da malha se tocam
++  const nodes = new Map();
++  roads.forEach((r, ri) => { if (!specs[ri]) return; r.p.forEach((q, j) => { const k = key(q); let n = nodes.get(k); if (!n) nodes.set(k, n = { k, x: q[0], z: q[1], occ: [], arms: 0 }); n.occ.push([ri, j]); n.arms += j === 0 || j === r.p.length - 1 ? 1 : 2; }); });
++  // cruzamento = 3+ braços de pelo menos duas ruas diferentes (a pista dupla que só se divide não é cruzamento)
++  const ident = ri => roads[ri].n || '#' + ri;
++  const jn = [...nodes.values()].filter(n => n.arms >= 3 && care(n.x, n.z) && new Set(n.occ.map(([ri]) => ident(ri))).size >= 2);
++  const isJ = new Set(jn.map(n => n.k));
++  // agrupa nós muito próximos ligados por um trecho curto (as duas pistas de uma avenida dupla; nós quase coincidentes)
++  const group = new Map(); jn.forEach(n => group.set(n.k, [n]));
++  const findG = n => group.get(n.k);
++  for (const n of jn) for (const [ri, j] of n.occ) for (const d of [-1, 1]) {
++    const r = roads[ri], j2 = j + d; if (j2 < 0 || j2 >= r.p.length) continue;
++    const k2 = key(r.p[j2]); if (!isJ.has(k2) || k2 === n.k) continue;
++    const m = nodes.get(k2), dist = Math.hypot(m.x - n.x, m.z - n.z);
++    const dualHere = [...n.occ, ...m.occ].some(([a]) => specs[a].dual);
++    if (dist < 6 || (dist < 18 && dualHere)) {
++      const A = findG(n), B = findG(m); if (A === B) continue;
++      for (const q of B) { A.push(q); group.set(q.k, A); }
++    }
++  }
++  const clusters = [...new Set(group.values())];
++  const cuts = new Map(), addCut = (ri, s0, s1, j) => { (cuts.get(ri) || cuts.set(ri, []).get(ri)).push({ s0: Math.min(s0, s1), s1: Math.max(s0, s1), j }); };
++  const list = [];
++  for (const cl of clusters) {
++    const keys = new Set(cl.map(n => n.k));
++    const C = [cl.reduce((s, n) => s + n.x, 0) / cl.length, cl.reduce((s, n) => s + n.z, 0) / cl.length];
++    const J = { x: C[0], z: C[1], arms: [], idx: list.length };
++    // braços: de cada ocorrência, para frente e para trás; o trecho que liga dois nós do grupo é interno
++    for (const n of cl) for (const [ri, j] of n.occ) for (const dir of [1, -1]) {
++      const r = roads[ri], j2 = j + dir; if (j2 < 0 || j2 >= r.p.length) continue;
++      if (keys.has(key(r.p[j2]))) { if (dir > 0) addCut(ri, cum[ri][j], cum[ri][j2], J.idx); continue; }
++      // até onde o braço vai: fim da rua ou o próximo cruzamento
++      let jl = j2; while (jl > 0 && jl < r.p.length - 1 && !isJ.has(key(r.p[jl]))) jl += dir;
++      const len = Math.abs(cum[ri][jl] - cum[ri][j]), nextJ = isJ.has(key(r.p[jl]));
++      J.arms.push({ ri, j, dir, sNode: cum[ri][j], len, lim: nextJ ? len * 0.45 : len - 0.5, ...specs[ri] });
++    }
++    if (J.arms.length < 3) continue;
++    const walk = (a, s) => {   // ponto e direção do braço a s metros do nó, ao longo da rua
++      const r = roads[a.ri], c = cum[a.ri], sAbs = Math.max(0, Math.min(c[c.length - 1], a.sNode + a.dir * s));
++      let i = 0; while (i < c.length - 2 && c[i + 1] < sAbs) i++;
++      const f = (sAbs - c[i]) / Math.max(1e-6, c[i + 1] - c[i]), A = r.p[i], B = r.p[i + 1];
++      const L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
++      return { p: [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f], u: [a.dir * (B[0] - A[0]) / L, a.dir * (B[1] - A[1]) / L], sAbs };
++    };
++    for (const a of J.arms) {
++      const far = walk(a, Math.min(12, a.len)).p; a.ang = Math.atan2(far[1] - C[1], far[0] - C[0]);
++      a.O = walk(a, 0).p; const q = walk(a, Math.min(8, a.len)).p, L = Math.hypot(q[0] - a.O[0], q[1] - a.O[1]) || 1; a.u0 = [(q[0] - a.O[0]) / L, (q[1] - a.O[1]) / L];
++      // largura da calçada de cada lado do braço (v = esquerda olhando para fora do cruzamento)
++      a.wPlus = a.dir > 0 ? a.sideL : a.sideR; a.wMinus = a.dir > 0 ? a.sideR : a.sideL;
++    }
++    J.arms.sort((a, b) => a.ang - b.ang);
++    const N = J.arms.length;
++    // recuo de cada braço: a esquina (canto externo da calçada) tem que caber antes do corte
++    for (const a of J.arms) a.D = Math.max(1.5, a.half * 0.6);
++    for (let k = 0; k < N; k++) {
++      const a = J.arms[k], b = J.arms[(k + 1) % N], g = ccwGap(a.ang, b.ang); if (g <= NOSE || g >= STRAIGHT0 || parallel(a, b)) continue;
++      const va = [-a.u0[1], a.u0[0]], vb = [-b.u0[1], b.u0[0]];
++      const oa = [a.O[0] + va[0] * (a.half + a.wPlus), a.O[1] + va[1] * (a.half + a.wPlus)], ob = [b.O[0] - vb[0] * (b.half + b.wMinus), b.O[1] - vb[1] * (b.half + b.wMinus)];
++      const x = lineX(oa, a.u0, ob, b.u0); if (!x) continue;
++      const rad = 1.2 + 0.6 * Math.min(a.half, b.half) / 3;
++      a.D = Math.max(a.D, x[0] + rad); b.D = Math.max(b.D, x[1] + rad);
++    }
++    // pistas irmãs (nariz de ilha entre elas): cortam na mesma linha, para o nariz sair simétrico
++    for (let k = 0; k < N; k++) { const a = J.arms[k], b = J.arms[(k + 1) % N]; if (parallel(a, b)) { const pa = (a.O[0] - C[0]) * a.u0[0] + (a.O[1] - C[1]) * a.u0[1], pb = (b.O[0] - C[0]) * b.u0[0] + (b.O[1] - C[1]) * b.u0[1], m = Math.max(a.D + pa, b.D + pb); a.D = m - pa; b.D = m - pb; } }
++    for (const a of J.arms) {
++      a.D = Math.max(0.5, Math.min(a.D, a.lim, 32));
++      const w = walk(a, a.D); a.S = w.p; a.u = w.u; a.sCut = w.sAbs; a.v = [-a.u[1], a.u[0]];
++      a.Em = [a.S[0] - a.v[0] * a.half, a.S[1] - a.v[1] * a.half]; a.Ep = [a.S[0] + a.v[0] * a.half, a.S[1] + a.v[1] * a.half];
++      addCut(a.ri, a.sNode, a.sCut, J.idx);
++    }
++    // contorno do asfalto + esquinas
++    const outline = [], corners = [];
++    for (let k = 0; k < N; k++) {
++      const a = J.arms[k], b = J.arms[(k + 1) % N], g = ccwGap(a.ang, b.ang), A = a.Ep, B = b.Em, AB = Math.hypot(B[0] - A[0], B[1] - A[1]);
++      outline.push(a.Em, a.Ep);
++      let kind, pts;
++      if (g <= NOSE || parallel(a, b)) {
++        kind = 'nose'; let ux = a.u[0] + b.u[0], uz = a.u[1] + b.u[1]; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l;
++        const c = [(A[0] + B[0]) / 2 - ux * AB * 0.5, (A[1] + B[1]) / 2 - uz * AB * 0.5];
++        pts = bez(A, c, B, Math.max(4, Math.min(12, Math.ceil(AB / 0.8))));
++      } else if (g < STRAIGHT0) {
++        kind = 'corner'; const x = lineX(A, a.u, B, b.u);
++        const c = x && x[0] < 0.5 && x[1] < 0.5 && x[0] > -25 && x[1] > -25 ? [A[0] + a.u[0] * x[0], A[1] + a.u[1] * x[0]] : [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
++        pts = bez(A, c, B, Math.max(4, Math.min(10, Math.ceil(AB / 0.9))));
++      } else if (g <= STRAIGHT1) {
++        kind = 'straight'; const n = Math.max(1, Math.ceil(AB / 2)); pts = []; for (let i = 1; i < n; i++) pts.push([A[0] + (B[0] - A[0]) * i / n, A[1] + (B[1] - A[1]) * i / n]);
++      } else {
++        kind = 'reflex'; const a0 = Math.atan2(A[1] - C[1], A[0] - C[0]), r0 = Math.hypot(A[0] - C[0], A[1] - C[1]), r1 = Math.hypot(B[0] - C[0], B[1] - C[1]), ga = ccwGap(a0, Math.atan2(B[1] - C[1], B[0] - C[0]));
++        const n = Math.max(3, Math.ceil(ga / (12 * DEG))); pts = [];
++        for (let i = 1; i < n; i++) { const t = i / n, rr = r0 + (r1 - r0) * t, an = a0 + ga * t; pts.push([C[0] + Math.cos(an) * rr, C[1] + Math.sin(an) * rr]); }
++      }
++      outline.push(...pts);
++      corners.push({ kind, inner: [A, ...pts, B], wA: a.wPlus, wB: b.wMinus, a, b });
++    }
++    J.outline = outline; J.corners = corners;
++    // calçada da esquina: canto externo em ângulo (até o lote) com borda interna curva; nos outros casos, faixa paralela
++    for (const c of corners) {
++      const { a, b, inner } = c; c.fill = null;
++      if (c.kind === 'nose') { c.fill = inner; continue; }   // ilha: o próprio contorno fechado pela corda
++      if (!(c.wA > 0.05 || c.wB > 0.05)) continue;
++      const Ao = [inner[0][0] + a.v[0] * c.wA, inner[0][1] + a.v[1] * c.wA], last = inner[inner.length - 1], Bo = [last[0] - b.v[0] * c.wB, last[1] - b.v[1] * c.wB];
++      if (c.kind === 'corner') {
++        const x = lineX(Ao, a.u, Bo, b.u);
++        if (x && x[0] < 1 && x[1] < 1 && x[0] > -15 && x[1] > -15) { c.Q = [Ao[0] + a.u[0] * x[0], Ao[1] + a.u[1] * x[0]]; c.fill = [Ao, ...inner, Bo, c.Q]; continue; }
++      }
++      // faixa: desloca cada ponto da borda para fora (oposto ao centro do cruzamento), largura interpolada
++      const outer = inner.map((p, i) => {
++        const pr = inner[Math.max(0, i - 1)], nx = inner[Math.min(inner.length - 1, i + 1)];
++        let tx = nx[0] - pr[0], tz = nx[1] - pr[1]; const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
++        let ox = -tz, oz = tx; if ((p[0] - C[0]) * ox + (p[1] - C[1]) * oz < 0) { ox = -ox; oz = -oz; }
++        const w = c.wA + (c.wB - c.wA) * i / (inner.length - 1); return [p[0] + ox * w, p[1] + oz * w];
++      });
++      c.ring = outer;
++    }
++    let R = 0; const ext = p => { R = Math.max(R, Math.hypot(p[0] - C[0], p[1] - C[1])); };
++    outline.forEach(ext); for (const c of corners) { (c.fill || []).forEach(ext); (c.ring || []).forEach(ext); }
++    J.R = R;
++    J.cobble = J.arms.filter(a => a.cobble).length * 2 > J.arms.length;
++    list.push(J);
++  }
++  return { list, cuts };
++}
++
++const inPoly = (x, z, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c; };
++const polyDist = (x, z, p) => { let best = Infinity; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const a = p[j], b = p[i], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)); best = Math.min(best, Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t)); } return best; };
++
++/** Polígonos que formam o piso do cruzamento (asfalto, esquinas, nariz de ilha). */
++export function junctionPolys(J) {
++  const out = [J.outline];
++  for (const c of J.corners) { if (c.fill) out.push(c.fill); if (c.ring) out.push([...c.inner, ...c.ring.slice().reverse()]); }
++  return out;
++}
++
++/** Piso por onde se anda dentro do cruzamento: 0.08 (pista), 0.23 (calçada/ilha) ou null (fora). */
++export function junctionSurf(J, x, z) {
++  if (Math.hypot(x - J.x, z - J.z) > J.R + 0.1) return null;
++  if (inPoly(x, z, J.outline)) return 0.08;
++  for (const c of J.corners) if ((c.fill && inPoly(x, z, c.fill)) || (c.ring && inPoly(x, z, [...c.inner, ...c.ring.slice().reverse()]))) return 0.23;
++  return null;
++}
++
++/** Aplaina o terreno do cruzamento na cota J.y (dentro do piso) com transição de `blend` metros. */
++export function flattenJunction(J, t, editHeights, blend = 3) {
++  const polys = junctionPolys(J), R = J.R + blend;
++  editHeights(t, J.x - R, J.z - R, J.x + R, J.z + R, (x, z, h) => {
++    if (Math.hypot(x - J.x, z - J.z) > R) return h;
++    let d = Infinity; for (const p of polys) { if (inPoly(x, z, p)) return J.y; d = Math.min(d, polyDist(x, z, p)); }
++    if (d >= blend) return h;
++    const s = d / blend, k = s * s * (3 - 2 * s); return J.y + (h - J.y) * k;
++  });
++}
++
++/**
++ * Desenha o cruzamento nos construtores do chunk.
++ * @param o {heightAt, asphalt: GeoBuilder, walk: GeoBuilder, curbB: GeoBuilder, colAsph, colWalk, colCurb, colIsland}
++ */
++export function drawJunction(J, o) {
++  const up = [0, 1, 0], Y = (p, dy) => [p[0], o.heightAt(p[0], p[1]) + dy, p[1]], uv = (p, s) => [p[0] / s, p[1] / s];
++  // asfalto: um polígono só (triangulação por recorte de orelhas)
++  const contour = J.outline.map(p => new THREE.Vector2(p[0], p[1]));
++  const tris = THREE.ShapeUtils.triangulateShape(contour, []);
++  for (const [i, j, k] of tris) { const a = J.outline[i], b = J.outline[j], c = J.outline[k]; o.asphalt.tri(Y(a, 0.08), Y(b, 0.08), Y(c, 0.08), [uv(a, o.uvA || 4), uv(b, o.uvA || 4), uv(c, o.uvA || 4)], o.colAsph, 0, up); }
++  const curbH = 0.15;
++  for (const c of J.corners) {
++    const island = c.kind === 'nose' && !(c.wA > 0.05 || c.wB > 0.05);
++    const top = island ? o.island : o.walk, col = island ? o.colIsland : o.colWalk, s = island ? 4 : 1.2;
++    const fillPoly = c.fill || (c.ring ? [...c.inner, ...c.ring.slice().reverse()] : null);
++    if (!fillPoly) continue;
++    if (c.fill) {
++      const tr = THREE.ShapeUtils.triangulateShape(c.fill.map(p => new THREE.Vector2(p[0], p[1])), []);
++      for (const [i, j, k] of tr) { const a = c.fill[i], b = c.fill[j], d = c.fill[k]; top.tri(Y(a, 0.08 + curbH), Y(b, 0.08 + curbH), Y(d, 0.08 + curbH), [uv(a, s), uv(b, s), uv(d, s)], col, 0, up); }
++    } else for (let i = 0; i < c.inner.length - 1; i++) {
++      const a = c.inner[i], b = c.inner[i + 1], b2 = c.ring[i + 1], a2 = c.ring[i];
++      top.quad(Y(a, 0.08 + curbH), Y(b, 0.08 + curbH), Y(b2, 0.08 + curbH), Y(a2, 0.08 + curbH), [uv(a, s), uv(b, s), uv(b2, s), uv(a2, s)], col, 0, up);
++    }
++    // meio-fio ao longo da borda curva, virado para o asfalto
++    for (let i = 0; i < c.inner.length - 1; i++) {
++      const a = c.inner[i], b = c.inner[i + 1], mx = (a[0] + b[0]) / 2 - J.x, mz = (a[1] + b[1]) / 2 - J.z;
++      let nx = -(b[1] - a[1]), nz = b[0] - a[0]; if (nx * mx + nz * mz > 0) { nx = -nx; nz = -nz; }
++      if (c.kind === 'nose') { const cx = (c.inner[0][0] + c.inner[c.inner.length - 1][0]) / 2 - (a[0] + b[0]) / 2, cz = (c.inner[0][1] + c.inner[c.inner.length - 1][1]) / 2 - (a[1] + b[1]) / 2; if (nx * cx + nz * cz > 0) { nx = -nx; nz = -nz; } }
++      const ya = o.heightAt(a[0], a[1]) + 0.08, yb = o.heightAt(b[0], b[1]) + 0.08;
++      o.curbB.quad([a[0], ya, a[1]], [b[0], yb, b[1]], [b[0], yb + curbH, b[1]], [a[0], ya + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], o.colCurb, 0, [nx, 0, nz]);
++    }
++  }
++}
++
++export { inPoly as junctionInPoly };

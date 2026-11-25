@@ -1,0 +1,381 @@
+Counter({'vector': 203, 'raster': 177})
+10161 vector POINT 17630 11703 / Cadastro Imobiliário
+9629 vector POLYGON 11091 11703 / Edificações
+10139 vector MULTIPOLYGON 36341 11703 / Edificações Open Buildings Google 2024
+10031 vector POLYGON 2333 11703 / Imóveis SIGEF/INCRA
+7579 vector POLYGON 13465 11703 / Lotes (Setor, Quadra e Lote)
+11054 vector POLYGON 763 11703 / Lotes Previstos
+7577 vector POLYGON 861 11703 / Quadras
+7071 vector POLYGON 3 11704 / Faixa de Domínio RS 020
+5500 vector POLYGON 1 11704 / Faixa de Domínio RS 115
+7681 vector POLYGON 2 11704 / Faixas de Segurança Linhas de Transmissão
+4780 vector LINESTRING 1 11704 / Gasoduto Brasil-Bolívia
+9970 vector POINT 41 11704 / Infraestrutura Corsan
+7679 vector LINESTRING 2 11704 / Linhas de Transmissão de Energia
+5967 vector POINT 229 11704 / Paradas e Marcos Quilométricos
+5328 vector POINT 75 11704 / Pontos Referência Municipal
+10223 vector MULTILINESTRING 1112 11704 / RUAS E ESTRADAS PDDURA 2020
+7287 vector MULTILINESTRING 2540 11704 / Sistema Viário Igrejinha
+8438 vector MULTIPOLYGON 887 11705 / Propriedades do Município
+9859 vector MULTIPOLYGON 2 11706 / Aterro de Resíduos PDDURA 2020
+8856 vector MULTILINESTRING 35 11706 / Caminhos PDDURA 2020
+7551 vector POINT 2 11706 / Centralidades PDDURA 2020
+10600 vector MULTIPOLYGON 1 11706 / Corredor de Alta Viabilidade Turística PDDURA 2020
+7253 vector MULTIPOLYGON 1 11706 / Faixa de Domínio Vias PDDURA 2020
+7247 vector MULTIPOLYGON 2 11706 / Limite Zona Urbana PDDURA 2020
+10418 vector POINT 2 11706 / Polos de Centralidade PDDURA  2020
+7249 vector MULTILINESTRING 127 11706 / Projeções Viárias PDDURA 2020
+7255 vector MULTIPOLYGON 3 11706 / Recuo Comércio e Serviço 4m (ZMB e ZTU) PDDURA 2020
+7259 vector MULTIPOLYGON 1 11706 / Recuo Industrial 6m PDDURA 2020
+7257 vector MULTIPOLYGON 1 11706 / Recuo Residencial 4m PDDURA 2020
+7281 vector MULTIPOLYGON 1 11706 / Recuo Rodovias 8m PDDURA 2020
+10598 vector MULTIPOLYGON 1 11706 / Vias de Alta Viabilidade Turística PDDURA 2020
+7265 vector MULTIPOLYGON 1 11706 / Zona de Passagem de Cheia Art. 16 e Art. 25 PDDURA 2020
+7326 vector MULTIPOLYGON 59 11706 / Zoneamento Urbano Lei 3824/2006 (Vigente até 16/11/2020)
+8830 vector MULTIPOLYGON 58 11706 / Zoneamento Urbano PDDURA 2020
+7267 vector MULTIPOLYGONZ 1 11706 / Área de Inundação Art. 16 e Art. 25  PDDURA 2020
+7269 vector MULTIPOLYGON 1 11706 / Área de Restrição do Aterro (NBR's) PDDURA 2020 
+10301 vector POINT 81 11708 / IPHAN - Bens Materiais
+10303 vector MULTIPOLYGON 25 11708 / IPHAN - Bens Materiais - Polígonos
+10299 vector POINT 13 11708 / IPHAN - Proteção - Bens Materiais
+10295 vector POINT 29 11708 / IPHAN - Sítios Arqueológicos
+10297 vector MULTIPOLYGON 25 11708 / IPHAN - Sítios Arqueológicos - Polígonos
+8354 vector POINT 122 11708 / Inventário Patrimônio Histórico PDDURA 2020
+11272 raster   11709 / LOTEAMENTOS DIGITALIZADOS / 3L Integral GEO1
+11274 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Alavanca Integral GEO1
+11276 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Alles Blau Norte GEO1
+11278 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Altos do XV GEO1
+11280 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Anselmo Muller GEO1
+11282 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Arend Integral GEO1
+11284 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Ari José Lazzaroto GEO1
+11286 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Armindo Hess GEO1
+11288 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Arthur Geis Integral GEO1
+11290 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Baviera GEO1
+11292 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Bela Vista Integral GEO1
+11294 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Belmonte GEO1
+11296 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Belmonte II GEO1
+11298 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Berlitz v1 GEO1
+11300 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Berlitz v2 GEO1
+11302 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Berlitz v3 GEO1
+11305 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Bischoff Integral GEO1
+11307 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Bom Pastor I Integral GEO1
+11309 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Bom Pastor II GEO1
+11311 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Bom Pastor III GEO1
+11778 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Bosque Figueira GEO1
+11315 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Breyer GEO1
+11317 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Brussius GEO1
+11319 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Caminhos da Colina GEO1
+11321 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Caminhos do Vale Integral GEO1
+11339 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Casa de Pedra I GEO1
+11341 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Casa de Pedra II Integral GEO1
+11344 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Cascata Integral GEO1
+11346 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Cohab GEO1
+11348 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Edgar Klein GEO1
+11350 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Edmundo Kichler Integral GEO1
+11352 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Elio Schaefer Integral GEO1
+11354 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Elza Koetz GEO1.tif.zip
+11356 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Evaldo Feller GEO1.tif.zip
+11358 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Feller GEO1
+11578 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Feller II GEO1
+11360 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Femme GEO1
+11362 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Fetter GEO1
+11364 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Flamboyant GEO1
+11366 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Fleck Integral GEO1
+11368 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Flesch I GEO1
+11370 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Flesch II GEO1
+11372 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Frederico Otto Lauffer GEO1
+11374 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Fridolino Hilbert GEO1
+11376 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Fridolino Linden GEO1
+11378 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Garibaldi Esp. GEO1
+11380 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Germânia Integral GEO1
+11382 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Haack GEO1
+11384 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Helbert Kichler GEO1
+11386 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Henssler Integral GEO1
+11388 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Hirt GEO1
+11390 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Hoffmann Integral GEO1
+11392 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Holdino GEO1
+11394 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Hugo Kuwer GEO1
+11396 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Industrial Moinho GEO1
+11398 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Industrial RS 115 Bairro Moinho GEO1
+11400 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Industrial Total Integral GEO1
+11402 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Invernada GEO1
+11404 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Jardim Azaléia GEO1
+11406 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Jardim Baviera I GEO1
+11408 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Jardim Baviera II GEO1
+11416 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Jardim Ipe GEO1
+11410 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Jardim da Fonte Integral GEO1
+11412 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Jardim das Extremosas GEO1
+11414 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Jardim das Palmeiras Integral GEO1
+11418 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Jasmim GEO1
+11420 raster   11709 / LOTEAMENTOS DIGITALIZADOS / João Saueressig Integral GEO1
+11422 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Kassner GEO1
+11424 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Kehl GEO1
+11426 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Kielling I v1 GEO1
+11428 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Kielling I v2 GEO1
+11430 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Kielling II GEO1
+11432 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Kirsch Integral GEO1
+11434 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Knobloch GEO1
+11436 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Krummenauer Integral GEO1
+11438 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Kunst GEO1
+11442 raster   11709 / LOTEAMENTOS DIGITALIZADOS / LAK GEO1
+11440 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Lajeadinho GEO1
+11444 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Lanz GEO1
+11446 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Lauck Integral GEO1
+11448 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Lauffer GEO1
+11450 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Leane Jung GEO1
+11454 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Lend II GEO1
+11452 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Leão GEO1
+11456 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Lúcio Integral GEO1
+11458 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Matzembacher Integral GEO1
+11460 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Moinhos de Vento GEO1
+11462 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Moinhos de Vento II GEO1
+11464 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Monte Bello I GEO1
+11466 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Montes Altos Integral GEO1
+11470 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Morada Verde GEO1
+11468 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Morada do Vale GEO1
+11472 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Morbach v1 GEO1
+11474 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Morbach v2 GEO1
+11476 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Multiparque GEO1
+11580 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Mutirão GEO1
+11478 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Nanthal Integral GEO1
+11480 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Neubarth GEO1
+11482 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Novo Horizonte GEO1
+11484 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Octavio GEO1
+11486 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Operario GEO1
+11488 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Panorama Integral GEO1
+11490 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque Acacia I GEO1
+11492 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque Acacia II GEO1
+11494 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque Acacia III GEO1
+11496 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque Acacia Popular Integral GEO1
+11498 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque Acacia Setor 1 Sitios de Lazer GEO1
+11506 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque Vita GEO1
+11500 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque da Figueira GEO1
+11502 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque do Sol I GEO1
+11504 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Parque do Sol II GEO1
+11508 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Pedreiras GEO1
+11582 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Petzinger GEO1
+11510 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Portal do Prado I GEO1
+11512 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Portal do Prado II GEO1
+11514 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Princesa Isabel Integral GEO1
+11516 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Promorar GEO1
+11518 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Recanto Verde Ari Nestor GEO1
+11520 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Ritter GEO1
+11522 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Rothmann Integral GEO1
+11524 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Rudi Krause GEO1
+11526 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Rui Barbosa GEO1
+11530 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Schenkel Gallas GEO1
+11532 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Schilling Integral GEO1
+11534 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Schwarz Integral GEO1
+11536 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Sohne I GEO1
+11538 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Sohne II GEO1
+11540 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Sossego I GEO1
+11542 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Sossego II Integral GEO1
+11544 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Stein Haus GEO1
+11584 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Sulmira GEO1
+11528 raster   11709 / LOTEAMENTOS DIGITALIZADOS / São Pedro GEO1
+11546 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Trevo Integral GEO1
+11548 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Veredas I Integral GEO1
+11550 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Veredas II - Norte GEO1
+11552 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Veredas II - Sul GEO1
+11554 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Veredas III GEO1
+11556 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Veredas IV GEO1
+11558 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Vidor Popular GEO1
+11560 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Vila Picadilly GEO1
+11562 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Vila Verde Integral GEO1
+11564 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Village Park GEO1
+11566 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Vista Alegre GEO1
+11568 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Vitória Esp. Integral GEO1
+11570 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Wagner Integral GEO1
+11572 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Werres Integral GEO1
+11574 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Wüst GEO1
+11576 raster   11709 / LOTEAMENTOS DIGITALIZADOS / Zwetsch GEO1
+8369 vector POLYGON 448 11709 / Desmembramentos Limites (Vetorial)
+8360 vector MULTIPOLYGON 33 11709 / Loteamentos Limites (Mapas PD 1993)
+8358 vector MULTIPOLYGON 144 11709 / Loteamentos Limites (Vetorial)
+6593 vector POINT 16 11710 / Cemitérios Igrejinha
+6597 vector POLYGON 16 11710 / Cemitérios Igrejinha (Limites)
+9392 vector POINT 17 11710 / Equipamentos de Saúde
+10171 vector POINTZ 35 11710 / Escolas
+6591 vector POINT 6 11710 / Feiras do Produtor Rural
+4479 vector POINT 6 11710 / Pontes
+6412 vector POLYGON 50 11710 / Praças e Espaços de Lazer
+5427 vector POLYGON 1 11711 / Cota de Enchente 1982 / Cota 0,50 metros
+5429 vector POLYGON 1 11711 / Cota de Enchente 1982 / Cota 0,80 metros
+5431 vector POLYGON 1 11711 / Cota de Enchente 1982 / Cota 1,00 metros
+5443 vector POLYGON 3 11711 / Cota de Enchente 1982 / Cota 1,50 metros
+5445 vector POLYGON 11 11711 / Cota de Enchente 1982 / Cota 2,00 metros
+5502 vector MULTIPOLYGON 5 11711 / Cota de Enchente 1982 / Cotas de Enchente 1982
+4580 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:2000 / Alta Aptidão (III)
+4586 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:2000 / Baixa Aptidão (I)
+4584 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:2000 / Média Aptidão (IIb)
+4582 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:2000 / Média Aptidão (IIc)
+4589 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:25000 / Alta Aptidão (III)
+4597 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:25000 / Baixa Aptidão (I)
+4595 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:25000 / Média Aptidão (IIa)
+4593 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:25000 / Média Aptidão (IIb)
+4591 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:25000 / Média Aptidão (IIc)
+4600 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:50000 / Alta Aptidão (III)
+4608 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:50000 / Baixa Aptidão (I)
+4606 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:50000 / Média Aptidão (IIa)
+4604 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:50000 / Média Aptidão (IIb)
+4602 vector MULTIPOLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Aptidão para Urbanização Escala 1:50000 / Média Aptidão (IIc)
+4563 vector POLYGON 4 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Geologia - Litologia Escala 1:25000 / Basaltos i
+4565 vector POLYGON 12 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Geologia - Litologia Escala 1:25000 / Basaltos ii
+4567 vector POLYGON 12 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Geologia - Litologia Escala 1:25000 / Botucatú
+4569 vector POLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Geologia - Litologia Escala 1:25000 / Fácies Caxias
+4571 vector POLYGON 3 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Geologia - Litologia Escala 1:25000 / Pirambóia
+4573 vector POLYGON 7 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Geologia - Litologia Escala 1:25000 / Quaternário
+4560 vector LINESTRING 52 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Geologia - Lineamentos Escala 1:25000
+4610 vector POLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Área Sujeita a Inundação (Tempo de Retorno de 10 anos)
+4616 vector POLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Área Sujeita a Inundação (Tempo de Retorno de 100 anos)
+4612 vector POLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Área Sujeita a Inundação (Tempo de Retorno de 20 anos)
+4614 vector POLYGON 1 11711 / Dados Cartas Geotécnicas de Aptidão a Urbanização - Defesa Civil / Área Sujeita a Inundação (Tempo de Retorno de 50 anos)
+5799 vector POLYGON 3 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Corrida de Massa
+5795 vector POLYGON 45 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Depósito Acumulação de Encosta
+5805 vector POLYGON 353 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Deslizamento
+5793 vector LINESTRING 677 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Drenagem
+5801 vector POLYGON 23 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Enxurrada
+5803 vector POLYGON 42 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Inundação
+5797 vector LINESTRING 196 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Lineamento
+5807 vector POLYGON 147 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Padrões de Relevo
+8395 vector MULTIPOLYGONZ 47 11711 / Dados SGB-CPRM 2019 - Risco Movimentos de Massa e Inundações / Setores de Risco CPRM 2019
+10257 vector POINTZ 45 11711 / Dados SGB-CPRM 2022 - Perigo Movimentos Gravitacionais de Massa / Pontos de Campo CPRM 2022
+10255 vector MULTIPOLYGON 329 11711 / Dados SGB-CPRM 2022 - Perigo Movimentos Gravitacionais de Massa / Setores de Perigo CPRM 2022
+10622 vector POLYGON 49 11711 / Dados SGB-CPRM 2025 - Risco Movimentos de Massa e Inundações / Setores de Risco SGB-CPRM 2025
+10620 vector MULTIPOLYGONZ 11519 11711 / Dados SGB-CPRM 2025 - Risco Movimentos de Massa e Inundações / Área Atingida Inundação (2024) SGB-CPRM 2025
+9487 vector MULTIPOLYGON 290 11711 / Deslizamento CPRM versus Aptidão Carta Geotécnica / Alta Suscetibilidade/Baixa Aptidão
+9491 vector MULTIPOLYGON 230 11711 / Deslizamento CPRM versus Aptidão Carta Geotécnica / Baixa Suscetibilidade/Alta Aptidão
+9489 vector MULTIPOLYGON 1507 11711 / Deslizamento CPRM versus Aptidão Carta Geotécnica / Média Suscetibilidade/Média Aptidão
+9894 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Acesso Documento: Estudo Geotécnico
+9896 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Acesso Documento: Parecer Geólogo
+9892 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Legenda Prancha 02 Declividades
+9890 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Legenda Prancha 02_1 Pontos de Estudo
+9888 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Legenda Prancha 03 Risco Potencial
+9886 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Legenda Prancha 04 Perfis Críticos
+9884 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Legenda Prancha 05 Risco Geotécnico
+9882 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Legenda Prancha 05_1 Risco Geotécnico Classes
+9880 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Legenda Prancha 05_2 Risco Geotécnico Classes
+9878 vector POINT 1 11711 / Estudo Geotécnico Loteamento Panorama / Legenda Prancha 06 Picadas de Monitoramento
+9862 raster   11711 / Estudo Geotécnico Loteamento Panorama / Prancha 02 Declividades
+9864 raster   11711 / Estudo Geotécnico Loteamento Panorama / Prancha 02_1 Pontos de Estudo
+9866 raster   11711 / Estudo Geotécnico Loteamento Panorama / Prancha 03 Risco Potencial
+9868 raster   11711 / Estudo Geotécnico Loteamento Panorama / Prancha 04 Perfis Críticos
+9870 raster   11711 / Estudo Geotécnico Loteamento Panorama / Prancha 05 Risco Geotécnico
+9872 raster   11711 / Estudo Geotécnico Loteamento Panorama / Prancha 05_1 Risco Geotécnico Classes
+9874 raster   11711 / Estudo Geotécnico Loteamento Panorama / Prancha 05_2 Risco Geotécnico Classes
+9876 raster   11711 / Estudo Geotécnico Loteamento Panorama / Prancha 06 Picadas de Monitoramento
+5300 vector LINESTRING 22 11711 / Eventos Adversos Paranhana - Dados Empíricos / Cotas Interpoladas
+5296 vector MULTILINESTRING 334 11711 / Eventos Adversos Paranhana - Dados Empíricos / Cotas Lâmina Dágua - Curvas 10 cm
+5290 vector POINT 144 11711 / Eventos Adversos Paranhana - Dados Empíricos / Cotas Ortométricas - Alagável
+5298 vector LINESTRING 517 11711 / Eventos Adversos Paranhana - Dados Empíricos / Cotas Ortométricas - Curvas 10 cm
+5292 vector POINT 57 11711 / Eventos Adversos Paranhana - Dados Empíricos / Cotas Ortométricas - Não Alagável
+5288 vector POINT 14 11711 / Eventos Adversos Paranhana - Dados Empíricos / Dados Auxiliares
+10372 vector POLYGON 17 11711 / Eventos Adversos Paranhana - Dados Empíricos / Deslizamentos Maio 2024
+5294 vector LINESTRING 410 11711 / Eventos Adversos Paranhana - Dados Empíricos / Lâmina Dágua Local - Curvas 10 cm
+5302 vector POLYGON 1 11711 / Eventos Adversos Paranhana - Dados Empíricos / Mancha de Inundação
+11818 vector MULTIPOLYGONZ 12 11711 / Eventos Adversos Paranhana - Dados Empíricos / Área Atingida por Enxurrada e Alagamento 29/07/2026
+10133 vector POLYGON 2 11711 / Eventos Adversos Paranhana - Dados Empíricos / Área Atingida por Enxurrada, Inundação e Alagamento 02/05/2024
+7112 vector POLYGONZ 33 11711 / Eventos Adversos Paranhana - Dados Empíricos / Área Atingida por Enxurrada, Inundação e Alagamento 08/07/2020
+9375 vector MULTIPOLYGON 18 11711 / Eventos Adversos Paranhana - Dados Empíricos / Área Atingida por Enxurrada, Inundação e Alagamento 15/06/2023
+9966 vector MULTIPOLYGON 8 11711 / Eventos Adversos Paranhana - Dados Empíricos / Área Atingida por Enxurrada, Inundação e Alagamento 18/11/2023
+11699 vector POINTZ 13 11711 / Pontos Monitoramento Defesa Civil
+7283 vector MULTIPOLYGON 1 11712 / Áreas de Preservação Permanente Urbanas / APP Arroios
+4531 vector POLYGON 250 11712 / Áreas de Preservação Permanente Urbanas / APP Nascentes
+7039 vector MULTIPOLYGON 1 11712 / Áreas de Preservação Permanente Urbanas / APP Rio Paranhana
+9288 vector POLYGON 62 11712 / Áreas de Preservação Permanente Urbanas / APP Urbana Consolidada (Lei 5604/2023)
+4537 vector POLYGON 33448 11712 / Áreas de Preservação Permanente Urbanas / Uso Restrito e APP
+7562 vector MULTIPOLYGON 1 11712 / APP Arroios (Rural)
+7330 vector MULTIPOLYGON 1 11712 / Aplicação Lei Mata Atlântica Art. 30 e 31
+7575 vector POLYGON 4 11712 / Extração Mineral (Certidões)
+7759 vector MULTIPOLYGON 1 11712 / Parque Natural de Arroio Kampff
+7761 vector MULTIPOLYGON 1 11712 / Parque Natural de Solitária
+7557 vector POLYGON 14446 11712 / Uso Restrito e APP (Rural)
+11816 vector POLYGONZ 1 11715 / Bacia Hidrográfica Paranhana
+7045 vector POLYGON 181 11715 / Banhados
+4524 vector LINESTRING 5558 11715 / Drenagem Derivada de Modelagem
+9292 vector POLYGON 14 11715 / Hidrografia  (Lei 5604/2023) - Trechos Paranhana
+9294 vector POINT 75 11715 / Hidrografia (Lei 5604/2023) - Pontos Segmentos
+9290 vector MULTILINESTRING 44 11715 / Hidrografia (Lei 5604/2023) - Trechos
+6439 vector MULTILINESTRING 740 11715 / Hidrografia CPRM 2019 1:12500
+5538 vector MULTILINESTRING 1950 11715 / Hidrografia Carta do Exército 1:50000
+9369 vector MULTILINESTRING 4451 11715 / Hidrografia IEDE 1:25000
+5541 vector MULTILINESTRING 2169 11715 / Hidrografia Projeto Mata Atlântica Sul 1:50000
+8414 vector MULTILINESTRING 51 11715 / Hidrografia Urbana Projetada (não incide APP)
+6406 vector MULTILINESTRING 498 11715 / Hidrografia Urbana Válida (incide APP)
+7043 vector POLYGON 350 11715 / Lagos e Lagoas
+4522 vector POINT 250 11715 / Nascentes Indicadas por Cartografia Escala 1:5000
+7041 vector POLYGON 1 11715 / Rio Paranhana
+6449 vector MULTIPOLYGON 23 11715 / Sub-bacias Hidrográficas Igrejinha
+11814 vector POLYGONZ 21 11715 / Sub-bacias Hidrográficas Sinos
+10407 raster   11715 / Ordenação Strahler (Drenagem Derivada de Modelagem)
+9040 raster   11715 / Índice Topográfico de Umidade (TWI)
+7546 vector POINT 2469 11716 / Drenagem - Pontos Caixas
+7548 vector LINESTRING 1561 11716 / Drenagem - Rede Tubulação
+7263 vector MULTIPOLYGON 15 11717 / Bairros PDDURA 2020
+5959 vector POLYGON 1 11717 / Limite Municipal
+7856 vector POINT 28 11717 / Localidades e Topônimos
+10400 vector MULTIPOLYGON 25 11717 / Municípios/Imediações
+6588 vector LINESTRING 1 11717 / Travessão Geral Padre Eterno
+6447 vector LINESTRING 1 11717 / Travessão Geral Santa Maria
+7069 vector LINESTRING 1 11717 / Travessão Geral Solitária
+6445 vector LINESTRING 1 11717 / Travessão Geral Voluntária
+9062 raster   11718 / Mapas Originais Plano Diretor 1991 / CADASTRAL CENTRO, LESTE E OESTE
+9066 raster   11718 / Mapas Originais Plano Diretor 1991 / CADASTRAL NORTE
+9064 raster   11718 / Mapas Originais Plano Diretor 1991 / CADASTRAL SUL
+5478 raster   11718 / Mapas Originais Plano Diretor 1991 / SISTEMA VIÁRIO 15 DE NOVEMBRO
+5476 raster   11718 / Mapas Originais Plano Diretor 1991 / SISTEMA VIÁRIO BOM PASTOR E VILA NOVA
+5474 raster   11718 / Mapas Originais Plano Diretor 1991 / SISTEMA VIÁRIO CASA DE PEDRA
+5472 raster   11718 / Mapas Originais Plano Diretor 1991 / SISTEMA VIÁRIO CENTRO E SAIBREIRA
+5470 raster   11718 / Mapas Originais Plano Diretor 1991 / SISTEMA VIÁRIO MOINHO E FIGUEIRA
+5468 raster   11718 / Mapas Originais Plano Diretor 1991 / SISTEMA VIÁRIO ROTHMANN, GARIBALDI E MOINHO
+5466 raster   11718 / Mapas Originais Plano Diretor 1991 / SISTEMA VIÁRIO VIADUTO
+9028 vector MULTIPOLYGON 15346 11718 / Mapa Original Diretrizes Viárias
+9048 raster   11718 / Planta Cadastral 1989 NE
+9042 raster   11718 / Planta Cadastral 1989 NO
+9046 raster   11718 / Planta Cadastral 1989 SE
+9044 raster   11718 / Planta Cadastral 1989 SO
+5809 vector LINESTRING 1468 11720 / Curvas de Nível 10 metros
+5813 vector LINESTRING 3674 11720 / Curvas de Nível 4 metros
+4473 vector LINESTRING 19222 11720 / Curvas de Nível Escala 1:1000 1 metro
+4625 vector MULTILINESTRING 1878 11720 / Curvas de Nível Escala 1:50000 20 metros
+9058 raster   11720 / Declividades (Classes 5%)
+7167 raster   11720 / Declividades Global Igrejinha Acima 30%
+9319 raster   11720 / Deslizamento CPRM versus Aptidão Carta Geotécnica
+9056 raster   11720 / Relevo Rural
+9054 raster   11720 / Relevo Urbano
+6454 vector MULTILINESTRING 2664 11721 / CENSO 2010 / Dados Censo IBGE (Face de Quadra)
+5318 vector POLYGON 15 11721 / CENSO 2010 / Dados Censo IBGE Rural
+5320 vector POLYGON 74 11721 / CENSO 2010 / Dados Censo IBGE Urbano
+11249 vector POLYGON 15 11721 / CENSO 2022 / Censo 2022 - Bairros (Densidade domicílios/km²)
+10841 vector POLYGON 15 11721 / CENSO 2022 / Censo 2022 - Bairros (Densidade hab./km²)
+11062 vector POLYGON 15 11721 / CENSO 2022 / Censo 2022 - Bairros (Domicílios)
+10839 vector POLYGON 15 11721 / CENSO 2022 / Censo 2022 - Bairros (Média de Moradores/Domicílio)
+10946 vector POLYGON 15 11721 / CENSO 2022 / Censo 2022 - Bairros (Pessoas Responsáveis)
+10843 vector POLYGON 15 11721 / CENSO 2022 / Censo 2022 - Bairros (População Absoluta)
+10948 vector POLYGON 15 11721 / CENSO 2022 / Censo 2022 - Bairros (Renda Média)
+10146 vector POINT 18173 11721 / CENSO 2022 / Censo 2022 - CNEFE (Cad. End. Fins Estatísticos)
+10814 vector MULTILINESTRING 2912 11721 / CENSO 2022 / Censo 2022 - Faces de Logradouros
+10017 vector POINT 18173 11721 / CENSO 2022 / Censo 2022 - Pontos Endereços
+11251 vector POLYGON 88 11721 / CENSO 2022 / Censo 2022 - Setores (Densidade domicílios/km²)
+10847 vector POLYGON 88 11721 / CENSO 2022 / Censo 2022 - Setores (Densidade hab./km²)
+11060 vector POLYGON 88 11721 / CENSO 2022 / Censo 2022 - Setores (Domicílios)
+10845 vector POLYGON 88 11721 / CENSO 2022 / Censo 2022 - Setores (Média de Moradores/Domicílio)
+10942 vector POLYGON 88 11721 / CENSO 2022 / Censo 2022 - Setores (Pessoas Responsáveis)
+10849 vector POLYGON 88 11721 / CENSO 2022 / Censo 2022 - Setores (População Absoluta)
+10944 vector POLYGON 88 11721 / CENSO 2022 / Censo 2022 - Setores (Renda Média)
+10305 vector POLYGON 88 11721 / CENSO 2022 / Censo 2022 - Setores/População/Domicílios
+5330 vector POINT 16 11722 / Pontos Turísticos
+7683 vector MULTILINESTRING 4 4483 / Ciclovias
+4481 vector LINESTRING 2454 4483 / Linhas Municipais de Ônibus
+5843 vector POINT 80 4483 / Paradas de Ônibus na Área Urbana
+4484 vector POINT 19 4483 / Pontes PD Mobilidade
+4486 vector MULTILINESTRING 65 4483 / Rede Viaria PD Mobilidade_Anexo IA
+4488 vector MULTILINESTRING 73 4483 / Rede Viaria PD Mobilidade_Anexo IIA
+4490 vector MULTILINESTRING 54 4483 / Rede Viaria PD Mobilidade_Anexo IIB
+4492 vector MULTILINESTRING 40 4483 / Rede Viaria PD Mobilidade_Anexo IIC
+4494 vector MULTILINESTRING 57 4483 / Rede Viaria PD Mobilidade_Anexo IID
+11073 vector MULTIPOLYGONZ 95 11072 / Basins
+11081 vector MULTILINESTRINGZ 4382 11072 / Channels
+11079 vector POINTZ 2252 11072 / Heads
+11077 vector POINTZ 2231 11072 / Mouths
+11075 vector MULTIPOLYGONZ 4378 11072 / Subbasins
