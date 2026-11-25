@@ -3,6 +3,16 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-25 — Centro 5: bordas da praça e do arroio
+- A praça termina onde começa a calçada/pista da cidade (o polígono do GEO avançava sobre as ruas): piso, canteiros,
+  árvores, bancos e lampiões só fora da rua (`praca.js`, `onStreet` com `city.surfOffset`).
+- Arroio Koetz nas travessias (R. João Corrêa e R. Gen. Ernesto Dorneles): paredes, margens, leito, água, pedras,
+  bambus e mato do valão não entram mais na rua — o canal termina na cabeceira do bueiro, no nível da calçada; as
+  colisões das paredes também param na rua.
+- Pistas do centro em faixas de até 3,5 m que seguem o terreno: na João Corrêa (22 m, sobre o bueiro) a pista era um
+  quad só e ficava até 0,56 m abaixo do terreno — manchas de chão sobre o asfalto. Agora fica sempre acima.
+- 12/12 suítes; 713 draw calls, 2271k triângulos, heap 112 MB.
+
 ## 2026-11-24 — Centro 4 (C5): ambientação pelas fotos de 24/11
 - Floreira redonda da rotatória da Av. Pres. Castelo Branco × R. João Corrêa: base de pedra em cone, anel amarelo,
   flores (com colisão). Posição corrigida pelo grafo de ruas (no jogo a João Corrêa passa em z ≈ 48).

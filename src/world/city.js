@@ -460,7 +460,12 @@ export class City {
         // pista
         // centro: asfalto mais escuro (cinza-grafite das fotos) e calçada de lajota cinza
         const surfC = centro && asphalt ? surfJ.clone().multiplyScalar(0.72) : surfJ;
-        strip(cobble ? ch.cobble : ch.roads, half, -half, 0, surfC, cobble ? 2.5 : 4, F());
+        if (centro && half > 2) {
+          // centro: pista em faixas de até 3,5 m (com uma no eixo), cada uma seguindo o terreno — uma pista larga num quad
+          // só ficava abaixo do terreno no meio (bueiro do arroio na João Corrêa, até 0,5 m)
+          const n2 = Math.max(1, Math.ceil(half / 3.5)), ofs = []; for (let q = -n2; q <= n2; q++) ofs.push(half * q / n2);
+          for (let q = ofs.length - 1; q > 0; q--) strip(cobble ? ch.cobble : ch.roads, ofs[q], ofs[q - 1], 0, surfC, cobble ? 2.5 : 4, F());
+        } else strip(cobble ? ch.cobble : ch.roads, half, -half, 0, surfC, cobble ? 2.5 : 4, F());
         // calçadas (lajota) + meio-fio de concreto (no centro, amarelo nas esquinas)
         const curbH = 0.15, W = centro ? ch.walkC : ch.walk, sideCol = centro ? C.sideC.clone().multiplyScalar(0.94 + 0.12 * hash(r.p[0][1], r.p[0][0])) : C.side;
         if (sideL) { strip(W, half + sideL, half, curbH, sideCol, 1.2, F()); }

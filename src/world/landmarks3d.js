@@ -320,7 +320,7 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
   }
 
   /* ---------------- Praça Dona Luiza (src/world/praca.js) ---------------- */
-  const praca = P.praca.poly ? buildPraca({ root, colliders, updaters, seats, H, world, poly: P.praca.poly, erni: P.praca.erni }) : {};
+  const praca = P.praca.poly ? buildPraca({ root, colliders, updaters, seats, H, world, poly: P.praca.poly, erni: P.praca.erni, city }) : {};
 
   /* ---------------- Bar do Waldir ---------------- */
   let waldirNpc = null;

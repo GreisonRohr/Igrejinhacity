@@ -158,7 +158,9 @@ export function buildPraca(ctx) {
   const erni = ctx.erni || [];
   const g = new THREE.Group(); root.add(g);
   const k = new Kit(), kd = new Kit();          // kd: detalhes chapados sem sombra (placas, mostradores)
-  const inside = (x, z) => inPoly(x, z, poly) || (erni.length && inPoly(x, z, erni));
+  // o polígono do GEO avança sobre as ruas em volta: a praça termina onde começa a calçada/pista da cidade
+  const onStreet = (x, z) => !!ctx.city && ctx.city.surfOffset(x, z) > 0;
+  const inside = (x, z) => (inPoly(x, z, poly) || (erni.length && inPoly(x, z, erni))) && !onStreet(x, z);
   const xs = [...poly, ...erni].map(q => q[0]), zs = [...poly, ...erni].map(q => q[1]);
   const X0 = Math.min(...xs), X1 = Math.max(...xs), Z0 = Math.min(...zs), Z1 = Math.max(...zs);
   const M = {
@@ -223,11 +225,15 @@ export function buildPraca(ctx) {
     const n = Math.max(1, Math.ceil(L / 4));
     for (let j = 0; j < n; j++) {
       const t = (j + 0.5) / n, cx2 = a[0] + (b[0] - a[0]) * t, cz2 = a[1] + (b[1] - a[1]) * t;
+      // trecho sob a rua (bueiro): nada do valão aparece — o arroio passa por baixo; a borda fica no nível da calçada
+      const e0 = [a[0] + (b[0] - a[0]) * (j / n), a[1] + (b[1] - a[1]) * (j / n)], e1 = [a[0] + (b[0] - a[0]) * ((j + 1) / n), a[1] + (b[1] - a[1]) * ((j + 1) / n)];
+      if (onStreet(cx2, cz2) || onStreet(e0[0], e0[1]) || onStreet(e1[0], e1[1])) continue;
       for (const s of [-1, 1]) {
         const mx = cx2 - uz * s * (WALL + 0.25), mz = cz2 + ux * s * (WALL + 0.25), yb = Yb(mx - uz * s * 2, mz + ux * s * 2);
         k.add(new THREE.BoxGeometry(L / n + 0.05, 2.6, 0.5), s > 0 ? (inPil(mx, mz) ? stoneP : stoneW) : conc, mx, yb - 1.2, mz, ry);
         // faixa de margem com vegetação baixa cobrindo a borda da escavação até o piso
         const gx = cx2 - uz * s * (WALL + 2.0), gz = cz2 + ux * s * (WALL + 2.0);
+        if (onStreet(gx, gz) || onStreet(cx2 - uz * s * (WALL + 3.5), cz2 + ux * s * (WALL + 3.5))) continue;   // margem não invade a calçada
         if (inPil(gx, gz)) {
           // piloto: grama com textura rente ao piso, tufos quebrando a borda reta e arbustos de folhas (sem bolas)
           k.add(new THREE.BoxGeometry(L / n + 0.05, 1.2, 3.1), grassP, gx, yb - 0.57, gz, ry);
@@ -284,7 +290,7 @@ export function buildPraca(ctx) {
     const ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, n = Math.max(1, Math.ceil(L / 2));
     const A = t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
     // vão da passarela: entre os guarda-corpos (|w| < 0,95 m do eixo do tabuleiro) a parede fica aberta
-    const open = t => { const p = A(t); return decks.some(d => Math.abs((p[0] - d.qx) * d.ux + (p[1] - d.qz) * d.uz) < 0.95 && Math.hypot(p[0] - d.qx, p[1] - d.qz) < d.L / 2 + 1); };
+    const open = t => { const p = A(t); return onStreet(p[0], p[1]) || decks.some(d => Math.abs((p[0] - d.qx) * d.ux + (p[1] - d.qz) * d.uz) < 0.95 && Math.hypot(p[0] - d.qx, p[1] - d.qz) < d.L / 2 + 1); };
     const K = n * 10; let start = null;
     for (let i = 0; i <= K; i++) {
       const t = i / K, o = i < K && open((i + 0.5) / K);
@@ -606,7 +612,7 @@ export function buildPraca(ctx) {
   trees.forEach(([x, z, sc, r, real], i) => { const p = inPil(x, z); treeList.push({ x, y: Y(x, z) + (inBed(x, z) ? 0.3 : 0), z, s: sc * (p && !real ? 0.92 + (i % 3) * 0.08 : 1), rot: r, kind: real ? 'fig' : p ? 'bigP' : 'big', color: p || real ? GREENS[(i * 5) % GREENS.length] : [0x4f7f33, 0x5a8a3a, 0x46752f, 0x628f3f][i % 4] }); });
   palms.forEach(([x, z, sc]) => treeList.push({ x, y: Y(x, z), z, s: sc, rot: x * 7 % 6.28, kind: 'palm', color: 0x5d9a3d }));
   const bambooG = new THREE.CylinderGeometry(0.07, 0.07, 9, 5).translate(0, 4.5, 0), bl = [];
-  bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) { const bx = x + (rnd() - 0.5) * 2.4, bz = z + (rnd() - 0.5) * 2.4, r = rnd();
+  bamboos.forEach(([x, z]) => { for (let i = 0; i < 14; i++) { const bx = x + (rnd() - 0.5) * 2.4, bz = z + (rnd() - 0.5) * 2.4, r = rnd(); if (onStreet(bx, bz) || onStreet(x, z)) continue;
     // piloto: touceira natural (colmo curvo com nós e folhas), altura e inclinação variadas, mais aberta para não fechar a visão
     if (inPil(bx, bz)) { const cl = ((x * 7 + z * 3) % 1 + 1) % 1; if (i % 2 === 0 && i < 12) FL.bamboo.push([x + (bx - x) * (0.5 + cl * 0.4), Yb(bx, bz), z + (bz - z) * (0.5 + cl * 0.4), (0.62 + cl * 0.3) * (0.85 + r * 0.3), (r - 0.5) * (0.2 + cl * 0.25), rnd() * 6.28]); } else bl.push([bx, bz, r]); } });
   inst(bambooG, lambert(0x7fa04a), bl, (d, [x, z, r]) => { d.position.set(x, Yb(x, z), z); d.rotation.set((r - 0.5) * 0.3, 0, (r - 0.4) * 0.3); d.scale.set(1, 0.8 + r * 0.4, 1); });
@@ -770,6 +776,7 @@ export function buildPraca(ctx) {
   // assento de banco colado numa palmeira/árvore sorteada: o pedestre não senta ali
   for (let i = seats.length - 1; i >= 0; i--) { const q = seats[i]; if ([...palms, ...trees].some(t => Math.hypot(t[0] - q.x, t[1] - q.z) < (t.length > 3 ? 1.0 : 0.7))) seats.splice(i, 1); }
   // vegetação e pedras naturais do piloto (instanciadas; fora do mergeStatic)
+  for (const kk of ['shrubs', 'bamboo', 'rocks', 'tufts']) FL[kk] = FL[kk].filter(q => !onStreet(q[0], q[2]));   // nada de mato na pista
   const fol = new THREE.Group(); fol.userData.dynamic = true; g.add(fol); buildFoliage(fol, FL);
   return { footbridges, pipoca, parking, trees: treeList, bounds: [X0, Z0, X1, Z1], surfaceAt, deckAt };
 }
