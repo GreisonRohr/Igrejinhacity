@@ -3,6 +3,16 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-25 — Centro 7: malha urbana do centro (referência Bah City)
+- Estudo da abordagem do Bah City (sem código-fonte público; índice de dados e jogo): `docs/malha-urbana-bahcity.md`.
+- Remendos de altura sob as ruas do centro e das cabeceiras de ponte (`City.flattenStreets`): pista, calçada e chão
+  no mesmo nível, sem terreno furando o pavimento.
+- Cruzamentos: calçada, meio-fio e marcas não atravessam a pista transversal; asfalto sobreposto só da via mais
+  larga; faixas de pedestre na borda da via transversal (pista dupla da Castelo Branco: fora do canteiro).
+- Pontes: encontro de concreto sob cada ponta do tabuleiro (sem vão até o barranco); acesso da Ponte Edmundo Kichler
+  com as mesmas regras do centro.
+- Suíte nova `malha`. 13/13 suítes; 704 draw calls, 2248k triângulos, heap 112 MB.
+
 ## 2026-11-25 — Centro 6: nenhum prédio sobre as ruas
 - Prédios comuns do centro (+40 m): as paredes são subdivididas a cada 2 m e todo ponto que cai na pista/calçada vai
   para a borda externa da calçada (`City._outOfStreet`); o contorno é refeito sem os pontos colineares (Piccadilly e

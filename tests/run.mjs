@@ -366,6 +366,30 @@ await suite('personagem', async () => {
   return `Lukas e Anna (trajes da Oktoberfest); mistura ${JSON.stringify(r.out['2.2'].o)} a 2,2 m/s, fase comum; meia-volta em ${(r.n0 / 60).toFixed(2)} s`;
 });
 
+await suite('malha', async () => {
+  // centro: nenhum prédio grande sobre a pista (paredes afastadas da rua; blocos do entorno encaixados no lote)
+  const p = await page();
+  const r = await p.evaluate(() => {
+    const g = __game, inP = (x, z, q) => { let c = false; for (let i = 0, j = q.length - 1; i < q.length; j = i++) { const [xi, zi] = q[i], [xj, zj] = q[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
+    const seen = new Set(); let tot = 0; const bad = [];
+    for (const [, L] of g.spatial.cells) for (const it of L) {
+      if (!it.p || seen.has(it)) continue; seen.add(it);
+      const xs = it.p.map(q => q[0]), zs = it.p.map(q => q[1]), cx = xs.reduce((a, b) => a + b) / xs.length, cz = zs.reduce((a, b) => a + b) / zs.length;
+      if (cx < -170 || cx > 150 || cz < -155 || cz > 180) continue;
+      let A = 0; for (let i = 0, j = it.p.length - 1; i < it.p.length; j = i++) A += (it.p[j][0] * it.p[i][1] - it.p[i][0] * it.p[j][1]) / 2; if (Math.abs(A) < 20) continue;
+      tot++; let hit = 0;
+      for (let x = Math.min(...xs) + 0.4; x < Math.max(...xs) - 0.4; x += 0.8) for (let z = Math.min(...zs) + 0.4; z < Math.max(...zs) - 0.4; z += 0.8) { const so = g.city.surfOffset(x, z); if (inP(x, z, it.p) && so > 0 && so < 0.15) hit++; }
+      if (hit > 2) bad.push([cx | 0, cz | 0, hit]);
+    }
+    return { tot, bad };
+  });
+  assert(!p.errors.length, 'erros: ' + p.errors[0]);
+  assert(r.tot > 100, 'poucos prédios no centro: ' + r.tot);
+  assert(!r.bad.length, 'prédio sobre a pista: ' + JSON.stringify(r.bad.slice(0, 5)));
+  await p.close();
+  return `${r.tot} prédios grandes no centro, nenhum sobre a pista`;
+});
+
 await suite('capturas', async () => {
   const p = await page('autostart', [1280, 720]);
   const views = [['praca', -20, 5, 2.4, 14, 0.15, 10], ['rua', 150, 200, 2, 10, 0.12, 15], ['oktoberfest', -190, -612, 3.14, 22, 0.12, 15], ['noite', -60, -20, 2.9, 22, 0.25, 21]];

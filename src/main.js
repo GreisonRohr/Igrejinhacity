@@ -35,7 +35,7 @@ import { MAP_MALE_CASUAL } from './player/retarget.js';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
-export const VERSAO = 'Centro 6 · Prédios fora das ruas';
+export const VERSAO = 'Centro 7 · Malha urbana (cruzamentos, pontes, terreno)';
 if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */
@@ -110,6 +110,7 @@ city.roofColors = await fetchPackedJSON(BASE + 'data/roofs.data.json').catch(() 
 city.roofShapes = await fetchPackedJSON(BASE + 'data/roofshape.data.json').catch(() => null);   // laje, duas ou quatro águas
 city.valaoZones = [{ x: 10, z: 22, r: 42 }];   // Arroio Koetz canalizado na Praça Dona Luísa (paredes retas)
 await stage('Escavando o Paranhana…', 0.05, 0.1, () => city.carveWater());
+city.flattenStreets();   // remendos de altura sob as ruas do centro e das cabeceiras de ponte
 const landuseImg = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = BASE + 'data/landuse.webp'; });
 const groundCanvas = await stage('Pintando o chão…', 0.1, 0.18, () => buildGroundCanvas(terrain, world, Math.min(Q.ground, renderer.capabilities.maxTextureSize), landuseImg));
 terrain.material.map = groundTexture(groundCanvas, renderer);
