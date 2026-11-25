@@ -57,12 +57,47 @@ pela Castelo Branco × João Corrêa, atravessa o canteiro, contorna a rótula e
 Imagens: `docs/piloto/jogo-*.jpg` (antes × depois no jogo) e `docs/piloto/ortofoto-*.jpg` (Centro 7 × piloto sobre a
 ortofoto de 0,2 m/px).
 
+## Correções antes da expansão (25/11/2026)
+
+1. **Rótula**: sem pintura de faixa dentro do anel e até 12 m em volta; uma faixa de pedestre por acesso (nenhuma sobre o
+   anel, nenhuma fora do asfalto, mínimo de 10 m entre elas perto da rótula); ilha central gramada.
+2. **Borda da região**: onde cada via sai, o build mede meio-fio e borda da calçada do piloto; fora, a malha antiga começa
+   com essas medidas, volta às do dado em 25 m e entra 3 m na região (sem fresta nem degrau).
+3. **7 prédios > 4 m** (revisados na ortofoto, `docs/piloto/predios-7-revisao.jpg`, nenhum movido):
+   - #290 (−156,183), #292 (−147,192), #5545 (−150,100), #18960 (−110,400): casas reais; a linha da quadra corta o telhado
+     (quadra desenhada para dentro do que foi construído);
+   - #2679 (−1,−92): galpão real, avanço numa quina;
+   - #11039 (13,172): contorno do Google ~5 m deslocado para a rua (o telhado real está dentro do lote) — corrigir à mão;
+   - #29404 (4,−53): a própria cobertura da Rua Coberta (fica sobre a rua mesmo).
+4. **Canteiro**: largura suavizada (mediana + média), sem pontas finas; **pista dupla detectada pela geometria** (mão única,
+   mesmo nome, paralela e oposta a até 25 m) — o trecho da Castelo Branco ao sul da João Corrêa vinha sem marcação de
+   canteiro no OSM e era centrado no vão da avenida inteira (7 m fora). Canteiro ao sul da João Corrêa: a foto mostra uma
+   floreira estreita, mas a seção oficial (R-24) diz "canteiro 0" e as larguras de lei não cabem no vão real (21 m): fica
+   sem canteiro até haver medida (DWG ou levantamento).
+5. **Rua Coberta**: identificada pela camada Praças e Espaços de Lazer da Prefeitura (polígono "Rua Coberta", 100% fora de
+   quadra) → calçadão, sem depender do OSM; sem vagas de carro sobre ela.
+
+## Expansão por etapas (cada uma validada e publicada à parte)
+
+| Etapa | Área (x0,z0,x1,z1) | Link congelado | Suítes | Chamadas / triângulos / heap |
+|---|---|---|---|---|
+| 1 Piloto revisado | −190,−60,60,410 | https://claude.ai/artifact/E9eTcVH8nxiJDnAS8gA31z | 14/14 | 702 / 2286k / 115 MB |
+| 2 Centro leste | + 60,−60,360,410 | https://claude.ai/artifact/W9w5HUJjAoqqvYT4swftPd | 14/14 | 707 / 2317k / 117 MB |
+| 3 Centro norte | + −130,−480,360,−60 | https://claude.ai/artifact/UYGVFacDMaXZf3FkYVNRFL | 14/14 | 703 / 2336k / 117 MB |
+| 4 Centro inteiro | + 360,−300,640,330 | https://claude.ai/artifact/4KiPGeX2W93wtJexKqtQUf | 14/14 | 703 / 2347k / 118 MB |
+| Centro 7 (estável) | — | link principal (inalterado) | 14/14 | 704 / 2248k / 113 MB |
+
+Validação numérica de cada etapa (build): eixo fora do centro P90 0,21–0,34 m (antes 2,6–3,6 m); calçada dentro de lote
+0% (antes 22–27%); pista dentro de lote 0,8–2,3% (antes 2,3–3,4%). Imagens: `docs/piloto/etapa*-ortofoto.jpg`.
+
+**Rollback**: cada etapa tem os dados congelados (`public/data/piloto-e<n>.data.json`), o build reproduzível
+(`sh scripts/etapa-piloto.sh <n>`) e o link publicado acima; o Centro 7 não depende de nada disso (o piloto só liga com
+`?piloto` ou no build experimental).
+
 ## Problemas restantes
 
-1. Rótula: linhas de borda das pistas ainda cruzam o anel; muitas faixas de pedestre nos acessos.
-2. 7 prédios avançam mais de 4 m sobre o espaço público (cadastro × quadras divergem): revisar um a um com a foto.
-3. Pista dupla perto da João Corrêa: sem canteiro (vão estreito); o nariz de canteiro junto à rótula é serrilhado.
-4. Larguras de pista vêm da lei (GEO); onde a rua real é mais estreita, a borda pintada fica sob a calçada (2,6%).
-5. Calçadão: a Rua Coberta não é via de pedestre no OSM; o espaço sem quadra nem pista fica terreno.
-6. Transição na borda da caixa piloto: a malha antiga recomeça fora dela (corte reto).
-7. Os 3 DWG da Prefeitura seguem sem conversão (podem trazer meio-fio real e confirmar as larguras).
+1. Vias urbanas sem calçada no cadastro recebem 2,2 m por padrão: rodovia junto à mata (leste) ganhou calçada onde há grama.
+2. Floreira da Castelo Branco ao sul da João Corrêa e larguras reais menores que as da lei (pista de dado sob a calçada 2,6–3,8%).
+3. Prédio #11039 (contorno do Google deslocado): corrigir à mão.
+4. Trevo leste da rodovia: ilhas aproximadas (o OSM tem poucos vértices ali).
+5. Os 3 DWG da Prefeitura continuam sem conversão.

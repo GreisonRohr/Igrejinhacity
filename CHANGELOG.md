@@ -3,6 +3,13 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-25 — Experimental: centro inteiro pelas quadras (4 etapas)
+- Correções do piloto: rótula sem pintura e com uma faixa por acesso; transição na borda com as medidas do piloto;
+  canteiro suavizado; pista dupla detectada pela geometria; Rua Coberta como calçadão pela camada da Prefeitura;
+  vias de serviço internas preservadas; carga sem travamento (desenho do piloto em etapa própria, memória liberada).
+- Expansão em 4 etapas cumulativas (piloto → centro leste → centro norte → faixa leste), cada uma com 14/14 suítes e
+  link congelado; Centro 7 inalterado (14/14). Detalhes: `docs/piloto-quadras.md`.
+
 ## 2026-11-25 — Experimental: piloto de reconstrução urbana pelas quadras da Prefeitura
 - Auditoria do GEO Igrejinha (`docs/auditoria-geo.md`): 380 camadas, quadras e lotes não usados até então.
 - `scripts/build-piloto.mjs` + `src/world/piloto.js` (`?piloto` / `npm run build:piloto`): eixo centrado entre as

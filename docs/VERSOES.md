@@ -107,3 +107,10 @@ indicado e no tag local `etapa-N-*`).
 - Link (independente, não substitui o principal): https://claude.ai/artifact/FtfUVq1FMyvvXxsytFhdhp
 - Base: Centro 7. Ruas, calçadas, esquinas, canteiros e meio-fio gerados das quadras da Prefeitura numa caixa piloto
   (x −190…60, z −60…410). Detalhes: `docs/piloto-quadras.md`.
+
+## Experimental — Quadras por etapas (25/11/2026)
+- Etapa 1 (piloto revisado): https://claude.ai/artifact/E9eTcVH8nxiJDnAS8gA31z
+- Etapa 2 (centro leste): https://claude.ai/artifact/W9w5HUJjAoqqvYT4swftPd
+- Etapa 3 (centro norte): https://claude.ai/artifact/UYGVFacDMaXZf3FkYVNRFL
+- Etapa 4 (centro inteiro): https://claude.ai/artifact/4KiPGeX2W93wtJexKqtQUf
+- O link principal continua no Centro 7. Detalhes e rollback: `docs/piloto-quadras.md`.
