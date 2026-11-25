@@ -79,5 +79,7 @@ export class Piloto {
       const ya = o.heightAt(ax, az), yb = o.heightAt(bx, bz), B = o.chunk(mx, mz).roads;
       B.quad([ax, ya + 0.08, az], [bx, yb + 0.08, bz], [bx, yb + 0.23, bz], [ax, ya + 0.23, az], [[0, 0], [1, 0], [1, 1], [0, 1]], cb[i + 4] ? C.yellow : C.curb, 0, [nx, 0, nz]);
     }
+    // a geometria já está nos construtores: solta os arrays (fica só o mapa de piso, usado para andar)
+    for (const k of ['asph', 'walk', 'med', 'medG', 'curbs', 'blocks', 'curbPolys', 'medPolys', 'orig', 'grandes']) d[k] = null;
   }
 }

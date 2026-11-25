@@ -81,7 +81,8 @@ export function buildStreetLife(world, terrain, city, Q, extraCars = [], realTre
     trees.push({ x, z, y: terrain.heightAt(x, z) + 0.05, kind, s: Math.max(0.6, Math.min(1.9, rr / 3.3)), rot: u * 6.28 });
   }
   // vagas extras (estacionamento em ângulo sob a Rua Coberta etc.)
-  for (const c of extraCars) cars.push({ x: c.x, z: c.z, y: terrain.heightAt(c.x, c.z) + 0.08, yaw: c.yaw, c: rnd() });
+  for (const c of extraCars) { if (city.piloto && city.piloto.cls(c.x, c.z) === 2) continue;   // piloto: Rua Coberta é calçadão (sem vagas)
+    cars.push({ x: c.x, z: c.z, y: terrain.heightAt(c.x, c.z) + 0.08, yaw: c.yaw, c: rnd() }); }
   // geometrias
   const trunk = new THREE.CylinderGeometry(0.16, 0.26, 3.2, 6).translate(0, 1.6, 0);
   // copa distante: 2 massas (as árvores reais são muitas; perto da câmera entra o modelo detalhado de trees.js)

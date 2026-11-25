@@ -358,6 +358,8 @@ export class City {
     this.buildWater();
     await tick(0.1);
     this.buildRoads();
+    await tick(0.25);
+    this.buildPiloto();   // separado das ruas: não trava a carga numa tarefa só
     await tick(0.3);
     await this.buildBuildings(f => tick(0.3 + f * 0.6));
     this.buildFronts();
@@ -414,6 +416,20 @@ export class City {
     }
     const g = b.build();
     if (g) { freeAfterUpload(g); const m = new THREE.Mesh(g, this.waterMat); m.receiveShadow = true; this.group.add(m); this.water = m; }
+  }
+
+  /** Piloto das quadras: piso pronto (asfalto, calçada, canteiro, meio-fio) — etapa própria da carga (piloto.js). */
+  buildPiloto() {
+    const PL = this.piloto, t = this.t; if (!PL) return;
+    {
+      // calçamento: o da via mais próxima (paralelepípedo/bloco continua como era)
+      const cob = []; for (const r of this.world.roads) if ((r.pav === 'pedra' || r.pav === 'bloco') && !r.br && r.p.some(q => PL.inBox(q[0], q[1], 20))) for (let i = 0; i < r.p.length - 1; i++) cob.push([r.p[i], r.p[i + 1], r.w / 2 + 1]);
+      const all = []; for (const r of this.world.roads) if (!r.br && (URBAN.has(r.k) || r.k === 'service' || r.k === 'unclassified') && r.p.some(q => PL.inBox(q[0], q[1], 20))) for (let i = 0; i < r.p.length - 1; i++) all.push([r.p[i], r.p[i + 1], r.pav === 'pedra' || r.pav === 'bloco']);
+      // grade de 25 m com os trechos (antes: todos os trechos para cada trapézio → travava a carga nas etapas maiores)
+      const CG = 25, cgrid = new Map(); for (const sg of all) { const [a, b] = sg; for (let i = Math.floor((Math.min(a[0], b[0]) - 15) / CG); i <= Math.floor((Math.max(a[0], b[0]) + 15) / CG); i++) for (let j = Math.floor((Math.min(a[1], b[1]) - 15) / CG); j <= Math.floor((Math.max(a[1], b[1]) + 15) / CG); j++) { const k = i + ',' + j; (cgrid.get(k) || cgrid.set(k, []).get(k)).push(sg); } }
+      const cobbleAt = (x, z) => { if (!cob.length) return false; let best = Infinity, c = false; for (const [a, b, isC] of cgrid.get(Math.floor(x / CG) + ',' + Math.floor(z / CG)) || []) { const d = segDist(x, z, a[0], a[1], b[0], b[1]); if (d < best) { best = d; c = isC; } } return c; };
+      PL.draw({ chunk: (x, z) => this.chunk(x, z), heightAt: (x, z) => t.heightAt(x, z), inCentro: (x, z) => inCentro(x, z), C, cobbleAt });
+    }
   }
 
   buildRoads() {
@@ -522,7 +538,8 @@ export class City {
       const strip = (B, o0, o1, dy, col, uvs = 4, filt = null) => {
         for (let i = 0; i < n - 1; i++) {
           if (filt && !filt(cum[i], cum[i + 1])) continue;
-          if (pil && dy !== 0.03 && PL.inBox((off(i, o0)[0] + off(i + 1, o1)[0]) / 2, (off(i, o0)[1] + off(i + 1, o1)[1]) / 2) && !overlapTr(cum[i], cum[i + 1])) continue;   // piloto: pista/calçada vêm do build
+          if (pil && dy !== 0.03 && PL.inBox((off(i, o0)[0] + off(i + 1, o1)[0]) / 2, (off(i, o0)[1] + off(i + 1, o1)[1]) / 2) && !overlapTr(cum[i], cum[i + 1])
+            && !(r.k === 'service' && PL.cls((pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2) === 0)) continue;   // piloto: pista/calçada vêm do build (via de serviço dentro do lote continua como era)
           if (pil && dy === 0.03 && PL.nearRing((pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2, 12)) continue;   // sem pintura dentro e em volta da rótula
           const a0 = off(i, o0), a1 = off(i + 1, o0), b1 = off(i + 1, o1), b0 = off(i, o1);
           if (posFilt && !posFilt((a0[0] + a1[0] + b0[0] + b1[0]) / 4, (a0[1] + a1[1] + b0[1] + b1[1]) / 4, i, B)) continue;
@@ -640,13 +657,6 @@ export class City {
         }
       }
       if (r.br) this.buildBridge(r, pts, NRM, cum, hy, half, side, off, wall);
-    }
-    if (PL) {
-      // calçamento: o da via mais próxima (paralelepípedo/bloco continua como era)
-      const cob = []; for (const r of this.world.roads) if ((r.pav === 'pedra' || r.pav === 'bloco') && !r.br && r.p.some(q => PL.inBox(q[0], q[1], 20))) for (let i = 0; i < r.p.length - 1; i++) cob.push([r.p[i], r.p[i + 1], r.w / 2 + 1]);
-      const all = []; for (const r of this.world.roads) if (!r.br && (URBAN.has(r.k) || r.k === 'service' || r.k === 'unclassified') && r.p.some(q => PL.inBox(q[0], q[1], 20))) for (let i = 0; i < r.p.length - 1; i++) all.push([r.p[i], r.p[i + 1], r.pav === 'pedra' || r.pav === 'bloco']);
-      const cobbleAt = (x, z) => { if (!cob.length) return false; let best = Infinity, c = false; for (const [a, b, isC] of all) { const d = segDist(x, z, a[0], a[1], b[0], b[1]); if (d < best) { best = d; c = isC; } } return c; };
-      PL.draw({ chunk: (x, z) => this.chunk(x, z), heightAt: (x, z) => t.heightAt(x, z), inCentro: (x, z) => inCentro(x, z), C, cobbleAt });
     }
   }
 
