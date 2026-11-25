@@ -311,7 +311,7 @@ await suite('dirigir', async () => {
     for (let i = 0; i < 240; i++) v.step(1 / 60, { f: 1, t: 0 }, false);   // 4 s de simulação
     out.andou = Math.round(Math.hypot(v.x - x0, v.z - z0));
     out.noChao = Math.abs(v.y - g.player.groundAt(v.x, v.z, v.y + 0.5)) < 0.6;
-    const v0 = v.v; for (let i = 0; i < 60; i++) v.step(1 / 60, { f: -1, t: 0 }, false); out.freou = v.v < v0 * 0.3; for (let i = 0; i < 240; i++) v.step(1 / 60, { f: -1, t: 0 }, false); out.re = v.v < -1; v.v = 0;
+    const v0 = v.v; for (let i = 0; i < 60; i++) v.step(1 / 60, { f: -1, t: 0 }, false); out.freou = v.v < Math.max(v0 * 0.3, v0 - 3); for (let i = 0; i < 240; i++) v.step(1 / 60, { f: -1, t: 0 }, false); out.re = v.v < -1; v.v = 0;
     key('KeyF', true); key('KeyF', false); await wait(300); out.saiu = !g.drive.car && g.player.mesh.visible;
     out.erros = 0; return out;
   });
@@ -405,13 +405,13 @@ await suite('piloto', async () => {
     const g = __game, pl = g.player, PL = g.city.piloto; if (!PL) return { erro: 'piloto desligado' };
     pl.update = pl.constructor.prototype.update.bind(pl);
     pl.blocked = (x, z, r) => g.spatial.blocked(x, z, r);   // só a colisão fixa (prédios, postes, muros): pedestres e carros andam
-    const near = (want, x, z) => { for (let d = 0; d < 14; d += 0.5) for (let a = 0; a < 24; a++) { const X = x + Math.cos(a / 24 * 6.283) * d, Z = z + Math.sin(a / 24 * 6.283) * d; if (want.includes(PL.cls(X, Z)) && !pl.blocked(X, Z, 0.4)) return [X, Z]; } return null; };
+    const near = (want, x, z) => { for (let d = 0; d < 14; d += 0.5) for (let a = 0; a < 24; a++) { const X = x + Math.cos(a / 24 * 6.283) * d, Z = z + Math.sin(a / 24 * 6.283) * d; if (want.includes(PL.cls(X, Z)) && !pl.blocked(X, Z, 0.6)) return [X, Z]; } return null; };
     // eixo corrigido no asfalto
     let on = 0, n = 0; for (const [, p2] of PL.d.roads) { for (let i = 0; i < p2.length - 1; i++) for (let f = 0; f < 1; f += 0.25) { const x = p2[i][0] + (p2[i + 1][0] - p2[i][0]) * f, z = p2[i][1] + (p2[i + 1][1] - p2[i][1]) * f; if (!PL.inBox(x, z, -3)) continue; n++; if (PL.cls(x, z) === 1) on++; } }
     const rotas = { 'Castelo Branco x João Corrêa': [[-80, 28], [-30, 66]], 'canteiro da avenida': [[-100, 255], [-60, 255]], 'rótula': [[-150, 380], [-105, 385]] }, out = {};
     for (const [nome, [[ax, az], [bx, bz]]] of Object.entries(rotas)) {
       // trajeto sem carro estacionado no caminho (o teste é da geometria, não de desviar de carro)
-      const livre = (A, B) => A && B && !g.street.cars.some(c => { const dx = B[0] - A[0], dz = B[1] - A[1], l2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((c.x - A[0]) * dx + (c.z - A[1]) * dz) / l2)); return Math.hypot(c.x - A[0] - dx * t, c.z - A[1] - dz * t) < 3; });
+      const livre = (A, B) => A && B && !g.street.cars.some(c => { const dx = B[0] - A[0], dz = B[1] - A[1], l2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((c.x - A[0]) * dx + (c.z - A[1]) * dz) / l2)); return Math.hypot(c.x - A[0] - dx * t, c.z - A[1] - dz * t) < 3; }) && ![...Array(40).keys()].some(k => g.spatial.blocked(A[0] + (B[0] - A[0]) * (k + 0.5) / 40, A[1] + (B[1] - A[1]) * (k + 0.5) / 40, 0.5));   // nem obstáculo fixo (floreira, poste) na linha
       let A = null, B = null; const js = [0, 5, -5, 10, -10, 15, -15];
       busca: for (const ox of js) for (const oz of js) { const a2 = near(nome.startsWith('ladeira') ? [1] : [2], ax + ox, az + oz), b2 = near([2, 1], bx + ox, bz + oz); if (livre(a2, b2)) { A = a2; B = b2; break busca; } }
       if (!A || !B) { out[nome] = 'sem trajeto livre'; continue; }

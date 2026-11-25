@@ -73,12 +73,23 @@ const inAnyBlock = (x, z) => { for (const s of blockSegs.near(x, z, x, z)) if (i
 
 /* ---------- seção transversal de cada via (as mesmas regras de city.js) ---------- */
 const segDist = (px, pz, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (pz - a[1]) * dz) / l2)); return Math.hypot(px - a[0] - dx * t, pz - a[1] - dz * t); };
-const hasTwin = r => { const m = r.p[r.p.length >> 1]; for (const q of roads) { if (q === r || !q.ow || !q.med || q.n !== r.n) continue; for (let i = 0; i < q.p.length - 1; i++) if (segDist(m[0], m[1], q.p[i], q.p[i + 1]) < r.w * 1.2) return q; } return null; };
+// pista irmã pela GEOMETRIA (não só pela marcação do OSM): mão única, mesmo nome, paralela em sentido oposto, a até 25 m
+const hasTwin = r => {
+  if (!r.ow || !r.n) return null;
+  for (let k = 0; k < r.p.length - 1; k++) {
+    const a = r.p[k], b = r.p[k + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 5) continue;
+    const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], tx = (b[0] - a[0]) / L, tz = (b[1] - a[1]) / L;
+    for (const q of roads) { if (q === r || !q.ow || q.n !== r.n || q.br) continue;
+      for (let i = 0; i < q.p.length - 1; i++) { const c = q.p[i], d = q.p[i + 1], l2 = Math.hypot(d[0] - c[0], d[1] - c[1]) || 1;
+        if (((d[0] - c[0]) * tx + (d[1] - c[1]) * tz) / l2 < -0.7 && segDist(m[0], m[1], c, d) < Math.max(25, r.w * 1.2)) return q; } }
+  }
+  return null;
+};
 const medSign = r => {   // lado do canteiro em relação ao sentido do traçado (−1 = lado −n)
   let acc = 0;
   for (let i = 0; i < r.p.length - 1; i++) { const a = r.p[i], b = r.p[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 1) continue;
     const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, nx = -(b[1] - a[1]) / L, nz = (b[0] - a[0]) / L; let best = Infinity, side = 0;
-    for (const q of roads) { if (q === r || !q.ow || !q.med || q.n !== r.n) continue; for (let j = 0; j < q.p.length - 1; j++) { const c = q.p[j], d = q.p[j + 1], dx = d[0] - c[0], dz = d[1] - c[1], l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((mx - c[0]) * dx + (mz - c[1]) * dz) / l2)); const px = c[0] + dx * t - mx, pz = c[1] + dz * t - mz, dd = Math.hypot(px, pz); if (dd < best) { best = dd; side = Math.sign(px * nx + pz * nz); } } }
+    for (const q of roads) { if (q === r || !q.ow || q.n !== r.n || q.br) continue; for (let j = 0; j < q.p.length - 1; j++) { const c = q.p[j], d = q.p[j + 1], dx = d[0] - c[0], dz = d[1] - c[1], l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((mx - c[0]) * dx + (mz - c[1]) * dz) / l2)); const px = c[0] + dx * t - mx, pz = c[1] + dz * t - mz, dd = Math.hypot(px, pz); if (dd < best) { best = dd; side = Math.sign(px * nx + pz * nz); } } }
     if (best < r.w * 3) acc += side * L; }
   return acc > 0 ? 1 : -1;
 };
@@ -86,9 +97,9 @@ const spec = new Map();
 for (const r of roads) {
   if (!VEH(r) || !r.p.some(([x, z]) => inBox(x, z, FADE + 40))) continue;
   const unpaved = r.pav === 'terra' || (!r.pav && ['unpaved', 'gravel', 'dirt', 'ground', 'compacted'].includes(r.sf));
-  const urban = URBAN.has(r.k) && !unpaved, twin = r.ow && r.med ? hasTwin(r) : null, dual = !!twin;
+  const urban = URBAN.has(r.k) && !unpaved, twin = r.ow && !r.k.endsWith('_link') ? hasTwin(r) : null, dual = !!twin;
   const side = r.sw ? (r.sw[0] + r.sw[1]) / 2 : (urban ? 2.2 : 0);
-  const half = (dual ? Math.max(3.5, (r.w - r.med) / 2) : r.w) / 2;
+  const half = (dual && r.med ? Math.max(3.5, (r.w - r.med) / 2) : r.w) / 2;
   spec.set(r, { dual, twin, half, side, MS: dual ? medSign(r) : -1, expROW: dual ? r.w + 2 * side : r.w + 2 * side });
 }
 
@@ -314,7 +325,7 @@ for (const [r, sp] of spec) {
 // ilha central das rótulas: anel recuado da meia pista para dentro (gramada)
 for (const loop of loops) {
   const pts = []; for (const q of loop) for (const v of P(q).slice(pts.length ? 1 : 0)) pts.push(v);
-  const cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cz = pts.reduce((a, q) => a + q[1], 0) / pts.length, half = spec.get(loop[0])?.half || 3.5;
+  const cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cz = pts.reduce((a, q) => a + q[1], 0) / pts.length, half = Math.min(4, spec.get(loop[0])?.half || 3.5);   // pista do anel (a marcação de largura da avenida não vale no anel)
   let isl = pts.map(([x, z]) => { const d = Math.hypot(x - cx, z - cz) || 1, k = Math.max(0.2, (d - half) / d); return [r2(cx + (x - cx) * k), r2(cz + (z - cz) * k)]; });
   if (signedArea(isl) < 0) isl.reverse();
   medPolys.push({ p: isl, grass: true, ring: true });
@@ -420,7 +431,7 @@ W.buildings.forEach((b, bi) => {
   if (!b.p.some(([x, z]) => inBox(x, z, -2))) return; bstat.naCaixa++;
   const out = b.p.map(([x, z]) => { if (classify(x, z) === 0) return null; const q = nearestBlockPt(x, z); return q ? q : { d: 99 }; });
   if (!out.some(Boolean)) return; bstat.avancam++;
-  const dmax = Math.max(...out.filter(Boolean).map(q => q.d)); if (dmax > 4) { bstat.grandes++; return; }
+  const dmax = Math.max(...out.filter(Boolean).map(q => q.d)); if (dmax > 4) { bstat.grandes++; bstat.lista = (bstat.lista || []).concat([[bi, r2(dmax), b.p.map(q => [r2(q[0]), r2(q[1])]), b.n || '', b.h, b.src || '']]); return; }
   // empurra para dentro (anti-horário: a normal esquerda da aresta da quadra aponta para dentro)
   bfix.push([bi, b.p.map((q, i) => out[i] ? [r2(out[i].px + out[i].nx * 0.05), r2(out[i].pz + out[i].nz * 0.05)] : q)]); bstat.corrigidos++;
 });
@@ -449,7 +460,7 @@ const GC = 0.5, GW = Math.round((BOX.x1 - BOX.x0) / GC), GH = Math.round((BOX.z1
 for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) { const x = BOX.x0 + (i + 0.5) * GC, z = BOX.z0 + (j + 0.5) * GC; grid[j * GW + i] = inBox(x, z) ? classify(x, z) : 255; }   // 255 = fora da região
 
 const data = { v: 2, etapa: ETAPA, nome: ETAPAS[ETAPA - 1].nome, areas: AREAS, fonte: 'GEO Igrejinha — Quadras (camada 7577); eixos OSM centrados entre as quadras', box: BOX, fade: FADE,
-  trans, rings: loops.map(l => l.map(q => roads.indexOf(q))), ringGeo: loops.map(l => { const pts = l.flatMap(q => P(q)), cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cz = pts.reduce((a, q) => a + q[1], 0) / pts.length; return [r2(cx), r2(cz), r2(Math.max(...pts.map(q => Math.hypot(q[0] - cx, q[1] - cz))))]; }), buildings: bfix, borig: bfix.map(([bi]) => [bi, W.buildings[bi].p[0]]), roads: corr, asph: quads[1], walk: quads[2], med: quads[3], medG: quads[4], curbs, grid: { cell: GC, w: GW, h: GH, b64: Buffer.from(grid).toString('base64') },
+  grandes: bstat.lista || [], trans, rings: loops.map(l => l.map(q => roads.indexOf(q))), ringGeo: loops.map(l => { const pts = l.flatMap(q => P(q)), cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cz = pts.reduce((a, q) => a + q[1], 0) / pts.length; return [r2(cx), r2(cz), r2(Math.max(...pts.map(q => Math.hypot(q[0] - cx, q[1] - cz))))]; }), buildings: bfix, borig: bfix.map(([bi]) => [bi, W.buildings[bi].p[0]]), roads: corr, asph: quads[1], walk: quads[2], med: quads[3], medG: quads[4], curbs, grid: { cell: GC, w: GW, h: GH, b64: Buffer.from(grid).toString('base64') },
   blocks: blocks.filter(p => p.some(([x, z]) => inBox(x, z, 10))).map(p => p.map(q => [r2(q[0]), r2(q[1])])), curbPolys, medPolys: medPolys.map(m => m.p),
   orig: [...newP.keys()].map(r => [roads.indexOf(r), r.p]) };
 fs.writeFileSync('public/data/piloto.data.json', JSON.stringify({ gzip_base64: zlib.gzipSync(JSON.stringify(data), { level: 9 }).toString('base64') }));
