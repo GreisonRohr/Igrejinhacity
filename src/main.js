@@ -10,6 +10,7 @@ import { tryLoadGLB } from './player/glbmodel.js';
 import { FollowCam } from './camera.js';
 import { Minimap } from './ui/minimap.js';
 import { LANDMARKS, byId, PLACE_STYLE } from './landmarks.js';
+import { Piloto } from './world/piloto.js';
 import { City } from './world/city.js';
 import { buildStreetLife } from './world/streetlife.js';
 import { buildGroundCanvas, groundTexture } from './world/ground.js';
@@ -75,7 +76,9 @@ function toast(title, txt = '', sec = 4) {
 
 /* ---------- carregamento ---------- */
 const BASE = import.meta.env.BASE_URL;
-const [terrain, world, navData, geoX] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json'), fetchPackedJSON(BASE + 'data/nav.data.json'),
+// piloto de reconstrução urbana pelas quadras da Prefeitura (?piloto, ou build experimental com VITE_PILOTO=1)
+const PILOTO = params.has('piloto') || import.meta.env.VITE_PILOTO === '1';
+const [terrain, world, navData, geoX] = await Promise.all([Terrain.load(BASE), fetchPackedJSON(BASE + 'data/world.data.json'), fetchPackedJSON(BASE + (PILOTO ? 'data/nav-piloto.data.json' : 'data/nav.data.json')),
   fetchPackedJSON(BASE + 'data/geoextra.data.json').catch(() => null)]);
 // pontos do mapa interativo do site de turismo (scripts/fetch-turismo.mjs)
 const turismo = await fetch(BASE + 'data/turismo.json').then(r => r.json()).catch(() => null);
@@ -103,8 +106,11 @@ const stage = async (label, from, to, fn) => {
   if (DEBUG) console.log('@' + Math.round(t0), label, Math.round(performance.now() - t0) + ' ms', performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB' : '');
   return r;
 };
+let piloto = null;
+if (PILOTO) { piloto = new Piloto(await fetchPackedJSON(BASE + 'data/piloto.data.json')); if (!piloto.applyRoads(world)) piloto = null; }
 const LM = placeLandmarks(world, terrain);
 const city = new City(world, terrain, Q, LM.exclusions);
+city.piloto = piloto;
 // cores reais dos telhados, tiradas da imagem aérea da Prefeitura (scripts/build-roofs.py)
 city.roofColors = await fetchPackedJSON(BASE + 'data/roofs.data.json').catch(() => null);
 city.roofShapes = await fetchPackedJSON(BASE + 'data/roofshape.data.json').catch(() => null);   // laje, duas ou quatro águas
@@ -117,8 +123,6 @@ terrain.material.map = groundTexture(groundCanvas, renderer);
 // foto aérea da Prefeitura (GEO Igrejinha 2016) no chão perto da câmera
 fetch(BASE + 'ortho/index.json').then(r => r.ok ? r.json() : null).then(ix => { if (ix) terrain.setOrtho(ix, BASE, isTouch ? { near: 650, far: 1000 } : { near: 1000, far: 1400 }, groundCanvas); }).catch(() => {});
 await stage('Erguendo a Serra…', 0.18, 0.22, () => scene.add(terrain.build()));
-// teste: calçadas pelas quadras do GEO (?quadras)
-if (params.has('quadras')) { city.blocks = (await fetch(BASE + 'data/quadras.data.json').then(r => r.json())).quadras; city.snapAxes = params.get('quadras') === 'eixo'; }
 await stage('Construindo a cidade…', 0.22, 0.7, async tick => scene.add(await city.build(tick)));
 const landmarks = await stage('Montando a Igreja, a praça e a Oktoberfest…', 0.7, 0.82, () => buildLandmarks(LM, world, terrain, scene, city));
 const realTrees = await fetchPackedJSON(BASE + 'data/trees.data.json').catch(() => null);
@@ -610,7 +614,7 @@ $('bMenu').addEventListener('click', () => { if (running) openMenu(); });
 $('mContinue').addEventListener('click', closeMenu);
 $('mChar').addEventListener('click', openCharModal);
 $('selDone').addEventListener('click', closeCharModal);
-$('versao').textContent = 'Versão de teste: ' + VERSAO;
+$('versao').textContent = 'Versão de teste: ' + (piloto ? 'EXPERIMENTAL · Piloto de reconstrução pelas quadras da Prefeitura (sobre o Centro 7)' : VERSAO);
 $('play').disabled = false; $('play').textContent = 'Jogar';
 window.__readyAt = performance.now();   // fim do carregamento (testes medem travamentos até aqui)
 $('play').addEventListener('click', () => {

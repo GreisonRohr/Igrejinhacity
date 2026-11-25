@@ -12,7 +12,8 @@
     "data:world": "node scripts/build-world.mjs && node scripts/build-nav.mjs",
     "data:nav": "node scripts/build-nav.mjs",
     "data:geo": "NODE_USE_ENV_PROXY=1 node --no-warnings scripts/fetch-geo-igrejinha.mjs",
-    "test": "node tests/run.mjs"
+    "test": "node tests/run.mjs",
+    "build:piloto": "node scripts/build-piloto.mjs && PILOTO=1 node scripts/build-nav.mjs && VITE_PILOTO=1 vite build --outDir dist-piloto && node scripts/pack-models.mjs dist-piloto"
   },
   "repository": {
     "type": "git",

@@ -6,6 +6,9 @@ import zlib from 'node:zlib';
 
 const raw = JSON.parse(fs.readFileSync('public/data/world.data.json', 'utf8'));
 const world = JSON.parse(zlib.gunzipSync(Buffer.from(raw.gzip_base64, 'base64')).toString());
+// PILOTO=1: grafo com os eixos corrigidos pelo piloto das quadras (scripts/build-piloto.mjs) → nav-piloto.data.json
+const PILOTO = process.env.PILOTO === '1';
+if (PILOTO) { const pd = JSON.parse(zlib.gunzipSync(Buffer.from(JSON.parse(fs.readFileSync('public/data/piloto.data.json', 'utf8')).gzip_base64, 'base64'))); for (const [ri, p] of pd.roads) world.roads[ri].p = p; }
 
 // tipos de via: velocidade máxima (km/h, padrão urbano do CTB) e quem pode usar
 const KINDS = ['motorway', 'trunk', 'primary', 'primary_link', 'secondary', 'secondary_link', 'tertiary', 'tertiary_link',
@@ -58,7 +61,7 @@ for (let i = 0; i < N; i++) if (comp[i] === best) { remap[i] = outNodes.length /
 const outEdges = edges.filter(e => comp[e.a] === best).map(e => ({ ...e, a: remap[e.a], b: remap[e.b] }));
 
 const nav = { v: 1, kinds: KINDS, CAR, PED, nodes: outNodes, edges: outEdges };
-fs.writeFileSync('public/data/nav.data.json', JSON.stringify({ gzip_base64: zlib.gzipSync(JSON.stringify(nav), { level: 9 }).toString('base64') }));
+fs.writeFileSync(PILOTO ? 'public/data/nav-piloto.data.json' : 'public/data/nav.data.json', JSON.stringify({ gzip_base64: zlib.gzipSync(JSON.stringify(nav), { level: 9 }).toString('base64') }));
 const km = f => (outEdges.filter(e => e.f & f).reduce((s, e) => s + e.len, 0) / 1000).toFixed(1);
 console.log({ nos: outNodes.length / 2, arestas: outEdges.length, descartados: N - bestN, kmCarro: km(CAR), kmPedestre: km(PED),
   maoUnica: outEdges.filter(e => e.ow).length, tamanhoKB: Math.round(fs.statSync('public/data/nav.data.json').size / 1024) });

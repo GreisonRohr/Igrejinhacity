@@ -15,6 +15,7 @@ const ROOT = path.resolve(path.dirname(new globalThis.URL(import.meta.url).pathn
 const OUT = path.join(ROOT, 'tests/out'); fs.mkdirSync(OUT, { recursive: true });
 const BUDGET = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests/budget.json'), 'utf8'));
 const PORT = 5179, BASE_URL = `http://localhost:${PORT}/`;
+const QS = process.env.TEST_QS || '';   // ex.: TEST_QS='&piloto' roda tudo com o piloto das quadras
 const filter = process.argv[2] || '';
 
 // testa o build de produção (o que o jogador recebe), não o servidor de desenvolvimento
@@ -32,7 +33,7 @@ async function page(q = 'autostart', size = [844, 390]) {
   p.errors = []; p.on('pageerror', e => p.errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') p.errors.push(m.text()); });
   await p.addInitScript(() => { window.__lt = []; new PerformanceObserver(l => { for (const e of l.getEntries()) window.__lt.push(e.duration); }).observe({ type: 'longtask', buffered: true }); });
   p.t0 = Date.now();
-  await p.goto(BASE_URL + '?' + q);
+  await p.goto(BASE_URL + '?' + q + QS);
   await p.waitForFunction(() => window.__game, null, { timeout: 240000 });
   p.loadMs = Date.now() - p.t0;
   await p.evaluate(() => { const t = document.getElementById('toast'); if (t) t.style.visibility = 'hidden'; });
@@ -54,7 +55,7 @@ await suite('carga', async () => {
   const p = await browser.newPage({ viewport: { width: 844, height: 390 } }); openPages.push(p);
   p.errors = []; p.on('pageerror', e => p.errors.push(e.message));
   await p.addInitScript(() => { window.__lt = []; new PerformanceObserver(l => { for (const e of l.getEntries()) window.__lt.push([e.startTime, e.duration]); }).observe({ type: 'longtask', buffered: true }); });
-  const t0 = Date.now(); await p.goto(BASE_URL);
+  const t0 = Date.now(); await p.goto(BASE_URL + (QS ? '?' + QS.slice(1) : ''));
   await p.waitForFunction(() => !document.getElementById('play').disabled, null, { timeout: 240000, polling: 50 });
   p.loadMs = Date.now() - t0;
   const lt = await p.evaluate(() => Math.round(Math.max(0, ...window.__lt.filter(([s]) => s < window.__readyAt).map(([, d]) => d))));
@@ -388,6 +389,57 @@ await suite('malha', async () => {
   assert(!r.bad.length, 'prédio sobre a pista: ' + JSON.stringify(r.bad.slice(0, 5)));
   await p.close();
   return `${r.tot} prédios grandes no centro, nenhum sobre a pista`;
+});
+
+await suite('piloto', async () => {
+  // piloto das quadras: o eixo corrigido fica no asfalto e o pedestre atravessa cruzamento complexo, canteiro,
+  // ladeira e rótula subindo e descendo meio-fio sem travar nem cair (inclui as calçadas geradas pela quadra)
+  const p = await page('autostart&piloto');
+  const r = await p.evaluate(() => {
+    const g = __game, pl = g.player, PL = g.city.piloto; if (!PL) return { erro: 'piloto desligado' };
+    pl.update = pl.constructor.prototype.update.bind(pl);
+    pl.blocked = (x, z, r) => g.spatial.blocked(x, z, r);   // só a colisão fixa (prédios, postes, muros): pedestres e carros andam
+    const near = (want, x, z) => { for (let d = 0; d < 14; d += 0.5) for (let a = 0; a < 24; a++) { const X = x + Math.cos(a / 24 * 6.283) * d, Z = z + Math.sin(a / 24 * 6.283) * d; if (want.includes(PL.cls(X, Z)) && !pl.blocked(X, Z, 0.4)) return [X, Z]; } return null; };
+    // eixo corrigido no asfalto
+    let on = 0, n = 0; for (const [, p2] of PL.d.roads) { for (let i = 0; i < p2.length - 1; i++) for (let f = 0; f < 1; f += 0.25) { const x = p2[i][0] + (p2[i + 1][0] - p2[i][0]) * f, z = p2[i][1] + (p2[i + 1][1] - p2[i][1]) * f; if (!PL.inBox(x, z, -3)) continue; n++; if (PL.cls(x, z) === 1) on++; } }
+    const rotas = { 'Castelo Branco x João Corrêa': [[-80, 28], [-30, 66]], 'canteiro da avenida': [[-100, 255], [-60, 255]], 'rótula': [[-150, 380], [-105, 385]] }, out = {};
+    for (const [nome, [[ax, az], [bx, bz]]] of Object.entries(rotas)) {
+      // trajeto sem carro estacionado no caminho (o teste é da geometria, não de desviar de carro)
+      const livre = (A, B) => A && B && !g.street.cars.some(c => { const dx = B[0] - A[0], dz = B[1] - A[1], l2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((c.x - A[0]) * dx + (c.z - A[1]) * dz) / l2)); return Math.hypot(c.x - A[0] - dx * t, c.z - A[1] - dz * t) < 3; });
+      let A = null, B = null; const js = [0, 5, -5, 10, -10, 15, -15];
+      busca: for (const ox of js) for (const oz of js) { const a2 = near(nome.startsWith('ladeira') ? [1] : [2], ax + ox, az + oz), b2 = near([2, 1], bx + ox, bz + oz); if (livre(a2, b2)) { A = a2; B = b2; break busca; } }
+      if (!A || !B) { out[nome] = 'sem trajeto livre'; continue; }
+      pl.x = A[0]; pl.z = A[1]; pl.surf = g.terrain.heightAt(A[0], A[1]); pl.speed = 0;
+      let maxDy = 0, prev = null, minGap = 9;
+      for (let k = 0; k < 9000; k++) {
+        const d = Math.hypot(B[0] - pl.x, B[1] - pl.z); if (d < 1.5) break;
+        pl.update(1 / 60, { f: 1, t: 0, run: false }, Math.atan2(B[0] - pl.x, B[1] - pl.z));
+        if (prev !== null) maxDy = Math.max(maxDy, Math.abs(pl.y - prev)); prev = pl.y;
+        minGap = Math.min(minGap, pl.y - g.terrain.heightAt(pl.x, pl.z));
+      }
+      out[nome] = { chegou: Math.hypot(B[0] - pl.x, B[1] - pl.z) < 2.5, dist: Math.round(Math.hypot(B[0] - A[0], B[1] - A[1])), degrau: +maxDy.toFixed(2), abaixo: minGap < -0.05 };
+    }
+    // ladeira: pela calçada gerada, de 10 em 10 m ao longo do eixo corrigido da Dorneles (sobe ~5%)
+    { let best = null; for (const [, p2] of PL.d.roads) for (let i = 0; i < p2.length - 1; i++) { const m = [(p2[i][0] + p2[i + 1][0]) / 2, (p2[i][1] + p2[i + 1][1]) / 2], d = Math.hypot(m[0] - 13, m[1] - 320); if (d < 15 && (!best || d < best.d)) best = { d, p2 }; }
+      const wps = []; if (best) { const q = best.p2; for (let i = 0; i < q.length - 1; i++) { const L = Math.hypot(q[i + 1][0] - q[i][0], q[i + 1][1] - q[i][1]), tx = (q[i + 1][0] - q[i][0]) / L, tz = (q[i + 1][1] - q[i][1]) / L;
+        for (let s2 = 0; s2 < L; s2 += 10) { const x = q[i][0] + tx * s2, z = q[i][1] + tz * s2; if (z < 265 || z > 395) continue; const sg = -tz < 0 ? 1 : -1, nx = -tz * sg, nz = tx * sg;   // sempre a calçada do lado oeste
+          const sp = PL.lampSpot(x, z, nx, nz, 3); if (sp && PL.cls(sp[0] + nx * 0.6, sp[1] + nz * 0.6) === 2) wps.push([sp[0] + nx * 0.6, sp[1] + nz * 0.6]); } } }
+      wps.sort((a, b) => a[1] - b[1]);
+      let ok = wps.length > 6, maxDy = 0, prev = null, y0 = null, y1 = null, gone = 0;
+      if (ok) { pl.x = wps[0][0]; pl.z = wps[0][1]; pl.surf = g.terrain.heightAt(pl.x, pl.z); pl.speed = 0; y0 = g.terrain.heightAt(pl.x, pl.z);
+        for (const w of wps.slice(1)) { let k = 0; for (; k < 1500 && Math.hypot(w[0] - pl.x, w[1] - pl.z) > 1.2; k++) { pl.update(1 / 60, { f: 1, t: 0, run: false }, Math.atan2(w[0] - pl.x, w[1] - pl.z)); if (prev !== null) maxDy = Math.max(maxDy, Math.abs(pl.y - prev)); prev = pl.y; }
+          if (k >= 1500) { ok = false; break; } gone++; }
+        y1 = g.terrain.heightAt(pl.x, pl.z); }
+      out['ladeira da Dorneles (calçada)'] = { chegou: ok, dist: wps.length * 10, degrau: +maxDy.toFixed(2), abaixo: false, desnivel: y0 !== null ? +(y1 - y0).toFixed(1) : 0, pontos: gone };
+    }
+    return { eixoNoAsfalto: +(100 * on / n).toFixed(1), rotas: out };
+  });
+  assert(!p.errors.length, 'erros: ' + p.errors[0]);
+  assert(!r.erro, r.erro);
+  assert(r.eixoNoAsfalto > 95, 'eixo fora do asfalto: ' + r.eixoNoAsfalto + '%');
+  for (const [k, v] of Object.entries(r.rotas)) assert(v.chegou && v.degrau < 0.4 && !v.abaixo, k + ': ' + JSON.stringify(v));
+  await p.close();
+  return `eixo no asfalto ${r.eixoNoAsfalto}%; ` + Object.entries(r.rotas).map(([k, v]) => `${k} ${v.dist} m (degrau máx ${v.degrau} m)`).join('; ');
 });
 
 await suite('capturas', async () => {

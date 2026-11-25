@@ -4,5 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 const walk = d => fs.readdirSync(d).flatMap(f => { const p = path.join(d, f); return fs.statSync(p).isDirectory() ? walk(p) : [p]; });
 let n = 0;
-for (const f of walk('dist/models')) if (/\.(glb|fbx)$/i.test(f)) { fs.writeFileSync(f + '.b64.json', JSON.stringify({ base64: fs.readFileSync(f).toString('base64') })); n++; }
+const OUT = process.argv[2] || 'dist';
+for (const f of walk(OUT + '/models')) if (/\.(glb|fbx)$/i.test(f)) { fs.writeFileSync(f + '.b64.json', JSON.stringify({ base64: fs.readFileSync(f).toString('base64') })); n++; }
 console.log('modelos empacotados:', n);

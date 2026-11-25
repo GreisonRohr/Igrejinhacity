@@ -9,3 +9,4 @@ data/raw/geoigrejinha/diretrizes_viarias.geojson
 data/raw/geoigrejinha/drenagem_*.geojson
 data/raw/geoigrejinha/sistema_viario.geojson
 data/raw/geoigrejinha/censo_faces_logradouro.geojson
+dist-piloto/

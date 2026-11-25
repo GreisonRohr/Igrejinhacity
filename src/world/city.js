@@ -6,7 +6,6 @@ import { editHeights } from './terrain.js';
 import { freeAfterUpload } from './merge.js';
 import { inCentro, CENTRO } from './centro.js';
 import { signAtlas, SOBRADO_CORES, LOJAS_FOTOS } from './fachadas.js';
-import { Quadras, inPiloto } from './quadras.js';
 
 const CHUNK = 600, FAR_CHUNK = 1500, FAR_R = 1500;
 // Piloto do upgrade visual (centro): sombra de contato, lojas no térreo e muros/portões das casas até PILOT_R da praça
@@ -38,7 +37,7 @@ const METAL = [0x8e98a4, 0xa9b2bb, 0x6f8fa8].map(c => new THREE.Color(c));
 const C = {
   asphalt: new THREE.Color(0x55585c), dirt: new THREE.Color(0xa08660), path: new THREE.Color(0xc2ad86),
   side: new THREE.Color(0xd4d0c8), sideC: new THREE.Color(0xa9a6a0), curb: new THREE.Color(0xdcd8cf), line: new THREE.Color(0xf0f0ea), yellow: new THREE.Color(0xf2d24b),
-  concrete: new THREE.Color(0xb9b6ae), plain: new THREE.Color(0xffffff), pool: new THREE.Color(0x7fd6ff),
+  concrete: new THREE.Color(0xb9b6ae), island: new THREE.Color(0xc4c1b9), plain: new THREE.Color(0xffffff), pool: new THREE.Color(0x7fd6ff),
   pedra: new THREE.Color(0x8a8378), metal: new THREE.Color(0x9aa0a6), concreteDark: new THREE.Color(0x8f8c85), bloco: new THREE.Color(0xa29d94), median: new THREE.Color(0x6f9e4c),
 };
 
@@ -423,9 +422,8 @@ export class City {
     const lampGrid = new Set(), lampKey = (x, z) => Math.round(x / 10) + ',' + Math.round(z / 10);
     const addLamp = (x, z, y, yaw) => { const k = lampKey(x, z); if (lampGrid.has(k)) return; lampGrid.add(k); this.lampPos.push([x, y, z, yaw]); };
     const crossings = this.findCrossings();
-    // teste ?quadras: calçada e meio-fio pela borda real das quadras do GEO, na caixa piloto (quadras.js)
-    const QD = this.qd = this.blocks ? new Quadras(this.blocks, this.world.roads, URBAN) : null;
-    if (QD && this.snapAxes) this.snappedVerts = QD.snap(this.world.roads, URBAN);   // ?quadras=eixo: eixo centrado entre as quadras
+    // piloto das quadras (piloto.js): na caixa piloto a superfície da rua vem pronta do build
+    const PL = this.piloto || null;
     this.zebras = [];                                  // faixas de pedestre (para decoração: casinhas da avenida)
     const duals = this.world.roads.filter(q => q.ow && q.med && !q.br);
     // distância do ponto até a outra pista da mesma avenida (largura real do canteiro)
@@ -439,7 +437,7 @@ export class City {
     const carr = new Map(), CB = 40, roadIdx = new Map();
     this.world.roads.forEach((r, ri) => {
       roadIdx.set(r, ri);
-      if (r.br || !(URBAN.has(r.k) || r.k === 'service' || r.k === 'unclassified') || !r.p.some(q => care(q[0], q[1], 80))) return;
+      if (r.br || !(URBAN.has(r.k) || r.k === 'service' || r.k === 'unclassified') || !r.p.some(q => care(q[0], q[1], 80) || (PL && PL.inBox(q[0], q[1], 40)))) return;
       const dual = r.ow && r.med && this._hasTwin(r), half = (dual ? Math.max(3.5, (r.w - r.med) / 2) : r.w) / 2;
       for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1], L = Math.hypot(bx - ax, bz - az); if (L < 0.01) continue;
         const sg = { ri, ax, az, bx, bz, ux: (bx - ax) / L, uz: (bz - az) / L, L, half, full: dual ? r.w / 2 + 1 : half, med: dual ? r.med || 0 : 0, name: r.n || '' };
@@ -509,11 +507,11 @@ export class City {
       const ri = roadIdx.get(r);
       const dirAt = i => { const a = pts[i], b = pts[Math.min(n - 1, i + 1)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / L, (b[1] - a[1]) / L]; };
       let posFilt = null;   // (x, z, i) => false para pular o quad (definido por trecho, no centro)
-      const qPil = QD && URBAN.has(r.k) && !r.br;
+      const pil = PL && !r.br, inPil = (x, z) => pil && PL.inBox(x, z);
       const strip = (B, o0, o1, dy, col, uvs = 4, filt = null) => {
         for (let i = 0; i < n - 1; i++) {
           if (filt && !filt(cum[i], cum[i + 1])) continue;
-          if (qPil && dy > 0.1 && dy < 0.2 && inPiloto((pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2)) continue;   // calçada antiga: no piloto vem da quadra
+          if (pil && dy !== 0.03 && PL.inBox((off(i, o0)[0] + off(i + 1, o1)[0]) / 2, (off(i, o0)[1] + off(i + 1, o1)[1]) / 2)) continue;   // piloto: pista/calçada vêm do build
           const a0 = off(i, o0), a1 = off(i + 1, o0), b1 = off(i + 1, o1), b0 = off(i, o1);
           if (posFilt && !posFilt((a0[0] + a1[0] + b0[0] + b1[0]) / 4, (a0[1] + a1[1] + b0[1] + b1[1]) / 4, i, B)) continue;
           B.quad([a0[0], hy(a0, i) + dy, a0[1]], [a1[0], hy(a1, i + 1) + dy, a1[1]], [b1[0], hy(b1, i + 1) + dy, b1[1]], [b0[0], hy(b0, i) + dy, b0[1]],
@@ -531,7 +529,7 @@ export class City {
       const pieces = [];
       for (let i0 = 0; i0 < n - 1; i0 += 40) pieces.push([i0, Math.min(n - 1, i0 + 40)]);
       for (const [i0, i1] of pieces) {
-        const mid = pts[(i0 + i1) >> 1], ch = this.chunk(mid[0], mid[1]), centro = inCentro(mid[0], mid[1]), cuid = care(mid[0], mid[1]) || pts.slice(i0, i1 + 1).some(q => care(q[0], q[1]));
+        const mid = pts[(i0 + i1) >> 1], ch = this.chunk(mid[0], mid[1]), centro = inCentro(mid[0], mid[1]), cuid = care(mid[0], mid[1]) || pts.slice(i0, i1 + 1).some(q => care(q[0], q[1]) || (PL && PL.inBox(q[0], q[1])));
         const range = (s0) => s0 >= cum[i0] - 1e-6 && s0 < cum[i1] - 1e-6;
         const F = (f) => (a, b2) => range(a) && (!f || f(a, b2));
         // pista
@@ -551,23 +549,17 @@ export class City {
           const n2 = Math.max(1, Math.ceil(half / 3.5)), ofs = []; for (let q = -n2; q <= n2; q++) ofs.push(half * q / n2);
           for (let q = ofs.length - 1; q > 0; q--) strip(cobble ? ch.cobble : ch.roads, ofs[q], ofs[q - 1], 0, surfC, cobble ? 2.5 : 4, F());
         } else strip(cobble ? ch.cobble : ch.roads, half, -half, 0, surfC, cobble ? 2.5 : 4, F());
-        // piloto ?quadras: o asfalto vai até a borda da quadra (a calçada da quadra fica por cima)
-        if (qPil) for (const sg of [1, -1]) { if (!(sg > 0 ? sideL : sideR)) continue;
-          const E = []; for (let i = i0; i <= i1; i++) { const [nx, nz] = NRM[i]; E.push(inPiloto(pts[i][0], pts[i][1]) ? QD.ray(pts[i][0], pts[i][1], sg * nx, sg * nz) : Infinity); }
-          for (let i = i0; i < i1; i++) { const e0 = E[i - i0], e1 = E[i + 1 - i0]; if (!(e0 < half + 9 && e1 < half + 9) || e0 <= half || e1 <= half) continue;
-            const a0 = off(i, sg * half), a1 = off(i + 1, sg * half), b1 = off(i + 1, sg * e1), b0 = off(i, sg * e0);
-            ch.roads.quad([a0[0], hy(a0, i), a0[1]], [a1[0], hy(a1, i + 1), a1[1]], [b1[0], hy(b1, i + 1), b1[1]], [b0[0], hy(b0, i), b0[1]], [wuv(a0, 4), wuv(a1, 4), wuv(b1, 4), wuv(b0, 4)], surfC, 0, up); } }
         // calçadas (lajota) + meio-fio de concreto (no centro, amarelo nas esquinas)
         const curbH = 0.15, W = centro ? ch.walkC : ch.walk, sideCol = centro ? C.sideC.clone().multiplyScalar(0.94 + 0.12 * hash(r.p[0][1], r.p[0][0])) : C.side;
         if (sideL) { strip(W, half + sideL, half, curbH, sideCol, 1.2, F()); }
         if (sideR) { strip(W, -half, -half - sideR, curbH, sideCol, 1.2, F()); }
         const curbCol = (a, b) => centro && nearCorner((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, half + side + 7) ? C.yellow : C.curb;
         if (sideL || r.br) for (let i = i0; i < i1; i++) { const a = off(i, half), b = off(i + 1, half), [nx, nz] = NRM[i];
-          if (qPil && inPiloto((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
+          if (inPil((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
           if (posFilt && !posFilt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, ch.walk)) continue;
           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [-nx, 0, -nz]); }
         if (sideR) for (let i = i0; i < i1; i++) { const a = off(i, -half), b = off(i + 1, -half), [nx, nz] = NRM[i];
-          if (qPil && inPiloto((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
+          if (inPil((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
           if (posFilt && !posFilt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, ch.walk)) continue;
           ch.roads.quad([a[0], hy(a, i), a[1]], [b[0], hy(b, i + 1), b[1]], [b[0], hy(b, i + 1) + curbH, b[1]], [a[0], hy(a, i) + curbH, a[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], curbCol(a, b), 0, [nx, 0, nz]); }
         // canteiro central (pista única com canteiro)
@@ -578,14 +570,14 @@ export class City {
         if (dual && !r.br && !foot) {
           const G = []; for (let i = i0; i <= i1; i++) { const d = otherDist(r, pts[i][0], pts[i][1]); G.push(d === Infinity ? 0 : Math.max(0, Math.min(r.med / 2 + 1, (d - 2 * half) / 2))); }
           for (let i = i0; i < i1; i++) {
-            const g0 = G[i - i0], g1 = G[i + 1 - i0]; if (g0 < 0.4 || g1 < 0.4) continue;
+            const g0 = G[i - i0], g1 = G[i + 1 - i0]; if (g0 < 0.4 || g1 < 0.4 || inPil(pts[i][0], pts[i][1])) continue;
             const a0 = off(i, -half), a1 = off(i + 1, -half), b0 = off(i, -half - g0), b1 = off(i + 1, -half - g1), [nx, nz] = NRM[i];
             ch.roads.quad([a0[0], hy(a0, i) + 0.15, a0[1]], [a1[0], hy(a1, i + 1) + 0.15, a1[1]], [b1[0], hy(b1, i + 1) + 0.15, b1[1]], [b0[0], hy(b0, i) + 0.15, b0[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.median, 0, up);
             ch.roads.quad([a0[0], hy(a0, i), a0[1]], [a1[0], hy(a1, i + 1), a1[1]], [a1[0], hy(a1, i + 1) + 0.15, a1[1]], [a0[0], hy(a0, i) + 0.15, a0[1]], [[0, 0], [1, 0], [1, 1], [0, 1]], C.yellow, 0, [nx, 0, nz]);
           }
         }
         // sinalização horizontal (padrão brasileiro: amarelo separa sentidos, branco separa faixas/bordas)
-        if (asphalt && !foot && width >= 5.5) {
+        if (asphalt && !foot && width >= 5.5 && !(pil && PL.inBox(mid[0], mid[1], 10) && (r.k.endsWith('_link') || PL.ringRoads.has(roadIdx.get(r))))) {
           const M = ch.marks, lw = 0.12;
           // centro: as faixas param antes da faixa de pedestre (não atravessam o cruzamento)
           const xs = centro ? (crossings.get(r) || []).map(ci => cum[ci]) : [], clear = (a, b2) => xs.every(s0 => Math.abs((a + b2) / 2 - s0) > 9.5);
@@ -610,6 +602,7 @@ export class City {
           const cx = pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, cz = pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f;
           const L = Math.hypot(pts[k + 1][0] - pts[k][0], pts[k + 1][1] - pts[k][1]) || 1, ux = (pts[k + 1][0] - pts[k][0]) / L, uz = (pts[k + 1][1] - pts[k][1]) / L;
           if (care(cx, cz, 20) && inCrossFull(ri, ux, uz, cx, cz, 1.6)) continue;   // faixa dentro de outra via/canteiro
+          if (PL && !PL.zebraOk(cx, cz)) continue;
           const ch = this.chunk(cx, cz), y = t.heightAt(cx, cz) + 0.115;
           this.zebras.push({ x: cx, z: cz, ux, uz, half, name: r.n, dual, med: r.med || 0 });
           for (let o = -half + 0.5; o <= half - 0.4; o += 0.9) {
@@ -628,13 +621,21 @@ export class City {
           const sgn = r.br ? (j % 2 ? 1 : -1) : (j % 2 ? 1 : -1);
           const o = sgn * (half + Math.max(0.5, Math.min(side, 2.5) - 0.4));
           const q = off(k, o), [nx, nz] = NRM[k];
-          addLamp(q[0], q[1], hy(q, k) + (side ? 0.15 : 0), Math.atan2(-nx * sgn, -nz * sgn));
+          if (pil && PL.inBox(q[0], q[1])) {   // piloto: poste 0,5 m depois do meio-fio, na calçada real
+            const sp = PL.lampSpot(pts[k][0], pts[k][1], nx * sgn, nz * sgn, half); if (sp) addLamp(sp[0], sp[1], t.heightAt(sp[0], sp[1]) + 0.23, Math.atan2(-nx * sgn, -nz * sgn));
+          } else addLamp(q[0], q[1], hy(q, k) + (side ? 0.15 : 0), Math.atan2(-nx * sgn, -nz * sgn));
           if (r.br) { const q2 = off(k, -o); addLamp(q2[0], q2[1], hy(q2, k) + 0.15, Math.atan2(nx * sgn, nz * sgn)); }
         }
       }
       if (r.br) this.buildBridge(r, pts, NRM, cum, hy, half, side, off, wall);
     }
-    if (QD) { const ch = this.chunk(5, 10); QD.draw({ heightAt: (x, z) => t.heightAt(x, z), walk: ch.walkC, curbB: ch.roads, colWalk: C.sideC, colCurb: C.curb, colCorner: C.yellow }); }
+    if (PL) {
+      // calçamento: o da via mais próxima (paralelepípedo/bloco continua como era)
+      const cob = []; for (const r of this.world.roads) if ((r.pav === 'pedra' || r.pav === 'bloco') && !r.br && r.p.some(q => PL.inBox(q[0], q[1], 20))) for (let i = 0; i < r.p.length - 1; i++) cob.push([r.p[i], r.p[i + 1], r.w / 2 + 1]);
+      const all = []; for (const r of this.world.roads) if (!r.br && (URBAN.has(r.k) || r.k === 'service' || r.k === 'unclassified') && r.p.some(q => PL.inBox(q[0], q[1], 20))) for (let i = 0; i < r.p.length - 1; i++) all.push([r.p[i], r.p[i + 1], r.pav === 'pedra' || r.pav === 'bloco']);
+      const cobbleAt = (x, z) => { if (!cob.length) return false; let best = Infinity, c = false; for (const [a, b, isC] of all) { const d = segDist(x, z, a[0], a[1], b[0], b[1]); if (d < best) { best = d; c = isC; } } return c; };
+      PL.draw({ chunk: (x, z) => this.chunk(x, z), heightAt: (x, z) => t.heightAt(x, z), inCentro: (x, z) => inCentro(x, z), C, cobbleAt });
+    }
   }
 
   /** Ponte: laje com espessura, calçadas, guarda-corpo metálico com montantes e pilares até o leito. */
@@ -698,7 +699,7 @@ export class City {
   /** Altura do tabuleiro de ponte em (x, z), ou null se não há ponte ali. */
   /** Altura do piso de ruas e calçadas acima do terreno neste ponto (0 fora delas). */
   surfOffset(x, z) {
-    if (this.qd) { const v = this.qd.surf(x, z); if (v !== null) return v; }
+    if (this.piloto) { const v = this.piloto.surf(x, z); if (v !== null) return v; }
     const L = this.surfBins?.get(Math.floor(x / 50) + ',' + Math.floor(z / 50)); if (!L) return 0;
     let best = 0;
     for (const [ax, az, bx, bz, half, sl, sr, md, mm] of L) {
