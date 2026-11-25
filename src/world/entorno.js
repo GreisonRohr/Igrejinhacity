@@ -36,14 +36,36 @@ export function entornoExclusions() {
 
 const sign = (w, h, bg, draw) => tex(w, h, (c, W, H) => { c.fillStyle = bg; c.fillRect(0, 0, W, H); draw(c, W, H); });
 
-export function buildEntorno(terrain, root, colliders) {
+/**
+ * Encaixe no lote: o bloco foi posicionado à mão e pode invadir a pista/calçada. Grade de 0,5 m no espaço local;
+ * enquanto houver célula de rua, corta a borda com mais rua. Devolve o retângulo local livre [x0, x1, z0, z1].
+ */
+function fitBox(o, city) {
+  const box = [-o.w / 2, o.w / 2, -o.d / 2, o.d / 2]; if (!city) return box;
+  const S = 0.5, nx = Math.ceil(o.w / S), nz = Math.ceil(o.d / S), c = Math.cos(o.rot), s = Math.sin(o.rot);
+  const street = []; for (let i = 0; i < nx; i++) { street.push([]); for (let j = 0; j < nz; j++) { const lx = -o.w / 2 + (i + 0.5) * S, lz = -o.d / 2 + (j + 0.5) * S; street[i].push(city.surfOffset(o.x + lx * c + lz * s, o.z - lx * s + lz * c) > 0); } }
+  let i0 = 0, i1 = nx, j0 = 0, j1 = nz;
+  for (let it = 0; it < nx + nz; it++) {
+    const col = i => { let k = 0; for (let j = j0; j < j1; j++) k += street[i][j]; return k / (j1 - j0); };
+    const row = j => { let k = 0; for (let i = i0; i < i1; i++) k += street[i][j]; return k / (i1 - i0); };
+    let any = false; for (let i = i0; i < i1 && !any; i++) for (let j = j0; j < j1; j++) if (street[i][j]) { any = true; break; }
+    if (!any || i1 - i0 < 8 || j1 - j0 < 8) break;
+    const opts = [[col(i0), () => i0++], [col(i1 - 1), () => i1--], [row(j0), () => j0++], [row(j1 - 1), () => j1--]].sort((a, b) => b[0] - a[0]);
+    opts[0][1]();
+  }
+  return [-o.w / 2 + i0 * S, -o.w / 2 + i1 * S, -o.d / 2 + j0 * S, -o.d / 2 + j1 * S];
+}
+
+export function buildEntorno(terrain, root, colliders, city = null) {
   const H = (x, z) => terrain.heightAt(x, z);
   const place = (o) => {
-    const g = new THREE.Group();
-    let y = Infinity; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const c = Math.cos(o.rot), s = Math.sin(o.rot), lx = a * o.w / 2, lz = b * o.d / 2; y = Math.min(y, H(o.x + lx * c + lz * s, o.z - lx * s + lz * c)); }
-    g.position.set(o.x, y, o.z); g.rotation.y = o.rot; root.add(g);
+    // o prédio inteiro (desenhado nas medidas o.w × o.d) é encolhido e deslocado para o retângulo livre da rua
+    const [x0, x1, z0, z1] = fitBox(o, city), sx = (x1 - x0) / o.w, sz = (z1 - z0) / o.d, mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
     const c = Math.cos(o.rot), s = Math.sin(o.rot), P = (lx, lz) => [o.x + lx * c + lz * s, o.z - lx * s + lz * c];
-    colliders.push({ p: [P(-o.w / 2, -o.d / 2), P(o.w / 2, -o.d / 2), P(o.w / 2, o.d / 2), P(-o.w / 2, o.d / 2)] });
+    const g = new THREE.Group(), [gx, gz] = P(mx, mz);
+    let y = Infinity; for (const [lx, lz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) { const [wx, wz] = P(lx, lz); y = Math.min(y, H(wx, wz)); }
+    g.position.set(gx, y, gz); g.rotation.y = o.rot; g.scale.set(sx, 1, sz); root.add(g);
+    colliders.push({ p: [P(x0, z0), P(x1, z0), P(x1, z1), P(x0, z1)] });
     return g;
   };
   // fachada de janelas (faixas de andar); repeat = número de andares

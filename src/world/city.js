@@ -688,10 +688,23 @@ export class City {
         const cx = b.p.reduce((s2, q) => s2 + q[0], 0) / b.p.length, cz = b.p.reduce((s2, q) => s2 + q[1], 0) / b.p.length;
         if (this.exclusions.some(f => f(cx, cz))) continue;
       }
-      const p = b.p.slice();
+      let p = b.p.slice();
       if (signedArea(p) > 0) p.reverse();
-      let rect = null;
-      if (b.rect) {
+      let rect = null, pushed = false;
+      // centro: nenhum prédio avança sobre a pista ou a calçada (o contorno do GEO/OSM às vezes passa da rua)
+      if (b.kind !== 'roof' && this.surfBins) {
+        const cx0 = p.reduce((q, v) => q + v[0], 0) / p.length, cz0 = p.reduce((q, v) => q + v[1], 0) / p.length;
+        if (inCentro(cx0, cz0, 40)) {
+          // paredes longas podem cruzar a rua sem vértice dentro dela: subdivide a cada 2 m, afasta e tira os colineares
+          const dense = []; for (let i = 0; i < p.length; i++) { const A = p[i], B = p[(i + 1) % p.length], n2 = Math.max(1, Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]) / 2)); for (let q = 0; q < n2; q++) dense.push([A[0] + (B[0] - A[0]) * q / n2, A[1] + (B[1] - A[1]) * q / n2]); }
+          const np = dense.map(v => this._outOfStreet(v[0], v[1]));
+          pushed = np.some((v, i) => Math.abs(v[0] - dense[i][0]) + Math.abs(v[1] - dense[i][1]) > 1e-6);
+          if (pushed) { const out = []; for (let i = 0; i < np.length; i++) { const A = np[(i + np.length - 1) % np.length], B = np[i], C = np[(i + 1) % np.length];
+              const cr = (B[0] - A[0]) * (C[1] - B[1]) - (B[1] - A[1]) * (C[0] - B[0]); if (Math.abs(cr) > 0.05) out.push(B); }
+            if (out.length >= 3 && Math.abs(signedArea(out)) > 4) { p = out; if (signedArea(p) > 0) p.reverse(); } else pushed = false; }
+        }
+      }
+      if (b.rect && !pushed) {
         const [cx, cz, ux, uz, hu, hv] = b.rect, U = [ux, uz], V = [-uz, ux];
         rect = hu >= hv ? { cx, cz, a: hu, b: hv, ua: U, ub: V } : { cx, cz, a: hv, b: hu, ua: V, ub: U };
       } else rect = asRect(p);
@@ -849,6 +862,22 @@ export class City {
     ch.roofs.quad(P(a + o, b + o, ye), P(-a - o, b + o, ye), P(-a - o, -b - o, ye), P(a + o, -b - o, ye), [[0, 0], [1, 0], [1, 1], [0, 1]], col, 0, [0, -1, 0]);
     if (pilot && roof !== 'shed') this._roofTrim(ch, P, ua, a, b, o, ye, yr, a + o, 'gable', cx, cz, floor, col);
     this.addCollider(p, cx, cz, id);
+  }
+
+  /** Ponto fora da rua: se cair na pista/calçada de algum trecho, vai para a borda externa da calçada (+5 cm). */
+  _outOfStreet(x, z) {
+    for (let it = 0; it < 3; it++) {
+      let moved = false;
+      for (const sg of this.surfBins.get(Math.floor(x / 50) + ',' + Math.floor(z / 50)) || []) {
+        const [ax, az, bx, bz, half, sl, sr] = sg, dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1;
+        const t = ((x - ax) * dx + (z - az) * dz) / l2; if (t < 0 || t > 1) continue;
+        const qx = ax + dx * t, qz = az + dz * t, l = Math.sqrt(l2), nx = -dz / l, nz = dx / l;
+        const side = (x - qx) * nx + (z - qz) * nz, lim = half + (side >= 0 ? sl : sr) + 0.05;
+        if (Math.abs(side) < lim) { const sg2 = side >= 0 ? 1 : -1; x = qx + nx * lim * sg2; z = qz + nz * lim * sg2; moved = true; }
+      }
+      if (!moved) break;
+    }
+    return [x, z];
   }
 
   /** Fachada de fábrica do centro (uma parede a→b). */

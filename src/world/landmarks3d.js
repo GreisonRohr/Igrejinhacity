@@ -415,7 +415,7 @@ export function buildLandmarks(P, world, terrain, scene, city = null) {
 
   buildOktober(P.oktober, world, terrain, root, colliders, updaters);
   if (city) colliders.push(...buildAvenida(world, terrain, city, root).colliders);
-  buildEntorno(terrain, root, colliders);
+  buildEntorno(terrain, root, colliders, city);
   buildPontos(terrain, root, colliders, updaters, world);
   buildPontosTur(P.tur, terrain, root, colliders, updaters);
   if (city) buildCulverts(city, terrain, root, colliders);

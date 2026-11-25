@@ -35,7 +35,7 @@ import { MAP_MALE_CASUAL } from './player/retarget.js';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
-export const VERSAO = 'Centro 5 · Bordas da praça e do arroio';
+export const VERSAO = 'Centro 6 · Prédios fora das ruas';
 if (params.has('keepgeo')) globalThis.__keepGeo = true;
 
 /* ---------- qualidade (celular x computador) ---------- */

@@ -3,6 +3,17 @@
 Formato por data; o mais recente em cima. Detalhes técnicos nos commits do branch `ccr-4e60f86c-o43ab6`.
 
 
+## 2026-11-25 — Centro 6: nenhum prédio sobre as ruas
+- Prédios comuns do centro (+40 m): as paredes são subdivididas a cada 2 m e todo ponto que cai na pista/calçada vai
+  para a borda externa da calçada (`City._outOfStreet`); o contorno é refeito sem os pontos colineares (Piccadilly e
+  vizinhos na Dorneles, João Corrêa).
+- Prédios marcantes do entorno da praça (`entorno.js`: Farmácias São João, Panvel, Mercadão dos Óculos, Levi,
+  Agafarma, residencial 592…), posicionados à mão: grade de 0,5 m no lote corta as bordas que invadem a rua e o
+  prédio é encolhido/deslocado para o retângulo livre (`fitBox`). O da São João ocupava metade da R. João Corrêa.
+- Verificação automática no centro: 184 prédios grandes, 0 sobre a pista (resta a ponta da Casa do Artesão na
+  calçada, ajustada antes pelas fotos, e um prédio pequeno de borda sobre uma faixa marcada como calçada).
+- 12/12 suítes; 705 draw calls, 2252k triângulos, heap 112 MB.
+
 ## 2026-11-25 — Centro 5: bordas da praça e do arroio
 - A praça termina onde começa a calçada/pista da cidade (o polígono do GEO avançava sobre as ruas): piso, canteiros,
   árvores, bancos e lampiões só fora da rua (`praca.js`, `onStreet` com `city.surfOffset`).
